@@ -1,0 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import "tailwindcss";
+
+:root {
+  --background: #FCFCFA;
+  --foreground: #10100F;
+  --card-bg: #FFFFFF;
+  --card-border: #E8E8E5;
+  --primary: #C5A880;
+  --primary-hover: #B4966F;
+  --muted: #7E7E76;
+  --muted-light: #F0F0EE;
+  --accent: #E6D2B8;
+  --success: #3F6253;
+  --error: #A84E4E;
+}
+
+.dark {
+  --background: #0B0B0A;
+  --foreground: #F5F5F3;
+  --card-bg: #131312;
+  --card-border: #242422;
+  --primary: #D7BC97;
+  --primary-hover: #E6CDAB;
+  --muted: #A0A096;
+  --muted-light: #1A1A19;
+  --accent: #F1E2CD;
+  --success: #4E7C67;
+  --error: #C26363;
+}
+
+@theme {
+  --font-sans: "Outfit", sans-serif;
+  --font-serif: "Playfair Display", serif;
+  
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --color-gold: var(--primary);
+  --color-gold-hover: var(--primary-hover);
+  --color-muted: var(--muted);
+  --color-muted-light: var(--muted-light);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-error: var(--error);
+  --color-luxury-black: #0B0B0A;
+  --color-luxury-white: #FCFCFA;
+}
+
+/* Base custom resets */
+html, body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: "Outfit", sans-serif;
+  scroll-behavior: smooth;
+}
+
+/* Smooth transitions for themes */
+*, *::before, *::after {
+  transition: background-color 0.4s ease, border-color 0.4s ease, color 0.3s ease;
+}
+
+.theme-transition-disabled *,
+.theme-transition-disabled *::before,
+.theme-transition-disabled *::after {
+  transition: none !important;
+}
+
+/* Custom premium scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-hover);
+}
+
+/* Luxury button glow & utility styles */
+.luxury-shadow {
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+}
+.dark .luxury-shadow {
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+}
+
+.luxury-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #E6D2B8 0%, #C5A880 100%);
+}
+
+/* Accessibility Focus States (WCAG Compliance) */
+:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 2.5px;
+}
