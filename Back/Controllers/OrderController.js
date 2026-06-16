@@ -1,0 +1,264 @@
+const Cart = require("../models/Cart");
+const Order = require("../models/Order");
+const asyncHandler = require("express-async-handler");
+const { Product } = require("../models/Product");
+const mongoose = require("mongoose");
+const generateInvoice = require("../utils/generateInvoice");
+
+
+// ========================================
+// GET MY ORDERS
+// ========================================
+const getMyOrders = asyncHandler(async (req, res) => {
+
+    const orders = await Order.find({ user: req.user.id })
+        .populate("orderItems.product", "title images")
+        .sort({ createdAt: -1 });
+
+    res.status(200).json({
+        success: true,
+        orders
+    });
+});
+
+
+// ========================================
+// CREATE ORDER (FROM CART)
+// ========================================
+const createOrder = asyncHandler(async (req, res) => {
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+
+        const cart = await Cart.findOne({ user: req.user.id }).session(session);
+
+        const { shippingAddress } = req.body;
+        const allowedPaymentMethods = ["cod", "card", "paypal"];
+        const paymentMethod = req.body.paymentMethod || "cod";
+
+        if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.phone || !shippingAddress.city || !shippingAddress.street) {
+            return res.status(400).json({
+                success: false,
+                message: "Shipping address is required"
+            });
+        }
+
+        if (!allowedPaymentMethods.includes(paymentMethod)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid payment method"
+            });
+        }
+
+        if (!cart || cart.items.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Cart is empty"
+            });
+        }
+
+        // Build order items with product snapshot
+        const orderItems = [];
+
+        for (const item of cart.items) {
+
+            const product = await Product.findById(item.product).session(session);
+
+            if (!product) {
+                throw new Error("Product not found");
+            }
+
+            // check stock
+            if (product.stock < item.quantity) {
+                throw new Error(`Not enough stock for ${product.title}`);
+            }
+
+            // reduce stock
+            product.stock -= item.quantity;
+            product.sold += item.quantity;
+            product.inventoryLogs.push({
+                action: "sale",
+                quantity: item.quantity,
+                note: `Sold via order draft for user ${req.user.id}`,
+                createdBy: req.user.id
+            });
+
+            await product.save({ session });
+
+            orderItems.push({
+                product: product._id,
+                title: product.title,
+                image: product.images?.[0]?.url || "",
+                quantity: item.quantity,
+                price: product.price   // snapshot
+            });
+        }
+
+        const itemsPrice = orderItems.reduce(
+            (sum, item) => sum + item.price * item.quantity,
+            0
+        );
+
+        const orderStatus = paymentMethod === "cod" ? "pending" : "processing";
+        const paymentStatus = paymentMethod === "cod" ? "pending" : "processing";
+
+        const order = await Order.create([{
+            user: req.user.id,
+            orderItems,
+            shippingAddress,
+            paymentMethod,
+            itemsPrice,
+            shippingPrice: req.body.shippingPrice || 0,
+            taxPrice: req.body.taxPrice || 0,
+            totalPrice: itemsPrice + (req.body.shippingPrice || 0) + (req.body.taxPrice || 0),
+            orderStatus,
+            paymentStatus
+        }], { session });
+
+        // clear cart
+        cart.items = [];
+        await cart.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(201).json({
+            success: true,
+            order: order[0]
+        });
+
+    } catch (error) {
+
+        await session.abortTransaction();
+        session.endSession();
+
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+
+// ========================================
+// GET ORDER BY ID
+// ========================================
+const getOrderById = asyncHandler(async (req, res) => {
+
+    const order = await Order.findById(req.params.id)
+        .populate("user", "username email");
+
+    if (!order) {
+        return res.status(404).json({
+            success: false,
+            message: "Order not found"
+        });
+    }
+
+    // ownership check
+    if (order.user._id.toString() !== req.user.id) {
+        return res.status(403).json({
+            success: false,
+            message: "Not authorized"
+        });
+    }
+
+    res.status(200).json({
+        success: true,
+        order
+    });
+});
+
+
+// ========================================
+// CANCEL ORDER (OPTIONAL BUT IMPORTANT)
+// ========================================
+const cancelOrder = asyncHandler(async (req, res) => {
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+        return res.status(404).json({
+            success: false,
+            message: "Order not found"
+        });
+    }
+
+    if (order.user.toString() !== req.user.id) {
+        return res.status(403).json({
+            success: false,
+            message: "Not authorized"
+        });
+    }
+
+    if (order.orderStatus !== "pending") {
+        return res.status(400).json({
+            success: false,
+            message: "Order cannot be cancelled"
+        });
+    }
+
+    order.orderStatus = "cancelled";
+
+    for (const item of order.orderItems) {
+        const product = await Product.findById(item.product);
+        if (product) {
+            product.stock += item.quantity;
+            product.sold = Math.max(0, product.sold - item.quantity);
+            product.inventoryLogs.push({
+                action: "refund",
+                quantity: item.quantity,
+                note: `Order ${order._id} cancelled`,
+                createdBy: req.user.id
+            });
+            await product.save();
+        }
+    }
+
+    await order.save();
+
+    res.json({
+        success: true,
+        message: "Order cancelled"
+    });
+});
+
+// ========================================
+// DOWNLOAD PDF INVOICE
+// ========================================
+const downloadInvoice = asyncHandler(async (req, res) => {
+    const order = await Order.findById(req.params.id).populate("user", "username email");
+
+    if (!order) {
+        return res.status(404).json({
+            success: false,
+            message: "Order not found"
+        });
+    }
+
+    if (order.user._id.toString() !== req.user.id && req.user.role !== "admin") {
+        return res.status(403).json({
+            success: false,
+            message: "Not authorized"
+        });
+    }
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=invoice-${order._id}.pdf`
+    );
+
+    generateInvoice(order, res);
+});
+
+// ========================================
+module.exports = {
+    getMyOrders,
+    createOrder,
+    getOrderById,
+    cancelOrder,
+    downloadInvoice
+};

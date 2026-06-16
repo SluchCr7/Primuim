@@ -1,0 +1,125 @@
+# version: '3.8'
+
+# services:
+#   mongodb:
+#     image: mongo:6.0
+#     container_name: premium_mongodb
+#     ports:
+#       - "27017:27017"
+#     volumes:
+#       - mongo_data:/data/db
+#     networks:
+#       - premium_network
+#     restart: always
+ 
+#   redis:
+#     image: redis:7.0-alpine
+#     container_name: premium_redis
+#     ports:
+#       - "6379:6379"
+#     volumes:
+#       - redis_data:/data
+#     networks:
+#       - premium_network
+#     restart: always
+
+#   backend:
+#     build:
+#       context: ./Back
+#       dockerfile: Dockerfile
+#     container_name: premium_backend
+#     ports:
+#       - "5000:5000"
+#     environment:
+#       - MONGO_URI=mongodb://mongodb:27017/ecommerce
+#       - PORT=5000
+#       - FRONTEND_ORIGIN=http://localhost:3000
+#       - JWT_SECRET=luxurious_secures_jwt_secret_token_key_2026
+#       - NODE_ENV=production
+#     depends_on:
+#       - mongodb
+#       - redis
+#     networks:
+#       - premium_network
+#     restart: always
+
+#   frontend:
+#     build:
+#       context: ./front
+#       dockerfile: Dockerfile
+#     container_name: premium_frontend
+#     ports:
+#       - "3000:3000"
+#     environment:
+#       - NEXT_PUBLIC_API_URL=http://localhost:5000/api
+#       - NODE_ENV=production
+#     depends_on:
+#       - backend
+#     networks:
+#       - premium_network
+#     restart: always
+
+# volumes:
+#   mongo_data:
+#   redis_data:
+
+# networks:
+#   premium_network:
+#     driver: bridge
+
+
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7.0-alpine
+    container_name: premium_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - premium_network
+    restart: always
+
+  backend:
+    build:
+      context: ./Back
+      dockerfile: Dockerfile
+    container_name: premium_backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./Back/.env
+    environment:
+      - PORT=5000
+      - FRONTEND_ORIGIN=http://localhost:3000
+      - NODE_ENV=production
+    depends_on:
+      - redis
+    networks:
+      - premium_network
+    restart: always
+
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    container_name: premium_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000/api
+      - NODE_ENV=production
+    depends_on:
+      - backend
+    networks:
+      - premium_network
+    restart: always
+
+volumes:
+  redis_data:
+
+networks:
+  premium_network:
+    driver: bridge
