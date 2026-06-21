@@ -116,21 +116,25 @@ app.use("/api/superadmin", require("./Routers/superAdminRoutes"));
 app.use(notfound);
 app.use(errorhandler);
 
-if (require.main === module) {
-    (async () => {
+const port = process.env.PORT || 5000;
+
+// دالة بدء تشغيل السيرفر بعد ضمان اتصال قاعدة البيانات
+const startServer = async () => {
+    try {
+        // 1. الاتصال بقاعدة البيانات أولاً
         await connectDB();
-
-        const http = require("http");
-        const { init } = require("./utils/socket");
-
-        const port = process.env.PORT || 5000;
-        const server = http.createServer(app);
-        init(server);
-
-        server.listen(port, () => {
-            console.log(`Server is running on port ${port}`);
+        
+        // 2. تشغيل السيرفر للاستماع للطلبات بعد نجاح الاتصال
+        app.listen(port, () => {
+            console.log(`Server is running successfully on port ${port}`);
         });
-    })();
-}
+    } catch (error) {
+        console.error("Failed to start the server due to DB connection error:", error);
+        process.exit(1); // إنهاء العملية إذا فشل الاتصال الحرج
+    }
+};
+
+// استدعاء الدالة لتشغيل التطبيق
+startServer();
 
 module.exports = app;
