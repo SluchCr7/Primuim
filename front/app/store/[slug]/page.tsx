@@ -584,7 +584,7 @@ export default function PublicStorePage() {
                         <div>
                           <span className="text-[9px] font-bold uppercase tracking-widest text-gold">{art.category || "Editorial"}</span>
                           <Link 
-                            href={`/article/${art.slug}`} 
+                            href={`/article/${art._id}`} 
                             className="mt-1 block font-serif text-lg font-bold leading-tight text-foreground hover:text-gold transition-colors line-clamp-2"
                           >
                             {art.title}

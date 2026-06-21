@@ -111,7 +111,7 @@ export default function BlogListingPage() {
                   </div>
                   
                   <h2 className="font-serif font-bold text-xl text-foreground hover:text-gold transition-colors line-clamp-2">
-                    <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+                    <Link href={`/blog/${post._id}`}>{post.title}</Link>
                   </h2>
                   
                   <p className="text-sm text-muted font-light leading-relaxed line-clamp-3">
@@ -120,7 +120,7 @@ export default function BlogListingPage() {
 
                   <div className="flex justify-between items-center mt-2 pt-2 border-t border-card-border/30">
                     <Link
-                      href={`/blog/${post.slug}`}
+                      href={`/blog/${post._id}`}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold group-hover:text-gold-hover transition-colors uppercase tracking-widest"
                     >
                       Read Editorial <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />

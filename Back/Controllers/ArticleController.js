@@ -179,10 +179,37 @@ const getArticleBySlug = asyncHandler(async (req, res) => {
 // ========================================
 const getArticleById = asyncHandler(async (req, res) => {
   const article = await Article.findById(req.params.id)
-    .populate("author", "storeName storeSlug storeLogo brandName");
+    .populate("author", "storeName storeSlug storeLogo brandName followers responseTime storeRating");
 
   if (!article || article.status === "deleted") {
-    return res.status(404).json({ message: "Article not found" });
+    return res.status(404).json({ success: false, message: "Article not found" });
+  }
+
+  // Increment views
+  article.views += 1;
+
+  // Track unique visitors using a mock sessionId in query or user authorization
+  const sessionId = req.query.sessionId || req.ip || "anonymous";
+  if (!article.uniqueVisitors.includes(sessionId)) {
+    article.uniqueVisitors.push(sessionId);
+  }
+
+  await article.save();
+
+  // Log analytics event asynchronously
+  try {
+    await AnalyticsEvent.create({
+      sessionId,
+      eventType: "page_view",
+      user: req.user ? req.user.id : null,
+      metadata: {
+        type: "article",
+        articleId: article._id,
+        authorId: article.author._id
+      }
+    });
+  } catch (err) {
+    console.error("Analytics log error:", err.message);
   }
 
   res.json({ success: true, article });

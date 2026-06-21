@@ -1130,7 +1130,7 @@ export default function Home() {
           ) : (
             <div className="grid gap-6 md:grid-cols-3">
               {(articlesList.length > 0 ? articlesList : fallbackArticles).map((article: any) => (
-                <article key={article._id || article.slug} className="group overflow-hidden rounded-[24px] border border-card-border bg-card-bg shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl flex flex-col h-full">
+                <article key={article._id} className="group overflow-hidden rounded-[24px] border border-card-border bg-card-bg shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl flex flex-col h-full">
                   <div className="relative aspect-[16/10] overflow-hidden bg-muted-light">
                     <img
                       src={article.coverImage || "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?q=80&w=900&auto=format&fit=crop"}
@@ -1144,13 +1144,13 @@ export default function Home() {
                         <span className="font-semibold uppercase tracking-[0.15em] text-gold">{article.author?.storeName || article.author?.username || "Editorial Staff"}</span>
                         <span>{article.readTime || 5} min read</span>
                       </div>
-                      <Link href={`/article/${article.slug}`} className="block font-serif text-xl font-semibold leading-snug text-foreground hover:text-gold transition-colors line-clamp-2">
+                      <Link href={`/article/${article._id}`} className="block font-serif text-xl font-semibold leading-snug text-foreground hover:text-gold transition-colors line-clamp-2">
                         {article.title}
                       </Link>
                       <p className="text-sm leading-relaxed text-muted line-clamp-3 mt-3">{article.excerpt || article.metaDescription || "Read the full story on our premium editorial platform."}</p>
                     </div>
                     <div className="border-t border-card-border/50 pt-4 mt-5">
-                      <Link href={`/article/${article.slug}`} className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-gold transition-colors hover:text-gold-hover">
+                      <Link href={`/article/${article._id}`} className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-gold transition-colors hover:text-gold-hover">
                         Read Story <ArrowRight className="h-3.5 w-3.5" />
                       </Link>
                     </div>

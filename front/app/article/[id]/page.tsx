@@ -17,14 +17,14 @@ import { useToast } from "../../components/Toast";
 import { Calendar, User, ArrowLeft, Heart, Sparkles, Send, Trash2, Clock, Share2 } from "lucide-react";
 
 export default function ArticleDetailPage() {
-  const { slug } = useParams();
+  const { id } = useParams();
   const router = useRouter();
   const { showToast } = useToast();
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
 
   const [commentText, setCommentText] = useState("");
 
-  const { data, isLoading, refetch } = useGetArticleBySlugQuery(slug as string);
+  const { data, isLoading, refetch } = useGetArticleBySlugQuery(id as string);
   const [likeArticle, { isLoading: isLiking }] = useLikeArticleMutation();
   const [commentArticle, { isLoading: isCommenting }] = useCommentArticleMutation();
   const [deleteComment] = useDeleteCommentMutation();
@@ -135,7 +135,7 @@ export default function ArticleDetailPage() {
         <Breadcrumbs
           items={[
             { label: "Blog", url: "/blog" },
-            { label: article.title.substring(0, 25) + "...", url: `/article/${slug}` },
+            { label: article.title.substring(0, 25) + "...", url: `/article/${id}` },
           ]}
         />
 
