@@ -13,6 +13,8 @@ const {
   getMyProducts,
   getTopSellingProducts,
   getTopRatedProducts,
+  getBestSellers,
+  getLatestCollections,
   getSearchSuggestions,
   getTrendingSearches,
   getProductBySlug
@@ -24,6 +26,8 @@ router.get("/", getProducts);
 router.get("/top-selling", getTopSellingProducts);
 router.get("/top-rated", getTopRatedProducts);
 router.get("/mine", verifySeller, getMyProducts);
+router.get("/best-sellers", getBestSellers);
+router.get("/latest", getLatestCollections);
 router.get("/search/suggest", getSearchSuggestions);
 router.get("/search/trending", getTrendingSearches);
 router.get("/category/:id", getProductsByCategory);

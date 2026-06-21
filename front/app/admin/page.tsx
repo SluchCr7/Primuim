@@ -24,6 +24,8 @@ import {
   useGetAdminArticlesQuery,
   useCreateArticleMutation,
   useDeleteArticleMutation,
+  useGetPendingArticlesQuery,
+  useModerateArticleMutation,
 } from "../../lib/api";
 import { useToast } from "../components/Toast";
 import {
@@ -100,6 +102,11 @@ export default function AdminPage() {
   const [usageLimit, setUsageLimit] = useState(0);
   const [showCouponForm, setShowCouponForm] = useState(false);
 
+  // Article Moderation states
+  const [moderatingArticle, setModeratingArticle] = useState<any | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+
   // CMS Blog state
   const [blogTitle, setBlogTitle] = useState("");
   const [blogSubtitle, setBlogSubtitle] = useState("");
@@ -128,6 +135,7 @@ export default function AdminPage() {
   const { data: usersData, refetch: refetchUsers } = useGetAllUsersQuery(undefined, { skip: user?.role !== "admin" });
   const { data: sellerRequestsData, refetch: refetchRequests } = useGetSellerRequestsAdminQuery(undefined, { skip: user?.role !== "admin" });
   const { data: articlesData, refetch: refetchArticles } = useGetAdminArticlesQuery(undefined, { skip: user?.role !== "admin" });
+  const { data: pendingArticles, refetch: refetchPendingArticles } = useGetPendingArticlesQuery(undefined, { skip: user?.role !== "admin" });
 
   // Mutations
   const [adjustInventory, { isLoading: isAdjusting }] = useAdjustProductInventoryMutation();
@@ -138,6 +146,7 @@ export default function AdminPage() {
   const [moderateSellerRequest] = useModerateSellerRequestAdminMutation();
   const [createArticle, { isLoading: isCreatingArticle }] = useCreateArticleMutation();
   const [deleteArticle] = useDeleteArticleMutation();
+  const [moderateArticle] = useModerateArticleMutation();
 
   const handleAdjustInventory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,8 +267,48 @@ export default function AdminPage() {
         showToast("Article deleted successfully", "success");
         refetchArticles();
       } catch (err) {
-        showToast("Failed to delete article.", "error");
+        showToast("Failed to delete article", "error");
       }
+    }
+  };
+
+  const handleApproveArticle = async (id: string) => {
+    try {
+      await moderateArticle({ id, status: "approved" }).unwrap();
+      showToast("Article approved and published successfully!", "success");
+      refetchPendingArticles();
+      refetchArticles();
+    } catch (err: any) {
+      showToast(err.data?.message || "Failed to approve article", "error");
+    }
+  };
+
+  const handleRejectPrompt = (art: any) => {
+    setModeratingArticle(art);
+    setRejectionReason("");
+    setShowRejectionModal(true);
+  };
+
+  const handleRejectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectionReason.trim()) {
+      showToast("Rejection reason is required.", "error");
+      return;
+    }
+    try {
+      await moderateArticle({
+        id: moderatingArticle._id,
+        status: "rejected",
+        rejectionReason: rejectionReason
+      }).unwrap();
+      showToast("Article rejected successfully", "success");
+      setRejectionReason("");
+      setModeratingArticle(null);
+      setShowRejectionModal(false);
+      refetchPendingArticles();
+      refetchArticles();
+    } catch (err: any) {
+      showToast(err.data?.message || "Failed to reject article", "error");
     }
   };
 
@@ -1172,6 +1221,63 @@ export default function AdminPage() {
               </div>
             </div>
 
+            {/* Pending Articles Moderation Table */}
+            <div className="lg:col-span-2 luxury-card p-6 mt-10">
+              <h3 className="font-serif font-bold text-lg mb-6 flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-gold" /> Articles Moderation Queue ({pendingArticles?.articles?.length || 0})
+              </h3>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead>
+                    <tr className="border-b border-card-border">
+                      <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">Article Title</th>
+                      <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">Author</th>
+                      <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">Submitted On</th>
+                      <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider text-right">Moderate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {!pendingArticles?.articles || pendingArticles.articles.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-muted font-light">No articles currently pending review.</td>
+                      </tr>
+                    ) : (
+                      pendingArticles.articles.map((art: any) => (
+                        <tr key={art._id} className="border-b border-card-border/50 hover:bg-muted-light/10">
+                          <td className="py-4 px-3">
+                            <span className="font-bold text-foreground block truncate max-w-[250px]">{art.title}</span>
+                            <span className="text-[9px] text-muted uppercase tracking-wide block">{art.category}</span>
+                          </td>
+                          <td className="py-4 px-3 text-muted">
+                            <span className="block font-semibold">{art.authorName || art.author?.storeName || art.author?.username || "Staff"}</span>
+                            <span className="text-[9px] text-muted">{art.author?.email}</span>
+                          </td>
+                          <td className="py-4 px-3 text-muted">{new Date(art.createdAt).toLocaleDateString()}</td>
+                          <td className="py-4 px-3 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => handleApproveArticle(art._id)}
+                                className="px-3 py-1.5 bg-success/15 hover:bg-success hover:text-white text-success rounded text-[10px] font-semibold uppercase tracking-wider transition-all cursor-pointer"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleRejectPrompt(art)}
+                                className="px-3 py-1.5 bg-error/15 hover:bg-error hover:text-white text-error rounded text-[10px] font-semibold uppercase tracking-wider transition-all cursor-pointer"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             {/* Listed Articles Table */}
             <div className="lg:col-span-2 luxury-card p-6 mt-10">
               <h3 className="font-serif font-bold text-lg mb-6 flex items-center gap-2">
@@ -1299,6 +1405,50 @@ export default function AdminPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Rejection Reason Modal */}
+        {showRejectionModal && moderatingArticle && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-luxury-black/80 backdrop-blur-sm p-4">
+            <div className="bg-card-bg border border-card-border rounded-lg max-w-md w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
+              <h3 className="font-serif font-bold text-lg mb-4 text-foreground">Reject Article Submission</h3>
+              <p className="text-xs text-muted mb-4 font-light leading-relaxed">
+                Provide a reason for rejecting the article <strong className="text-foreground">"{moderatingArticle.title}"</strong>. The author will be notified.
+              </p>
+              <form onSubmit={handleRejectSubmit} className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-2">Rejection Reason</label>
+                  <textarea
+                    rows={4}
+                    required
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    className="w-full rounded border border-card-border bg-background p-3 text-xs outline-none focus:border-gold resize-none leading-relaxed"
+                    placeholder="e.g. Content does not meet our style guidelines. Please add more descriptive images."
+                  />
+                </div>
+                <div className="flex gap-3 justify-end mt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRejectionModal(false);
+                      setModeratingArticle(null);
+                      setRejectionReason("");
+                    }}
+                    className="px-4 py-2 border border-card-border rounded font-semibold uppercase tracking-wider text-[10px] cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-error text-luxury-white hover:bg-error-hover rounded font-semibold uppercase tracking-wider text-[10px] cursor-pointer"
+                  >
+                    Reject Article
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

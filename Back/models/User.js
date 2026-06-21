@@ -301,9 +301,23 @@ const validateUpdateUser = (user) => {
     return schema.validate(user);
 }
 
+const validateUpdateStoreProfile = (store) => {
+    const schema = Joi.object({
+        storeName: Joi.string().trim().min(3).max(100),
+        brandName: Joi.string().trim().min(2).max(100),
+        storeDescription: Joi.string().trim().max(1000).allow(""),
+        storeLogo: Joi.string().uri().allow("").optional(),
+        storeCover: Joi.string().uri().allow("").optional(),
+        country: Joi.string().trim().max(100),
+        responseTime: Joi.string().trim().max(100),
+    });
+    return schema.validate(store);
+};
+
 module.exports = {
     User,
     validateRegisterUser,
     validateLoginUser,
-    validateUpdateUser
+    validateUpdateUser,
+    validateUpdateStoreProfile
 };

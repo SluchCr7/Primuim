@@ -17,6 +17,11 @@ import {
   useTogglePublishProductMutation,
   useGetCategoriesQuery,
   useGetMeQuery,
+  useUpdateSellerStoreProfileMutation,
+  useGetMyArticlesQuery,
+  useCreateArticleMutation,
+  useUpdateArticleMutation,
+  useDeleteArticleMutation,
 } from "../../lib/api";
 import { useToast } from "../components/Toast";
 import {
@@ -41,6 +46,11 @@ import {
   ArrowRight,
   Eye,
   Clock,
+  Settings,
+  BookOpen,
+  FileText,
+  PenTool,
+  AlertCircle,
 } from "lucide-react";
 
 // Recharts dynamically imported to prevent SSR issues
@@ -60,8 +70,8 @@ export default function SellerDashboardPage() {
   const { showToast } = useToast();
   const [mounted, setMounted] = useState(false);
 
-  // Active Tab: "analytics" | "products" | "orders" | "wallet"
-  const [activeTab, setActiveTab] = useState<"analytics" | "products" | "orders" | "wallet">("analytics");
+  // Active Tab: "analytics" | "products" | "orders" | "wallet" | "settings" | "articles"
+  const [activeTab, setActiveTab] = useState<"analytics" | "products" | "orders" | "wallet" | "settings" | "articles">("analytics");
 
   // Onboarding Security check
   useEffect(() => {
@@ -90,6 +100,11 @@ export default function SellerDashboardPage() {
   const [togglePublishProduct] = useTogglePublishProductMutation();
   const [updateOrderStatus, { isLoading: isUpdatingStatus }] = useUpdateSellerOrderStatusMutation();
   const [requestPayout, { isLoading: isRequestingPayout }] = useRequestPayoutMutation();
+  const [updateSellerStoreProfile, { isLoading: isUpdatingProfile }] = useUpdateSellerStoreProfileMutation();
+  const { data: myArticlesData, refetch: refetchMyArticles } = useGetMyArticlesQuery(undefined, { skip: !user || (user.role !== "seller" && user.role !== "admin") });
+  const [createArticle, { isLoading: isCreatingArticle }] = useCreateArticleMutation();
+  const [updateArticle, { isLoading: isUpdatingArticle }] = useUpdateArticleMutation();
+  const [deleteArticle] = useDeleteArticleMutation();
 
   // Create/Edit Product Forms states
   const [showProductModal, setShowProductModal] = useState(false);
@@ -115,6 +130,26 @@ export default function SellerDashboardPage() {
   // Payout state
   const [payoutAmount, setPayoutAmount] = useState("");
 
+  // Store Settings states
+  const [storeName, setStoreName] = useState("");
+  const [brandName, setBrandName] = useState("");
+  const [storeDescription, setStoreDescription] = useState("");
+  const [storeLogo, setStoreLogo] = useState("");
+  const [storeCover, setStoreCover] = useState("");
+  const [country, setCountry] = useState("");
+  const [responseTime, setResponseTime] = useState("");
+
+  // Article form states
+  const [showArticleModal, setShowArticleModal] = useState(false);
+  const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
+  const [artTitle, setArtTitle] = useState("");
+  const [artSubtitle, setArtSubtitle] = useState("");
+  const [artContent, setArtContent] = useState("");
+  const [artCategory, setArtCategory] = useState("Lifestyle");
+  const [artTags, setArtTags] = useState("");
+  const [artFile, setArtFile] = useState<File | null>(null);
+  const [artStatus, setArtStatus] = useState<"draft" | "pending">("pending");
+
   // Sync subcategories on category change
   useEffect(() => {
     if (category && categoriesData?.categories) {
@@ -124,6 +159,113 @@ export default function SellerDashboardPage() {
       setSubcategoriesList([]);
     }
   }, [category, categoriesData]);
+
+  // Sync store settings states with loaded user data
+  useEffect(() => {
+    if (meData?.user) {
+      setStoreName(meData.user.storeName || "");
+      setBrandName(meData.user.brandName || "");
+      setStoreDescription(meData.user.storeDescription || "");
+      setStoreLogo(meData.user.storeLogo || "");
+      setStoreCover(meData.user.storeCover || "");
+      setCountry(meData.user.country || "");
+      setResponseTime(meData.user.responseTime || "Within 24 hours");
+    }
+  }, [meData]);
+
+  const handleUpdateStoreProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateSellerStoreProfile({
+        storeName,
+        brandName,
+        storeDescription,
+        storeLogo,
+        storeCover,
+        country,
+        responseTime,
+      }).unwrap();
+      showToast("Store settings updated successfully", "success");
+      refetchMe();
+    } catch (err: any) {
+      showToast(err?.data?.message || "Failed to update store settings", "error");
+    }
+  };
+
+  const openCreateArticleModal = () => {
+    setEditingArticleId(null);
+    setArtTitle("");
+    setArtSubtitle("");
+    setArtContent("");
+    setArtCategory("Lifestyle");
+    setArtTags("");
+    setArtFile(null);
+    setArtStatus("pending");
+    setShowArticleModal(true);
+  };
+
+  const openEditArticleModal = (art: any) => {
+    setEditingArticleId(art._id);
+    setArtTitle(art.title || "");
+    setArtSubtitle(art.subtitle || "");
+    setArtContent(art.content || "");
+    setArtCategory(art.category || "Lifestyle");
+    setArtTags(art.tags?.join(", ") || "");
+    setArtFile(null);
+    setArtStatus(art.status === "draft" ? "draft" : "pending");
+    setShowArticleModal(true);
+  };
+
+  const handleSaveArticle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!artTitle || !artContent) {
+      showToast("Title and content are required.", "error");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("title", artTitle);
+      formData.append("subtitle", artSubtitle);
+      formData.append("content", artContent);
+      formData.append("category", artCategory);
+      formData.append("status", artStatus);
+
+      if (artTags) {
+        artTags.split(",").map(t => t.trim()).filter(Boolean).forEach(tag => {
+          formData.append("tags", tag);
+        });
+      }
+
+      if (artFile) {
+        formData.append("image", artFile);
+      }
+
+      if (editingArticleId) {
+        await updateArticle({ id: editingArticleId, formData }).unwrap();
+        showToast("Article updated successfully", "success");
+      } else {
+        await createArticle(formData).unwrap();
+        showToast("Article created successfully", "success");
+      }
+      setShowArticleModal(false);
+      refetchMyArticles();
+    } catch (err: any) {
+      showToast(err.data?.message || "Failed to save article", "error");
+    }
+  };
+
+  const handleDeleteArticleAction = async (id: string) => {
+    if (confirm("Are you sure you want to delete this article?")) {
+      try {
+        await deleteArticle(id).unwrap();
+        showToast("Article deleted successfully", "success");
+        refetchMyArticles();
+      } catch (err: any) {
+        showToast(err.data?.message || "Failed to delete article", "error");
+      }
+    }
+  };
 
   const handleAddSpecification = () => {
     if (specName && specValue) {
@@ -401,6 +543,30 @@ export default function SellerDashboardPage() {
               }`}
             >
               <Wallet className="h-4 w-4" /> Store Balance Wallet
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab("settings");
+                refetchMe();
+              }}
+              className={`flex items-center gap-3.5 px-4 py-3 rounded text-sm font-semibold tracking-wide text-left transition-all ${
+                activeTab === "settings" ? "bg-foreground text-background" : "hover:bg-muted-light"
+              }`}
+            >
+              <Settings className="h-4 w-4" /> Store Settings
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab("articles");
+                refetchMyArticles();
+              }}
+              className={`flex items-center gap-3.5 px-4 py-3 rounded text-sm font-semibold tracking-wide text-left transition-all ${
+                activeTab === "articles" ? "bg-foreground text-background" : "hover:bg-muted-light"
+              }`}
+            >
+              <FileText className="h-4 w-4" /> Editorial Articles ({myArticlesData?.articles?.length || 0})
             </button>
           </div>
 
@@ -745,10 +911,374 @@ export default function SellerDashboardPage() {
                 </div>
               </div>
             )}
+
+            {/* 5. STORE SETTINGS */}
+            {activeTab === "settings" && (
+              <div className="luxury-card p-6 bg-card-bg">
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h2 className="font-serif text-xl font-bold">Store Branding & Details</h2>
+                    <p className="text-xs text-muted mt-1 font-light">Customize how your store appears to customers on the marketplace.</p>
+                  </div>
+                  {meData?.user?.storeSlug && (
+                    <a
+                      href={`/stores/${meData.user.storeSlug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-9 items-center justify-center gap-1.5 rounded border border-gold hover:bg-gold/10 text-gold px-4 text-xs font-semibold uppercase tracking-wider transition-all"
+                    >
+                      <Eye className="h-3.5 w-3.5" /> View Live Store
+                    </a>
+                  )}
+                </div>
+
+                <form onSubmit={handleUpdateStoreProfile} className="flex flex-col gap-6 text-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Store Name */}
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Store Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={storeName}
+                        onChange={(e) => setStoreName(e.target.value)}
+                        className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
+                        placeholder="e.g. Diamond Luxury Store"
+                      />
+                    </div>
+
+                    {/* Brand Name */}
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Brand / Company Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={brandName}
+                        onChange={(e) => setBrandName(e.target.value)}
+                        className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
+                        placeholder="e.g. Diamond Co."
+                      />
+                    </div>
+
+                    {/* Country */}
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Country / Headquarters</label>
+                      <input
+                        type="text"
+                        required
+                        value={country}
+                        onChange={(e) => setCountry(e.target.value)}
+                        className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
+                        placeholder="e.g. Egypt"
+                      />
+                    </div>
+
+                    {/* Response Time */}
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Average Customer Response Time</label>
+                      <select
+                        value={responseTime}
+                        onChange={(e) => setResponseTime(e.target.value)}
+                        className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold text-foreground"
+                      >
+                        <option value="Within a few hours">Within a few hours</option>
+                        <option value="Within 24 hours">Within 24 hours</option>
+                        <option value="Within 48 hours">Within 48 hours</option>
+                        <option value="Within a week">Within a week</option>
+                      </select>
+                    </div>
+
+                    {/* Store Logo URL */}
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Store Logo Image (URL)</label>
+                      <input
+                        type="url"
+                        value={storeLogo}
+                        onChange={(e) => setStoreLogo(e.target.value)}
+                        className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
+                        placeholder="e.g. https://domain.com/logo.png"
+                      />
+                    </div>
+
+                    {/* Store Cover URL */}
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Store Cover Image (URL)</label>
+                      <input
+                        type="url"
+                        value={storeCover}
+                        onChange={(e) => setStoreCover(e.target.value)}
+                        className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
+                        placeholder="e.g. https://domain.com/cover.png"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Store Description */}
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Store Description</label>
+                    <textarea
+                      value={storeDescription}
+                      onChange={(e) => setStoreDescription(e.target.value)}
+                      rows={4}
+                      className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold resize-none"
+                      placeholder="Tell customers about your store, brands, specialties and values..."
+                    />
+                  </div>
+
+                  <div className="flex justify-end mt-2">
+                    <button
+                      type="submit"
+                      disabled={isUpdatingProfile}
+                      className="inline-flex h-11 items-center justify-center rounded bg-gold hover:bg-gold-hover text-luxury-white px-8 text-xs font-semibold uppercase tracking-wider transition-all disabled:opacity-50"
+                    >
+                      {isUpdatingProfile ? "Saving Settings..." : "Save Settings"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* 6. EDITORIAL ARTICLES */}
+            {activeTab === "articles" && (
+              <div className="flex flex-col gap-6 animate-in fade-in duration-200">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="font-serif text-xl font-bold">Your Editorial Articles</h2>
+                    <p className="text-xs text-muted mt-1 font-light">Compose lifestyle blogs, storyboards, and editorial listings to promote your brand.</p>
+                  </div>
+                  <button
+                    onClick={openCreateArticleModal}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded bg-gold hover:bg-gold-hover text-luxury-white px-4 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4" /> Create Article
+                  </button>
+                </div>
+
+                <div className="luxury-card p-6 bg-card-bg">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left">
+                      <thead>
+                        <tr className="border-b border-card-border">
+                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">Article Title</th>
+                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">Category</th>
+                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">Status</th>
+                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">Performance</th>
+                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {!myArticlesData?.articles || myArticlesData.articles.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="py-8 text-center text-muted font-light animate-pulse">
+                              You haven't composed any articles yet. Click "Create Article" to write your first brand story.
+                            </td>
+                          </tr>
+                        ) : (
+                          myArticlesData.articles.map((art: any) => (
+                            <tr key={art._id} className="border-b border-card-border/50 hover:bg-muted-light/10 transition-colors">
+                              <td className="py-4 px-3">
+                                <span className="font-bold text-foreground block truncate max-w-[200px]">{art.title}</span>
+                                <span className="text-[9px] text-muted block italic mt-0.5">{art.subtitle || "No subtitle"}</span>
+                              </td>
+                              <td className="py-4 px-3 text-muted">{art.category}</td>
+                              <td className="py-4 px-3">
+                                <span
+                                  className={`inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
+                                    art.status === "approved"
+                                      ? "text-success bg-success/10"
+                                      : art.status === "pending"
+                                        ? "text-gold bg-gold/10"
+                                        : art.status === "rejected"
+                                          ? "text-error bg-error/10"
+                                          : "text-muted bg-muted-light/20"
+                                  }`}
+                                >
+                                  {art.status}
+                                </span>
+                                {art.status === "rejected" && art.rejectionReason && (
+                                  <span className="block text-[10px] text-error font-light mt-1 max-w-[180px] break-words" title={art.rejectionReason}>
+                                    Reason: {art.rejectionReason}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-4 px-3 text-muted">
+                                <span className="block font-semibold">{art.views || 0} Views</span>
+                                <span className="text-[10px] block mt-0.5">{art.likes?.length || 0} Likes</span>
+                              </td>
+                              <td className="py-4 px-3 text-right">
+                                <div className="flex justify-end gap-2.5">
+                                  <button
+                                    onClick={() => openEditArticleModal(art)}
+                                    className="p-1 hover:text-gold text-muted transition-colors rounded cursor-pointer"
+                                    title="Edit Article"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteArticleAction(art._id)}
+                                    className="p-1 hover:text-error text-muted transition-colors rounded cursor-pointer"
+                                    title="Delete Article"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
 
+      {/* ARTICLE COMPOSE & EDIT DIALOG MODAL */}
+      {showArticleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-luxury-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-card-bg border border-card-border rounded-lg max-w-2xl w-full p-6 shadow-xl relative max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="font-serif font-bold text-xl mb-6 text-foreground">
+              {editingArticleId ? "Edit Brand Editorial Article" : "Compose Brand Editorial Article"}
+            </h3>
+
+            <form onSubmit={handleSaveArticle} className="flex flex-col gap-4 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Title */}
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Article Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={artTitle}
+                    onChange={(e) => setArtTitle(e.target.value)}
+                    className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold font-bold"
+                    placeholder="e.g. The Craftsmanship of Diamond Settings"
+                  />
+                </div>
+
+                {/* Subtitle */}
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Subtitle / Brief Summary</label>
+                  <input
+                    type="text"
+                    value={artSubtitle}
+                    onChange={(e) => setArtSubtitle(e.target.value)}
+                    className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
+                    placeholder="Short summary detailing the main editorial hook"
+                  />
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Editorial Category</label>
+                  <select
+                    value={artCategory}
+                    onChange={(e) => setArtCategory(e.target.value)}
+                    className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold text-foreground"
+                  >
+                    <option value="Lifestyle">Lifestyle</option>
+                    <option value="Collections">Curated Collections</option>
+                    <option value="Luxury Watch">Luxury Watch</option>
+                    <option value="Brand Story">Brand Story</option>
+                  </select>
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Tags (Comma Separated)</label>
+                  <input
+                    type="text"
+                    value={artTags}
+                    onChange={(e) => setArtTags(e.target.value)}
+                    className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
+                    placeholder="e.g. diamonds, jewelry, design"
+                  />
+                </div>
+              </div>
+
+              {/* Content */}
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Article Body Content</label>
+                <textarea
+                  rows={10}
+                  required
+                  value={artContent}
+                  onChange={(e) => setArtContent(e.target.value)}
+                  className="w-full rounded border border-card-border bg-background p-4 text-xs outline-none focus:border-gold resize-none leading-relaxed"
+                  placeholder="Write article details here. You can use markdown syntax..."
+                />
+              </div>
+
+              {/* Cover Image Upload */}
+              <div className="border border-dashed border-card-border rounded p-4 text-center hover:border-gold transition-colors relative cursor-pointer mt-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setArtFile(e.target.files?.[0] || null)}
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                />
+                <div className="flex flex-col items-center gap-1.5">
+                  <Upload className="h-6 w-6 text-gold/60" />
+                  <span className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Select Article Cover Image</span>
+                  <span className="text-[9px] text-muted font-light">
+                    {artFile ? artFile.name : "Drag and drop, or browse folder (Optional)"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Status Choice */}
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Submission Action</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="artStatus"
+                      value="pending"
+                      checked={artStatus === "pending"}
+                      onChange={() => setArtStatus("pending")}
+                      className="text-gold focus:ring-gold"
+                    />
+                    Submit for Admin Approval & Publication
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="artStatus"
+                      value="draft"
+                      checked={artStatus === "draft"}
+                      onChange={() => setArtStatus("draft")}
+                      className="text-gold focus:ring-gold"
+                    />
+                    Save as Personal Draft
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end mt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowArticleModal(false)}
+                  className="px-5 py-2 border border-card-border rounded font-semibold uppercase tracking-wider text-[10px] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingArticle || isUpdatingArticle}
+                  className="px-6 py-2 bg-gold text-luxury-white hover:bg-gold-hover rounded font-semibold uppercase tracking-wider text-[10px] cursor-pointer"
+                >
+                  {isCreatingArticle || isUpdatingArticle ? "Saving..." : "Save Article"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
       {/* PRODUCT LISTING DIALOG MODAL */}
       {showProductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-luxury-black/80 backdrop-blur-sm p-4 overflow-y-auto">

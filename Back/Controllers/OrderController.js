@@ -4,6 +4,7 @@ const asyncHandler = require("express-async-handler");
 const { Product } = require("../models/Product");
 const mongoose = require("mongoose");
 const generateInvoice = require("../utils/generateInvoice");
+const CheckoutSession = require("../models/CheckoutSession");
 
 
 // ========================================
@@ -70,6 +71,11 @@ const createOrder = asyncHandler(async (req, res) => {
                 throw new Error("Product not found");
             }
 
+            // Check if the user is the seller of the product
+            if (product.seller && product.seller.toString() === req.user.id) {
+                throw new Error(`You cannot purchase your own product: ${product.title}`);
+            }
+
             // check stock
             if (product.stock < item.quantity) {
                 throw new Error(`Not enough stock for ${product.title}`);
@@ -121,8 +127,64 @@ const createOrder = asyncHandler(async (req, res) => {
         cart.items = [];
         await cart.save({ session });
 
+        // Delete checkout session
+        await CheckoutSession.deleteOne({ userId: req.user.id }).session(session);
+
         await session.commitTransaction();
         session.endSession();
+
+        // Send order confirmation email asynchronously
+        try {
+            const populatedOrder = await Order.findById(order[0]._id).populate("user", "username email");
+            if (populatedOrder && populatedOrder.user && populatedOrder.user.email) {
+                const sendEmail = require("../utils/sendEmail");
+                const itemsHtml = populatedOrder.orderItems.map(item => `
+                    <tr>
+                        <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.title}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${item.price.toLocaleString()} EGP</td>
+                    </tr>
+                `).join('');
+
+                await sendEmail({
+                    email: populatedOrder.user.email,
+                    subject: `Order Confirmation #${populatedOrder._id.toString().substring(18).toUpperCase()} - Shop Premium`,
+                    html: `
+                        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                            <h2 style="font-family: serif; color: #c5a880;">Thank you for your order!</h2>
+                            <p>Hi ${populatedOrder.user.username},</p>
+                            <p>Your order <strong>#${populatedOrder._id.toString().substring(18).toUpperCase()}</strong> has been successfully placed. We are processing it right now.</p>
+                            
+                            <h3>Order Summary</h3>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background-color: #f7fafc;">
+                                        <th style="padding: 8px; text-align: left;">Item</th>
+                                        <th style="padding: 8px; text-align: center;">Qty</th>
+                                        <th style="padding: 8px; text-align: right;">Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itemsHtml}
+                                </tbody>
+                            </table>
+                            
+                            <div style="margin-top: 20px; text-align: right; font-weight: bold;">
+                                <p>Subtotal: ${populatedOrder.itemsPrice.toLocaleString()} EGP</p>
+                                <p>Shipping: ${populatedOrder.shippingPrice.toLocaleString()} EGP</p>
+                                <p>Tax (14% VAT): ${populatedOrder.taxPrice.toLocaleString()} EGP</p>
+                                <p style="font-size: 18px; color: #c5a880;">Total: ${populatedOrder.totalPrice.toLocaleString()} EGP</p>
+                            </div>
+                            
+                            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+                            <p style="font-size: 12px; color: #718096; text-align: center;">Shop Premium - 123 Luxury Avenue, Cairo, Egypt</p>
+                        </div>
+                    `
+                });
+            }
+        } catch (emailErr) {
+            console.error("Order confirmation email failed:", emailErr.message);
+        }
 
         res.status(201).json({
             success: true,

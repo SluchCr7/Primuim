@@ -12,6 +12,8 @@ import {
   useCreateReviewMutation,
   useVoteHelpfulMutation,
   useGetProductsQuery,
+  useToggleWishlistMutation,
+  useGetWishlistQuery,
 } from "../../../lib/api";
 import { useAppSelector } from "../../../lib/store";
 import { useToast } from "../../components/Toast";
@@ -25,7 +27,9 @@ import {
   ShoppingBag, 
   ChevronRight, 
   ArrowRight, 
-  Sparkles
+  Sparkles,
+  Heart,
+  Lock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -33,7 +37,7 @@ export default function ProductDetailsBySlugPage() {
   const { slug } = useParams();
   const router = useRouter();
   const { showToast } = useToast();
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, user: currentUser } = useAppSelector((state) => state.auth);
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
@@ -41,8 +45,28 @@ export default function ProductDetailsBySlugPage() {
   const [reviewComment, setReviewComment] = useState("");
   const [addingToCart, setAddingToCart] = useState(false);
 
+  // Hover Zoom States & Event Handlers
+  const [zoomStyle, setZoomStyle] = useState({ transformOrigin: "center center", transform: "scale(1)" });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - left) / width) * 100;
+    const y = ((e.clientY - top) / height) * 100;
+    setZoomStyle({
+      transformOrigin: `${x}% ${y}%`,
+      transform: "scale(1.75)",
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setZoomStyle({
+      transformOrigin: "center center",
+      transform: "scale(1)",
+    });
+  };
+
   // 1. Fetch Product by Slug
-  const { data: productData, isLoading: isProductLoading } = useGetProductBySlugQuery(slug as string);
+  const { data: productData, isLoading: isProductLoading, refetch: refetchProduct } = useGetProductBySlugQuery(slug as string);
   const product = productData?.product;
 
   // 2. Fetch Reviews once product._id is available
@@ -59,6 +83,10 @@ export default function ProductDetailsBySlugPage() {
   const [addToCart] = useAddToCartMutation();
   const [createReview, { isLoading: reviewLoading }] = useCreateReviewMutation();
   const [voteHelpful] = useVoteHelpfulMutation();
+
+  // Wishlist queries & mutations
+  const { data: wishlistData, refetch: refetchWishlist } = useGetWishlistQuery(undefined, { skip: !isAuthenticated });
+  const [toggleWishlist] = useToggleWishlistMutation();
 
   // Set default variant if available
   useEffect(() => {
@@ -82,8 +110,18 @@ export default function ProductDetailsBySlugPage() {
     }
   }, [product]);
 
+  const productSellerId = product?.seller?._id || product?.seller;
+  const isOwner = currentUser && productSellerId && productSellerId.toString() === currentUser.id;
+  const isWishlisted = wishlistData?.wishlist?.some((w: any) => w.product?._id === product?._id);
+
   const handleAddToCart = async () => {
     if (!product) return;
+
+    if (isOwner) {
+      showToast("Sellers cannot add their own products to the cart.", "error");
+      return;
+    }
+
     setAddingToCart(true);
 
     if (!isAuthenticated) {
@@ -100,10 +138,25 @@ export default function ProductDetailsBySlugPage() {
         variantSku: selectedVariant ? selectedVariant.sku : undefined,
       }).unwrap();
       showToast("Item added to your shopping bag.", "success");
-    } catch (err) {
-      showToast("Failed to add item to bag.", "error");
+    } catch (err: any) {
+      showToast(err.data?.message || "Failed to add item to bag.", "error");
     } finally {
       setAddingToCart(false);
+    }
+  };
+
+  const handleWishlistToggle = async () => {
+    if (!product) return;
+    if (!isAuthenticated) {
+      showToast("Please log in to add items to your wishlist.", "error");
+      return;
+    }
+    try {
+      const res = await toggleWishlist(product._id).unwrap();
+      showToast(res.message, "success");
+      refetchWishlist();
+    } catch (err) {
+      showToast("Failed to update wishlist.", "error");
     }
   };
 
@@ -118,6 +171,7 @@ export default function ProductDetailsBySlugPage() {
       }).unwrap();
       setReviewComment("");
       refetchReviews();
+      refetchProduct();
       showToast("Thank you! Your review has been submitted.", "success");
     } catch (err: any) {
       showToast(err.data?.message || "Failed to submit review.", "error");
@@ -215,7 +269,11 @@ export default function ProductDetailsBySlugPage() {
           
           {/* LEFT COLUMN: INTERACTIVE IMAGES GALLERY */}
           <div className="flex flex-col gap-5">
-            <div className="relative aspect-square overflow-hidden rounded-[32px] border border-card-border bg-card-bg group">
+            <div 
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              className="relative aspect-square overflow-hidden rounded-[32px] border border-card-border bg-card-bg group cursor-zoom-in"
+            >
               {discountPercent > 0 && (
                 <div className="absolute left-6 top-6 z-10 rounded-full bg-error px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg">
                   Save {discountPercent}%
@@ -231,7 +289,8 @@ export default function ProductDetailsBySlugPage() {
                   transition={{ duration: 0.4 }}
                   src={product.images?.[selectedImage]?.url || "https://placehold.co/800x800"}
                   alt={product.title}
-                  className="h-full w-full object-cover transition-all duration-700 group-hover:scale-105"
+                  style={zoomStyle}
+                  className="h-full w-full object-cover transition-transform duration-100 ease-out"
                 />
               </AnimatePresence>
             </div>
@@ -337,23 +396,49 @@ export default function ProductDetailsBySlugPage() {
 
             {/* Shopping Bag Button */}
             <div className="flex flex-col gap-4 mt-8">
-              <button
-                onClick={handleAddToCart}
-                disabled={addingToCart || product.stock === 0}
-                className="w-full h-14 rounded-full bg-foreground text-background hover:bg-gold hover:text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-black/5 uppercase tracking-widest text-xs font-semibold disabled:opacity-50 cursor-pointer hover:-translate-y-0.5"
-              >
-                {addingToCart ? (
-                  "Reserving Allocation..."
-                ) : product.stock === 0 ? (
-                  "Allocation Closed"
-                ) : (
-                  <>
-                    <ShoppingBag className="h-4 w-4" /> Add To Shopping Bag
-                  </>
-                )}
-              </button>
+              {isOwner && (
+                <div className="flex items-start gap-3 rounded-2xl bg-gold/5 border border-gold/15 p-4 text-xs text-gold/90 mb-2">
+                  <Lock className="h-4.5 w-4.5 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block uppercase tracking-wider text-[9px] mb-1">Owner Account</span>
+                    This is your product. Cart and checkout purchase operations are restricted for self-owned inventory.
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-4 items-center">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={addingToCart || product.stock === 0 || isOwner}
+                  className="flex-grow h-14 rounded-full bg-foreground text-background hover:bg-gold hover:text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-black/5 uppercase tracking-widest text-xs font-semibold disabled:opacity-50 cursor-pointer hover:-translate-y-0.5"
+                >
+                  {addingToCart ? (
+                    "Reserving Allocation..."
+                  ) : product.stock === 0 ? (
+                    "Allocation Closed"
+                  ) : isOwner ? (
+                    "Self-Owned Product"
+                  ) : (
+                    <>
+                      <ShoppingBag className="h-4 w-4" /> Add To Shopping Bag
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleWishlistToggle}
+                  className={`h-14 w-14 rounded-full border flex items-center justify-center transition-all shadow-md cursor-pointer shrink-0 ${
+                    isWishlisted 
+                      ? "border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10" 
+                      : "border-card-border hover:border-gold/60 text-muted hover:text-gold"
+                  }`}
+                  title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+                >
+                  <Heart className={`h-5 w-5 ${isWishlisted ? "fill-destructive" : ""}`} />
+                </button>
+              </div>
               
-              <div className="flex items-center justify-center gap-6 text-[10px] text-muted uppercase tracking-wider font-semibold">
+              <div className="flex items-center justify-center gap-6 text-[10px] text-muted uppercase tracking-wider font-semibold mt-2">
                 <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-gold" /> Encrypted Checkout</span>
                 <span className="text-card-border">|</span>
                 <span className="flex items-center gap-1.5"><Award className="h-4 w-4 text-gold" /> Atelier Authenticated</span>

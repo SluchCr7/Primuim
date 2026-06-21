@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { useToast } from "../components/Toast";
 import { useAppSelector } from "../../lib/store";
 import {
   useGetCartQuery,
@@ -13,6 +14,7 @@ import {
   useSavePaymentMethodMutation,
   useCreateOrderMutation,
   useCreatePaymentMutation,
+  useStartCheckoutMutation,
 } from "../../lib/api";
 import {
   CreditCard,
@@ -31,13 +33,10 @@ import {
 export default function CheckoutPage() {
   const router = useRouter();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { showToast } = useToast();
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/login?redirect=checkout");
-    }
-  }, [isAuthenticated, router]);
+  const [startCheckout] = useStartCheckoutMutation();
+  const [hasStartedCheckout, setHasStartedCheckout] = useState(false);
 
   // Stepper State: "shipping" | "payment" | "processing" | "confirm"
   const [step, setStep] = useState<"shipping" | "payment" | "processing" | "confirm">("shipping");
@@ -83,6 +82,37 @@ export default function CheckoutPage() {
   const [createOrder, { isLoading: isCreatingOrder }] = useCreateOrderMutation();
   const [createPayment] = useCreatePaymentMutation();
 
+  // Start checkout session on load
+  useEffect(() => {
+    if (isAuthenticated && !hasStartedCheckout) {
+      setHasStartedCheckout(true);
+      startCheckout(undefined)
+        .unwrap()
+        .catch((err: any) => {
+          showToast(err.data?.message || "Failed to initialize checkout session", "error");
+        });
+    }
+  }, [isAuthenticated, startCheckout, showToast, hasStartedCheckout]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push("/login?redirect=checkout");
+    }
+  }, [isAuthenticated, router]);
+
+  // Redirect if cart is empty
+  useEffect(() => {
+    if (
+      (step === "shipping" || step === "payment") &&
+      cartData &&
+      (!cartData.cart || cartData.cart.items.length === 0)
+    ) {
+      showToast("Your cart is empty. Please add items before checking out.", "info");
+      router.push("/cart");
+    }
+  }, [cartData, step, router, showToast]);
+
   // Load saved user address if available
   useEffect(() => {
     if (userData?.user?.addresses && userData.user.addresses.length > 0) {
@@ -114,7 +144,7 @@ export default function CheckoutPage() {
   const handleProceedToPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !phone || !city || !street) {
-      alert("Please fill in all address details.");
+      showToast("Please fill in all address details.", "error");
       return;
     }
 
@@ -126,8 +156,8 @@ export default function CheckoutPage() {
       }).unwrap();
 
       setStep("payment");
-    } catch (err) {
-      alert("Failed to save shipping information.");
+    } catch (err: any) {
+      showToast(err.data?.message || "Failed to save shipping information.", "error");
     }
   };
 
@@ -135,7 +165,7 @@ export default function CheckoutPage() {
     if (paymentMethod === "vodafone_cash" && !isWalletModalOpen && !paymentResponse) {
       // Prompt wallet verification modal first
       if (!walletNumber) {
-        alert("Please enter your Vodafone Cash wallet number.");
+        showToast("Please enter your Vodafone Cash wallet number.", "error");
         return;
       }
       setIsWalletModalOpen(true);
@@ -187,14 +217,14 @@ export default function CheckoutPage() {
 
       setStep("confirm");
     } catch (err: any) {
-      alert(err.message || "Checkout failed. Please try again.");
+      showToast(err.data?.message || err.message || "Checkout failed. Please try again.", "error");
       setStep("payment");
     }
   };
 
   const handleWalletSubmit = () => {
     if (!walletOtp || !walletPin) {
-      alert("Please fill in OTP and wallet PIN.");
+      showToast("Please fill in OTP and wallet PIN.", "error");
       return;
     }
     setIsWalletModalOpen(false);

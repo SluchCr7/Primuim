@@ -187,6 +187,15 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    salesCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    isBestSeller: {
+      type: Boolean,
+      default: false,
+    },
     isPublished: {
       type: Boolean,
       default: true,
@@ -261,6 +270,7 @@ productSchema.index({
   createdAt: -1,
 });
 
+productSchema.index({ isBestSeller: 1, isDeleted: 1, isPublished: 1 });
 productSchema.index({ isDeleted: 1, isPublished: 1, category: 1, createdAt: -1 });
 productSchema.index({ seller: 1, isDeleted: 1, createdAt: -1 });
 

@@ -1,6 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const Cart = require("../models/Cart");
 const { Product } = require("../models/Product");
+const CheckoutSession = require("../models/CheckoutSession");
 
 // Local shipping options definition
 const shippingOptions = [
@@ -8,9 +9,6 @@ const shippingOptions = [
   { id: "exp", name: "Express Shipping", cost: 150, days: "1-2 business days" },
   { id: "free", name: "Free Shipping", cost: 0, days: "5-7 business days", minAmount: 1000 }
 ];
-
-// Mock database to hold active checkout sessions (simulates Redis session cache)
-const checkoutSessions = new Map();
 
 // ========================================
 // @desc    Start Checkout Session
@@ -54,15 +52,19 @@ const startCheckout = asyncHandler(async (req, res) => {
     discountAmount: 0,
     total: cart.totalPrice,
     step: "shipping",
-    createdAt: Date.now()
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000)
   };
 
-  checkoutSessions.set(req.user.id, sessionData);
+  const session = await CheckoutSession.findOneAndUpdate(
+    { userId: req.user.id },
+    sessionData,
+    { upsert: true, new: true }
+  );
 
   res.status(200).json({
     success: true,
     message: "Checkout started successfully",
-    checkoutSession: sessionData
+    checkoutSession: session
   });
 });
 
@@ -106,7 +108,7 @@ const validateAddress = asyncHandler(async (req, res) => {
 // ========================================
 const saveShipping = asyncHandler(async (req, res) => {
   const { shippingAddress, shippingMethodId } = req.body;
-  const session = checkoutSessions.get(req.user.id);
+  const session = await CheckoutSession.findOne({ userId: req.user.id });
 
   if (!session) {
     return res.status(400).json({ success: false, message: "No active checkout session found" });
@@ -131,7 +133,7 @@ const saveShipping = asyncHandler(async (req, res) => {
   session.total = session.subtotal + shippingCost + session.taxCost - session.discountAmount;
   session.step = "payment";
 
-  checkoutSessions.set(req.user.id, session);
+  await session.save();
 
   res.status(200).json({
     success: true,
@@ -148,7 +150,7 @@ const saveShipping = asyncHandler(async (req, res) => {
 // ========================================
 const savePayment = asyncHandler(async (req, res) => {
   const { paymentMethod } = req.body;
-  const session = checkoutSessions.get(req.user.id);
+  const session = await CheckoutSession.findOne({ userId: req.user.id });
 
   if (!session) {
     return res.status(400).json({ success: false, message: "No active checkout session found" });
@@ -162,7 +164,7 @@ const savePayment = asyncHandler(async (req, res) => {
   session.paymentMethod = paymentMethod;
   session.step = "confirm";
 
-  checkoutSessions.set(req.user.id, session);
+  await session.save();
 
   res.status(200).json({
     success: true,
@@ -177,7 +179,7 @@ const savePayment = asyncHandler(async (req, res) => {
 // @access  Private
 // ========================================
 const getCheckoutState = asyncHandler(async (req, res) => {
-  const session = checkoutSessions.get(req.user.id);
+  const session = await CheckoutSession.findOne({ userId: req.user.id });
   
   if (!session) {
     return res.status(404).json({ success: false, message: "No active checkout session found" });

@@ -9,7 +9,8 @@ const {
   updateSellerOrderStatus,
   requestPayout,
   getPublicStoreBySlug,
-  getApprovedSellers
+  getApprovedSellers,
+  updateSellerStoreProfile
 } = require("../Controllers/SellerController");
 
 const { verifyToken, verifySeller } = require("../Middelwares/verifyToken");
@@ -28,5 +29,6 @@ router.get("/stats", verifySeller, getSellerStats);
 router.get("/orders", verifySeller, getSellerOrders);
 router.patch("/orders/:orderId", verifySeller, updateSellerOrderStatus);
 router.post("/payout", verifySeller, requestPayout);
+router.put("/profile", verifySeller, updateSellerStoreProfile);
 
 module.exports = router;

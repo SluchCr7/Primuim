@@ -1,6 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const AnalyticsEvent = require("../models/AnalyticsEvent");
-const { Order } = require("../models/Order");
+const Order = require("../models/Order");
 const { User } = require("../models/User");
 const { Product } = require("../models/Product");
 const Payment = require("../models/Payment");

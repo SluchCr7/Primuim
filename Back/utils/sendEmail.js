@@ -2,6 +2,17 @@ const nodemailer = require('nodemailer');
 
 const sendEmail = async (useremail, subject, htmlTemplet) => {
   try {
+    let toEmail = useremail;
+    let emailSubject = subject;
+    let emailHtml = htmlTemplet;
+
+    // Support object parameter format: { email, subject, html }
+    if (typeof useremail === "object" && useremail !== null) {
+      toEmail = useremail.email || useremail.useremail || useremail.to;
+      emailSubject = useremail.subject;
+      emailHtml = useremail.html || useremail.htmlTemplet;
+    }
+
     const user = (process.env.EMAIL_NAME || process.env.EMAIL_USER || '').trim();
     const pass = (process.env.EMAIL_APP_PASS || process.env.EMAIL_PASSWORD || '').trim();
     const from = (process.env.EMAIL_FROM || user).trim();
@@ -34,9 +45,9 @@ const sendEmail = async (useremail, subject, htmlTemplet) => {
 
     await transporter.sendMail({
       from,
-      to: useremail,
-      subject,
-      html: htmlTemplet
+      to: toEmail,
+      subject: emailSubject,
+      html: emailHtml
     });
   } catch (error) {
     console.error('Nodemailer Error:', error);

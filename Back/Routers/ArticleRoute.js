@@ -13,12 +13,14 @@ const {
     commentArticle,
     deleteComment,
     getPendingArticles,
+    getAdminArticles,
     moderateArticle,
     getArticleAnalyticsDashboard,
     getSingleArticleAnalytics
 } = require("../Controllers/ArticleController");
 
 const { verifyToken, verifySeller, verifyAdmin } = require("../Middelwares/verifyToken");
+const photoUpload = require("../Middelwares/UploadPhoto");
 
 // Public routes
 router.get("/", getArticles);
@@ -38,11 +40,12 @@ router.post("/:id/duplicate", verifySeller, duplicateArticle);
 
 // Admin moderation routes
 router.get("/admin/pending", verifyAdmin, getPendingArticles);
+router.get("/admin/all", verifyAdmin, getAdminArticles);
 router.patch("/:id/moderate", verifyAdmin, moderateArticle);
 
 // General writing/management routes
-router.post("/", verifySeller, createArticle);
-router.put("/:id", verifySeller, updateArticle);
+router.post("/", verifySeller, photoUpload.single("image"), createArticle);
+router.put("/:id", verifySeller, photoUpload.single("image"), updateArticle);
 router.delete("/:id", verifySeller, deleteArticle);
 
 module.exports = router;

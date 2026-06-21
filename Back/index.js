@@ -110,7 +110,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/checkout", checkoutRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/analytics", analyticsRoutes);
-app.use("/api/article" , require("./Routers/ArticleRoute"));
+app.use("/api/articles" , require("./Routers/ArticleRoute"));
 app.use("/api/sellers", require("./Routers/sellerRoutes"));
 app.use("/api/superadmin", require("./Routers/superAdminRoutes"));
 app.use(notfound);

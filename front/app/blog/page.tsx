@@ -75,13 +75,13 @@ export default function BlogListingPage() {
           <div className="flex justify-center items-center py-24">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
           </div>
-        ) : !data?.articles || data.articles.length === 0 ? (
+        ) : !data?.data || data.data.length === 0 ? (
           <div className="text-center py-20 border border-dashed border-card-border rounded-lg text-muted text-sm font-light">
             No editorial reads matched your search.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            {data.articles.map((post: any) => (
+            {data.data.map((post: any) => (
               <div key={post._id} className="group flex flex-col luxury-card overflow-hidden hover:scale-[1.01] transition-all duration-300 bg-card-bg border border-card-border rounded-lg">
                 <div className="relative h-[250px] overflow-hidden bg-muted-light">
                   <img

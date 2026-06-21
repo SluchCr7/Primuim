@@ -11,6 +11,7 @@ import {
   useGetCategoriesQuery,
   useGetSearchSuggestionsQuery,
   useLogoutMutation,
+  useGetWishlistQuery,
 } from "../../lib/api";
 import {
   ShoppingBag,
@@ -25,7 +26,8 @@ import {
   X,
   BookOpen,
   Info,
-  ArrowRight
+  ArrowRight,
+  Heart
 } from "lucide-react";
 
 import { getGuestCartTotals } from "../../lib/cartUtils";
@@ -37,6 +39,7 @@ export const Header: React.FC = () => {
   
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
   const { data: cartData } = useGetCartQuery(undefined, { skip: !isAuthenticated });
+  const { data: wishlistData } = useGetWishlistQuery(undefined, { skip: !isAuthenticated });
   
   // جلب التصنيفات كـ Tree شجرية مجهزة من الـ Backend
   const { data: categoriesData } = useGetCategoriesQuery({ tree: true });
@@ -115,17 +118,18 @@ export const Header: React.FC = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-card-border/50 bg-background/70 backdrop-blur-md transition-all duration-300">
       
-      {/* 1. TOP ANNOUNCEMENT BAR
+      {/* 1. TOP ANNOUNCEMENT BAR */}
       <div className="w-full bg-foreground text-background py-2 px-4 text-center text-xs font-medium tracking-wider uppercase select-none flex items-center justify-center gap-2">
         <span>✨ Free worldwide shipping on luxury orders over $150</span>
         <ArrowRight className="h-3 w-3 inline" />
-      </div> */}
+      </div>
 
       {/* 2. MAIN HEADER BAR */}
       <div className="mx-auto flex h-20 max-w-9xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
         
         {/* LOGO */}
-        <LinkNext href="/" className="flex items-center gap-2 shrink-0">
+        <LinkNext href="/" className="flex items-center gap-2.5 shrink-0">
+          <img src="/luxury_store_logo.png" alt="PREMIUM Logo" className="h-8 w-8 object-contain rounded-md border border-gold/30" />
           <span className="font-serif text-2xl sm:text-3xl font-black tracking-[0.25em] text-gold hover:opacity-90 transition-opacity">
             PREMIUM
           </span>
@@ -210,6 +214,20 @@ export const Header: React.FC = () => {
             )}
           </button>
             
+          {/* WISHLIST */}
+          <LinkNext
+            href="/wishlist"
+            className="relative rounded-full p-2.5 text-foreground hover:bg-foreground/5 transition-all mr-1"
+            aria-label="Wishlist"
+          >
+            <Heart className="h-5 w-5 text-foreground hover:text-gold transition-colors" />
+            {isAuthenticated && wishlistData?.wishlist && wishlistData.wishlist.length > 0 && (
+              <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-gold text-[9px] font-black text-white ring-2 ring-background animate-pulse">
+                {wishlistData.wishlist.length}
+              </span>
+            )}
+          </LinkNext>
+
           {/* SHOPPING CART */}
           <LinkNext
             href="/cart"
@@ -306,6 +324,9 @@ export const Header: React.FC = () => {
             <LinkNext href="/products" className="text-foreground hover:text-gold transition-colors font-bold relative h-full flex items-center">
               All Collections
             </LinkNext>
+            <LinkNext href="/stores" className="text-foreground hover:text-gold transition-colors font-bold relative h-full flex items-center">
+              Flagship Stores
+            </LinkNext>
             
             {categoriesData?.categories &&
               categoriesData.categories.map((cat: any) => (
@@ -397,8 +418,11 @@ export const Header: React.FC = () => {
                   <LinkNext href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-background border border-card-border text-xs font-semibold hover:text-gold">
                     <User className="h-4 w-4 text-gold" /> Dashboard
                   </LinkNext>
+                  <LinkNext href="/wishlist" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-background border border-card-border text-xs font-semibold hover:text-gold">
+                    <Heart className="h-4 w-4 text-gold" /> Wishlist
+                  </LinkNext>
                   {user?.role === "admin" && (
-                    <LinkNext href="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gold/10 text-xs font-bold text-gold">
+                    <LinkNext href="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gold/10 text-xs font-bold text-gold col-span-2">
                       <Sliders className="h-4 w-4" /> Admin
                     </LinkNext>
                   )}
@@ -428,6 +452,13 @@ export const Header: React.FC = () => {
                 className="p-3.5 rounded-xl bg-card-bg/40 border border-card-border text-sm font-bold hover:border-gold transition-all"
               >
                 All Products
+              </LinkNext>
+              <LinkNext 
+                href="/stores" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-3.5 rounded-xl bg-card-bg/40 border border-card-border text-sm font-bold hover:border-gold transition-all"
+              >
+                Flagship Stores
               </LinkNext>
               {categoriesData?.categories &&
                 categoriesData.categories.map((cat: any) => (

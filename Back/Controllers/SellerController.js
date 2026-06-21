@@ -1,7 +1,7 @@
 const SellerRequest = require("../models/SellerRequest");
 const { Product } = require("../models/Product");
-const { Order } = require("../models/Order");
-const { User } = require("../models/User");
+const Order = require("../models/Order");
+const { User, validateUpdateStoreProfile } = require("../models/User");
 const Notification = require("../models/Notification");
 const asyncHandler = require("express-async-handler");
 
@@ -177,7 +177,7 @@ const updateSellerOrderStatus = asyncHandler(async (req, res) => {
     });
   }
 
-  const order = await Order.findById(orderId);
+  const order = await Order.findById(orderId).populate("user", "username email");
 
   if (!order) {
     return res.status(404).json({
@@ -217,6 +217,13 @@ const updateSellerOrderStatus = asyncHandler(async (req, res) => {
     for (const item of order.orderItems) {
       const prod = await Product.findById(item.product);
       if (prod && prod.seller) {
+        // Increment sales count and promote to best seller if threshold met
+        prod.salesCount = (prod.salesCount || 0) + item.quantity;
+        if (prod.salesCount >= 50) {
+          prod.isBestSeller = true;
+        }
+        await prod.save();
+
         const sellerUser = await User.findById(prod.seller);
         if (sellerUser) {
           const creditAmount = item.price * item.quantity;
@@ -242,6 +249,30 @@ const updateSellerOrderStatus = asyncHandler(async (req, res) => {
   }
 
   await order.save();
+
+  // Send status update email asynchronously
+  try {
+    if (order.user && order.user.email) {
+      const sendEmail = require("../utils/sendEmail");
+      await sendEmail({
+        email: order.user.email,
+        subject: `Order Update: #${order._id.toString().substring(18).toUpperCase()} is now ${status.toUpperCase()} - Shop Premium`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <h2 style="font-family: serif; color: #c5a880;">Your Order Status Has Been Updated</h2>
+            <p>Hi ${order.user.username},</p>
+            <p>Your order <strong>#${order._id.toString().substring(18).toUpperCase()}</strong> has been updated to <strong>${status.toUpperCase()}</strong>.</p>
+            <p>You can track your order history and details by logging into your account cabinet.</p>
+            
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+            <p style="font-size: 12px; color: #718096; text-align: center;">Shop Premium - 123 Luxury Avenue, Cairo, Egypt</p>
+          </div>
+        `
+      });
+    }
+  } catch (emailErr) {
+    console.error("Order status update email failed:", emailErr.message);
+  }
 
   res.status(200).json({
     success: true,
@@ -373,6 +404,15 @@ const getApprovedSellers = asyncHandler(async (req, res) => {
     sellerStatus: "approved"
   };
 
+  if (req.query.category) {
+    const sellerIds = await Product.find({
+      category: req.query.category,
+      isDeleted: false,
+      isPublished: true
+    }).distinct("seller");
+    filter._id = { $in: sellerIds };
+  }
+
   if (req.query.search) {
     const searchTerm = req.query.search.trim();
     filter.$or = [
@@ -428,6 +468,63 @@ const getApprovedSellers = asyncHandler(async (req, res) => {
   });
 });
 
+// ========================================
+// UPDATE SELLER STORE PROFILE (Seller only)
+// ========================================
+const updateSellerStoreProfile = asyncHandler(async (req, res) => {
+  const { error } = validateUpdateStoreProfile(req.body);
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.details[0].message
+    });
+  }
+
+  const seller = await User.findById(req.user.id);
+  if (!seller || seller.role !== "seller") {
+    return res.status(404).json({
+      success: false,
+      message: "Seller profile not found"
+    });
+  }
+
+  const fieldsToUpdate = [
+    "storeName",
+    "brandName",
+    "storeDescription",
+    "storeLogo",
+    "storeCover",
+    "country",
+    "responseTime"
+  ];
+
+  fieldsToUpdate.forEach(field => {
+    if (req.body[field] !== undefined) {
+      seller[field] = req.body[field];
+    }
+  });
+
+  await seller.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Store settings updated successfully",
+    seller: {
+      id: seller._id,
+      storeName: seller.storeName,
+      brandName: seller.brandName,
+      storeSlug: seller.storeSlug,
+      storeLogo: seller.storeLogo,
+      storeCover: seller.storeCover,
+      storeDescription: seller.storeDescription,
+      country: seller.country,
+      responseTime: seller.responseTime,
+      storeRating: seller.storeRating,
+      totalSales: seller.totalSales
+    }
+  });
+});
+
 module.exports = {
   applyAsSeller,
   getMyApplicationStatus,
@@ -436,6 +533,7 @@ module.exports = {
   updateSellerOrderStatus,
   requestPayout,
   getPublicStoreBySlug,
-  getApprovedSellers
+  getApprovedSellers,
+  updateSellerStoreProfile
 };
 

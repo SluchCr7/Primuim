@@ -1,23 +1,59 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
+import { setCredentials, logOut } from "./authSlice";
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
+const baseQuery = fetchBaseQuery({
+  baseUrl: API_BASE_URL,
+  prepareHeaders: (headers, { getState }) => {
+    // Access token can be read from the local state
+    const state = getState() as { auth: { accessToken: string | null } };
+    const token = state.auth.accessToken;
+    if (token) {
+      headers.set("authorization", `Bearer ${token}`);
+    }
+    return headers;
+  },
+  // Crucial for cookie transmission
+  credentials: "include",
+});
+
+const baseQueryWithReauth: BaseQueryFn<
+  string | FetchArgs,
+  unknown,
+  FetchBaseQueryError
+> = async (args, api, extraOptions) => {
+  let result = await baseQuery(args, api, extraOptions);
+
+  if (result.error && result.error.status === 401) {
+    // try to get a new token
+    const refreshResult = await baseQuery(
+      { url: "/auth/refresh", method: "POST" },
+      api,
+      extraOptions
+    );
+
+    if (refreshResult.data) {
+      const data = refreshResult.data as { accessToken: string };
+      // store the new token in store
+      const state = api.getState() as { auth: { user: any } };
+      const user = state.auth.user;
+      
+      api.dispatch(setCredentials({ user, accessToken: data.accessToken }));
+      
+      // retry the initial query
+      result = await baseQuery(args, api, extraOptions);
+    } else {
+      api.dispatch(logOut());
+    }
+  }
+
+  return result;
+};
+
 export const ecommerceApi = createApi({
   reducerPath: "ecommerceApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: API_BASE_URL,
-    prepareHeaders: (headers, { getState }) => {
-      // Access token can be read from the local state
-      const state = getState() as { auth: { accessToken: string | null } };
-      const token = state.auth.accessToken;
-      if (token) {
-        headers.set("authorization", `Bearer ${token}`);
-      }
-      return headers;
-    },
-    // Crucial for cookie transmission
-    credentials: "include",
-  }),
+  baseQuery: baseQueryWithReauth,
   tagTypes: ["User", "Product", "Category", "Cart", "Checkout", "Order", "Review", "Payment", "Coupon", "Article", "SellerRequest"],
   endpoints: (builder) => ({
     // --- AUTHENTICATION ---
@@ -458,6 +494,10 @@ export const ecommerceApi = createApi({
       query: () => "/articles/admin/all",
       providesTags: ["Article"],
     }),
+    getMyArticles: builder.query({
+      query: () => "/articles/mine",
+      providesTags: ["Article"],
+    }),
     createArticle: builder.mutation({
       query: (formData) => ({
         url: "/articles",
@@ -538,6 +578,14 @@ export const ecommerceApi = createApi({
         url: "/sellers/payout",
         method: "POST",
         body: { amount },
+      }),
+      invalidatesTags: ["User"],
+    }),
+    updateSellerStoreProfile: builder.mutation({
+      query: (storeData) => ({
+        url: "/sellers/profile",
+        method: "PUT",
+        body: storeData,
       }),
       invalidatesTags: ["User"],
     }),
@@ -698,6 +746,7 @@ export const {
   useGetArticlesQuery,
   useGetArticleBySlugQuery,
   useGetAdminArticlesQuery,
+  useGetMyArticlesQuery,
   useCreateArticleMutation,
   useUpdateArticleMutation,
   useDeleteArticleMutation,
@@ -711,6 +760,7 @@ export const {
   useGetSellerOrdersQuery,
   useUpdateSellerOrderStatusMutation,
   useRequestPayoutMutation,
+  useUpdateSellerStoreProfileMutation,
   useGetMyProductsQuery,
   useCreateProductMutation,
   useUpdateProductMutation,

@@ -1,6 +1,9 @@
 const asyncHandler = require("express-async-handler");
 const { Review, validateCreateReview, validateUpdateReview } = require("../models/Review");
-const { Order } = require("../models/Order");
+const Order  = require("../models/Order");
+const { Product } = require("../models/Product");
+const {User} = require("../models/User");
+
 
 // ========================================
 // @desc    Get Product Reviews (Approved only)
@@ -27,6 +30,7 @@ const getProductReviews = asyncHandler(async (req, res) => {
 // @access  Private
 // ========================================
 const createReview = asyncHandler(async (req, res) => {
+  req.body.user = req.user.id;
   const { error } = validateCreateReview(req.body);
   if (error) {
     return res.status(400).json({ success: false, message: error.details[0].message });
@@ -50,6 +54,13 @@ const createReview = asyncHandler(async (req, res) => {
 
   const isVerifiedPurchase = !!deliveredOrder;
 
+  if (!isVerifiedPurchase) {
+    return res.status(400).json({
+      success: false,
+      message: "Verified purchase reviews only. You can only review products you have purchased and had delivered."
+    });
+  }
+
   const review = await Review.create({
     user: userId,
     product,
@@ -57,7 +68,7 @@ const createReview = asyncHandler(async (req, res) => {
     comment,
     images: images || [],
     videos: videos || [],
-    isVerifiedPurchase,
+    isVerifiedPurchase: true,
     isApproved: true // approved by default, moderation can reject
   });
 

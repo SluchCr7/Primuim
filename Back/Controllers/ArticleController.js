@@ -434,6 +434,23 @@ const getPendingArticles = asyncHandler(async (req, res) => {
 });
 
 // ========================================
+// @desc    Get all articles (Admin only)
+// @route   GET /api/articles/admin/all
+// @access  Private (Admin only)
+// ========================================
+const getAdminArticles = asyncHandler(async (req, res) => {
+  const articles = await Article.find({ status: { $ne: "deleted" } })
+    .populate("author", "storeName username email")
+    .sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    count: articles.length,
+    articles
+  });
+});
+
+// ========================================
 // @desc    Moderate article (Approve / Reject / Archive / Feature)
 // @route   PATCH /api/articles/admin/:id/moderate
 // @access  Private (Admin only)
@@ -623,6 +640,7 @@ module.exports = {
   commentArticle,
   deleteComment,
   getPendingArticles,
+  getAdminArticles,
   moderateArticle,
   getArticleAnalyticsDashboard,
   getSingleArticleAnalytics

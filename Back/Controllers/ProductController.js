@@ -552,6 +552,45 @@ const getTopRatedProducts = asyncHandler(async (req, res) => {
 
 
 // ========================================
+// BEST SELLERS HOMEPAGE SECTION
+// ========================================
+const getBestSellers = asyncHandler(async (req, res) => {
+    const products = await Product.find({
+        isBestSeller: true,
+        isDeleted: false,
+        isPublished: true
+    })
+    .sort({ salesCount: -1 })
+    .limit(8)
+    .lean();
+
+    res.status(200).json({
+        success: true,
+        products
+    });
+});
+
+
+// ========================================
+// LATEST COLLECTIONS HOMEPAGE SECTION
+// ========================================
+const getLatestCollections = asyncHandler(async (req, res) => {
+    const products = await Product.find({
+        isDeleted: false,
+        isPublished: true
+    })
+    .sort({ createdAt: -1 })
+    .limit(8)
+    .lean();
+
+    res.status(200).json({
+        success: true,
+        products
+    });
+});
+
+
+// ========================================
 // EXPORT
 // ========================================
 const getSearchSuggestions = asyncHandler(async (req, res) => {
@@ -606,6 +645,8 @@ module.exports = {
     getMyProducts,
     getTopSellingProducts,
     getTopRatedProducts,
+    getBestSellers,
+    getLatestCollections,
     getSearchSuggestions,
     getTrendingSearches,
     getProductBySlug

@@ -52,6 +52,13 @@ const addToCart = asyncHandler(async (req, res) => {
         });
     }
 
+    if (product.seller && product.seller.toString() === req.user.id) {
+        return res.status(400).json({
+            success: false,
+            message: "You cannot add your own product to the cart"
+        });
+    }
+
     let cart = await Cart.findOne({ user: req.user.id });
 
     if (!cart) {
@@ -184,6 +191,7 @@ const mergeCart = asyncHandler(async (req, res) => {
 
         const product = await Product.findById(productId);
         if (!product) continue;
+        if (product.seller && product.seller.toString() === req.user.id) continue;
 
         const existingItem = cart.items.find(
             ci => ci.product.toString() === productId

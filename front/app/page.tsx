@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CountUp from "react-countup";
@@ -12,6 +12,8 @@ import {
   useAddToCartMutation,
   useGetApprovedSellersQuery,
   useGetArticlesQuery,
+  useToggleWishlistMutation,
+  useGetWishlistQuery,
 } from "../lib/api";
 import { useAppSelector } from "../lib/store";
 import { useToast } from "./components/Toast";
@@ -35,7 +37,10 @@ import {
   Truck,
   Users,
   Zap,
+  Heart,
+  Lock
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 type StoreProduct = {
   _id: string;
@@ -43,11 +48,13 @@ type StoreProduct = {
   brand?: string;
   slug?: string;
   price: number;
+  comparePrice?: number;
   images?: Array<{ url: string }>;
   ratingAverage?: number;
   sold?: number;
   stock?: number;
   isDigital?: boolean;
+  seller?: any;
 };
 
 type StoreCategory = {
@@ -226,6 +233,33 @@ const faqs = [
   { question: "What makes the homepage different from a basic store front?", answer: "It is built like a real brand landing page: editorial hero, category storytelling, product curation, trust signals, and a conversion-focused CTA flow." },
 ];
 
+const heroSlides = [
+  {
+    image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1400&auto=format&fit=crop",
+    tag: "Private Drop",
+    badge: "Limited Availability",
+    title: "The Modern Luxury Capsule",
+    description: "Flagship-grade presentation across every curation. Rebuilt for modern premium standards.",
+    link: "/products"
+  },
+  {
+    image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1400&auto=format&fit=crop",
+    tag: "Designer Edit",
+    badge: "New Collection",
+    title: "Signature Fashion Drops",
+    description: "Statement silhouettes, elevated essentials, and private boutique designs.",
+    link: "/category/signature-fashion"
+  },
+  {
+    image: "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1400&auto=format&fit=crop",
+    tag: "Exclusive Tech",
+    badge: "Pre-order Open",
+    title: "Engineered Horological Devices",
+    description: "Tactile gear, vintage restorations, and beautifully engineered items for premium setups.",
+    link: "/category/modern-tech"
+  }
+];
+
 const formatPrice = (value: number | string | undefined) => {
   const amount = Number(value) || 0;
   return new Intl.NumberFormat("en-EG", { maximumFractionDigits: 0 }).format(amount);
@@ -238,6 +272,43 @@ export default function Home() {
   const [addingId, setAddingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
+  
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [timeLeft, setTimeLeft] = useState({ hours: 4, minutes: 24, seconds: 55 });
+  const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
+
+  // Hero Autoplay
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Flash Sale Countdown Timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+        if (prev.hours > 0) return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        return { hours: 0, minutes: 0, seconds: 0 };
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Load recently viewed IDs from local storage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("recently_viewed");
+      if (stored) {
+        setRecentlyViewedIds(JSON.parse(stored).slice(0, 4));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
 
   // Fetch real data
   const { data: trendingData, isLoading: trendingLoading } = useGetProductsQuery({ limit: 4, sort: "sold" });
@@ -245,31 +316,37 @@ export default function Home() {
   const { data: categoriesData } = useGetCategoriesQuery(undefined);
   const { data: sellersData, isLoading: sellersLoading } = useGetApprovedSellersQuery({ limit: 3, sort: "rating" });
   const { data: articlesData, isLoading: articlesLoading } = useGetArticlesQuery({ limit: 3 });
+  const { data: allProductsQueryData } = useGetProductsQuery({ limit: 20 });
   const [addToCart] = useAddToCartMutation();
 
-  const trendingList = (trendingData?.products && trendingData.products.length > 0 ? trendingData.products.slice(0, 4) : fallbackProducts) as StoreProduct[];
-  const newArrivalsList = (newArrivalsData?.products && newArrivalsData.products.length > 0 ? newArrivalsData.products.slice(0, 4) : fallbackProducts) as StoreProduct[];
-  const categoriesList = (categoriesData?.categories && categoriesData.categories.length > 0 ? categoriesData.categories : fallbackCategories) as StoreCategory[];
-  const sellersList = sellersData?.sellers || [];
-  const articlesList = articlesData?.articles || [];
+  const { data: wishlistData, refetch: refetchWishlist } = useGetWishlistQuery(undefined, { skip: !isAuthenticated });
+  const [toggleWishlist] = useToggleWishlistMutation();
+  const { user: currentUser } = useAppSelector((state) => state.auth);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+  const handleWishlistToggle = async (productId: string) => {
+    if (!isAuthenticated) {
+      showToast("Please log in to add items to your wishlist.", "error");
+      return;
     }
-  };
-
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email.trim()) {
-      showToast("Thank you for subscribing to our newsletter!", "success");
-      setEmail("");
+    try {
+      const res = await toggleWishlist(productId).unwrap();
+      showToast(res.message, "success");
+      refetchWishlist();
+    } catch (err) {
+      showToast("Failed to update wishlist.", "error");
     }
   };
 
   const handleQuickAdd = async (product: StoreProduct) => {
     if (!product) return;
+
+    // Self-purchase blocker check
+    const productSellerId = product.seller?._id || product.seller;
+    if (currentUser && productSellerId && productSellerId.toString() === currentUser.id) {
+      showToast("Sellers cannot add their own products to the cart.", "error");
+      return;
+    }
+
     setAddingId(product._id);
 
     if (!isAuthenticated) {
@@ -289,6 +366,44 @@ export default function Home() {
 
     setAddingId(null);
   };
+
+  const allProductsList = allProductsQueryData?.products || [];
+
+  // Filter out deals (comparePrice > price)
+  const discountedProductsList = allProductsList.filter((p: any) => p.comparePrice && p.comparePrice > p.price).slice(0, 4);
+  const dealsList = (discountedProductsList.length > 0 ? discountedProductsList : fallbackProducts.map((p) => ({
+    ...p,
+    comparePrice: p.price * 1.25,
+  }))) as StoreProduct[];
+
+  // Filter out recently viewed products
+  const recentlyViewedProducts = (allProductsList
+    .filter((p: any) => recentlyViewedIds.includes(p._id))
+    .sort((a: any, b: any) => recentlyViewedIds.indexOf(a._id) - recentlyViewedIds.indexOf(b._id))
+    .slice(0, 4)) as StoreProduct[];
+
+  const trendingList = (trendingData?.products && trendingData.products.length > 0 ? trendingData.products.slice(0, 4) : fallbackProducts) as StoreProduct[];
+  const newArrivalsList = (newArrivalsData?.products && newArrivalsData.products.length > 0 ? newArrivalsData.products.slice(0, 4) : fallbackProducts) as StoreProduct[];
+  const categoriesList = (categoriesData?.categories && categoriesData.categories.length > 0 ? categoriesData.categories : fallbackCategories) as StoreCategory[];
+  const sellersList = sellersData?.sellers || [];
+  const articlesList = articlesData?.data || [];
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleNewsletterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email.trim()) {
+      showToast("Thank you for subscribing to our newsletter!", "success");
+      setEmail("");
+    }
+  };
+
+
 
   return (
     <div className="min-h-screen flex flex-col overflow-hidden bg-background text-foreground">
@@ -357,50 +472,52 @@ export default function Home() {
                 <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-gold/15 blur-3xl" />
                 <div className="absolute -left-20 bottom-10 h-56 w-56 rounded-full bg-accent/30 blur-3xl" />
 
-                <div className="relative overflow-hidden rounded-[24px] border border-card-border bg-luxury-black">
-                  <img
-                    src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1400&auto=format&fit=crop"
-                    alt="Featured collection showcase"
-                    className="h-[520px] w-full object-cover opacity-85"
-                  />
-
-                  <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/65 via-black/20 to-transparent p-5 text-white">
-                    <div className="flex items-center justify-between text-xs uppercase tracking-[0.28em] text-white/75">
-                      <span>Private drop</span>
-                      <span>Limited availability</span>
-                    </div>
-                  </div>
-
-                  <div className="absolute left-5 right-5 top-24 grid gap-3 sm:left-auto sm:right-5 sm:w-72">
-                    <div className="rounded-2xl border border-white/10 bg-black/45 p-4 text-white backdrop-blur-md">
-                      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-white/70">
-                        <BadgeCheck className="h-4 w-4 text-gold" /> Verified quality
+                <div className="relative overflow-hidden rounded-[24px] border border-card-border bg-luxury-black h-[520px]">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeSlide}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.6 }}
+                      className="absolute inset-0"
+                    >
+                      <img
+                        src={heroSlides[activeSlide].image}
+                        alt={heroSlides[activeSlide].title}
+                        className="h-full w-full object-cover opacity-75"
+                      />
+                      <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/65 via-black/20 to-transparent p-5 text-white z-10">
+                        <div className="flex items-center justify-between text-xs uppercase tracking-[0.28em] text-white/75">
+                          <span>{heroSlides[activeSlide].tag}</span>
+                          <span>{heroSlides[activeSlide].badge}</span>
+                        </div>
                       </div>
-                      <p className="mt-2 font-serif text-xl leading-tight">Flagship-grade presentation across every collection.</p>
-                    </div>
 
-                    <div className="rounded-2xl border border-white/10 bg-black/45 p-4 text-white backdrop-blur-md">
-                      <div className="flex items-center justify-between text-xs uppercase tracking-[0.22em] text-white/70">
-                        <span>Session restore</span>
-                        <span className="text-gold">Stable</span>
+                      <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-black/65 p-5 text-white backdrop-blur-md z-10">
+                        <div className="flex flex-col gap-2">
+                          <div className="text-xs uppercase tracking-[0.28em] text-white/60">Featured collection</div>
+                          <h2 className="font-serif text-2xl">{heroSlides[activeSlide].title}</h2>
+                          <p className="text-xs text-white/80 font-light leading-relaxed">{heroSlides[activeSlide].description}</p>
+                          <Link href={heroSlides[activeSlide].link} className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.25em] text-gold hover:text-gold-hover transition-colors">
+                            View Collection <ArrowRight className="h-3.5 w-3.5" />
+                          </Link>
+                        </div>
                       </div>
-                      <p className="mt-2 text-sm leading-relaxed text-white/85">
-                        Returning visitors are restored automatically after reopen, then synced to the authenticated profile state.
-                      </p>
-                    </div>
-                  </div>
+                    </motion.div>
+                  </AnimatePresence>
 
-                  <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-black/55 p-5 text-white backdrop-blur-md">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                      <div>
-                        <div className="text-xs uppercase tracking-[0.28em] text-white/60">Featured edit</div>
-                        <h2 className="mt-1 font-serif text-2xl">The modern luxury capsule</h2>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-white/80">
-                        <Star className="h-4 w-4 fill-gold text-gold" />
-                        4.9 average from premium buyers
-                      </div>
-                    </div>
+                  {/* Manual Controls */}
+                  <div className="absolute bottom-36 right-5 flex gap-2 z-20">
+                    {heroSlides.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setActiveSlide(idx)}
+                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                          activeSlide === idx ? "w-6 bg-gold" : "w-1.5 bg-white/40"
+                        }`}
+                      />
+                    ))}
                   </div>
                 </div>
               </div>
@@ -486,6 +603,133 @@ export default function Home() {
           </div>
         </section>
 
+        {/* FLASH SALES / BEST DEALS */}
+        <section className="mx-auto max-w-7xl px-6 py-20 border-b border-card-border/50 bg-[radial-gradient(circle_at_bottom_right,_rgba(197,168,128,0.08),_transparent_30%)]">
+          <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-xl">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-error/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-error border border-error/10">
+                <Zap className="h-3 w-3 fill-error" /> Limited Time Event
+              </span>
+              <h2 className="mt-4 font-serif text-4xl font-semibold">Flash Sales & Exquisite Offers</h2>
+              <p className="mt-3 text-sm leading-relaxed text-muted font-light">
+                High-end creations, allocated with temporary private discounts. Price adjustments expire when the timer hits zero.
+              </p>
+            </div>
+
+            {/* Countdown timer */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted mr-2">Time Remaining:</span>
+              <div className="flex items-center gap-2">
+                <div className="flex flex-col items-center justify-center h-12 w-12 rounded-xl bg-luxury-black border border-white/10 text-white shadow-lg">
+                  <span className="text-sm font-bold font-serif">{String(timeLeft.hours).padStart(2, '0')}</span>
+                  <span className="text-[8px] uppercase tracking-wider text-muted">Hrs</span>
+                </div>
+                <span className="font-bold text-gold">:</span>
+                <div className="flex flex-col items-center justify-center h-12 w-12 rounded-xl bg-luxury-black border border-white/10 text-white shadow-lg">
+                  <span className="text-sm font-bold font-serif">{String(timeLeft.minutes).padStart(2, '0')}</span>
+                  <span className="text-[8px] uppercase tracking-wider text-muted">Min</span>
+                </div>
+                <span className="font-bold text-gold">:</span>
+                <div className="flex flex-col items-center justify-center h-12 w-12 rounded-xl bg-luxury-black border border-white/10 text-white shadow-lg">
+                  <span className="text-sm font-bold text-gold animate-pulse font-serif">{String(timeLeft.seconds).padStart(2, '0')}</span>
+                  <span className="text-[8px] uppercase tracking-wider text-muted">Sec</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+            {dealsList.map((product) => {
+              const discountPercent = product.comparePrice ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100) : 25;
+              const stockPercentage = product.stock ? Math.min(Math.max((product.stock / 15) * 100, 10), 100) : 20;
+              return (
+                <article key={product._id} className="group overflow-hidden rounded-[24px] border border-card-border bg-card-bg shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between">
+                  <div className="relative aspect-[1/1.03] overflow-hidden bg-muted-light">
+                    <img
+                      src={product.images?.[0]?.url || "https://placehold.co/800x800"}
+                      alt={product.title}
+                      className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4 text-white z-10">
+                      <span className="rounded-full bg-error px-3 py-1 text-[9px] font-bold uppercase tracking-widest shadow">SAVE {discountPercent}%</span>
+                      
+                      {/* Heart Toggle Overlay */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleWishlistToggle(product._id);
+                        }}
+                        className={`h-7 w-7 rounded-full flex items-center justify-center transition-all bg-black/35 hover:bg-black/60 backdrop-blur-md cursor-pointer ${
+                          wishlistData?.wishlist?.some((w: any) => w.product?._id === product._id)
+                            ? "text-gold"
+                            : "text-white hover:text-gold"
+                        }`}
+                      >
+                        <Heart className={`h-4 w-4 ${wishlistData?.wishlist?.some((w: any) => w.product?._id === product._id) ? "fill-gold" : ""}`} />
+                      </button>
+                    </div>
+
+                    {/* Quick Add Block */}
+                    {(() => {
+                      const productSellerId = product.seller?._id || product.seller;
+                      const isProductOwner = currentUser && productSellerId && productSellerId.toString() === currentUser.id;
+                      if (isProductOwner) {
+                        return (
+                          <div className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider text-gold bg-background/95 shadow-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-full border border-gold/25 select-none z-10">
+                            <Lock className="h-3 w-3" /> Owner Account
+                          </div>
+                        );
+                      }
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAdd(product)}
+                          disabled={addingId === product._id}
+                          className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white/92 text-xs font-semibold uppercase tracking-[0.24em] text-luxury-black opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white disabled:opacity-70 cursor-pointer z-10"
+                        >
+                          {addingId === product._id ? "Adding..." : <><PackageCheck className="h-3.5 w-3.5" /> Claim Offer</>}
+                        </button>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="flex flex-col gap-4 p-5 flex-grow justify-between">
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-gold">{product.brand || "Atelier Paris"}</div>
+                      <Link href={product.slug ? `/product/${product.slug}` : `/products/${product._id}`} className="mt-1 block font-serif text-lg font-semibold leading-snug text-foreground transition-colors hover:text-gold line-clamp-1">
+                        {product.title}
+                      </Link>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      {/* Price section with discount */}
+                      <div className="flex items-baseline gap-2 text-sm border-t border-card-border/40 pt-3">
+                        <span className="font-bold text-gold">EGP {formatPrice(product.price)}</span>
+                        {product.comparePrice && (
+                          <span className="text-xs line-through text-muted font-light">EGP {formatPrice(product.comparePrice)}</span>
+                        )}
+                      </div>
+
+                      {/* Stock availability indicator */}
+                      <div className="flex flex-col gap-1.5 mt-1">
+                        <div className="flex justify-between text-[10px] font-semibold uppercase tracking-wider text-muted">
+                          <span>Stock Remaining</span>
+                          <span className="text-error font-bold">{product.stock || 3} left</span>
+                        </div>
+                        <div className="w-full h-1 bg-card-border rounded-full overflow-hidden">
+                          <div className="h-full bg-error rounded-full" style={{ width: `${stockPercentage}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
         {/* TRENDING PRODUCTS */}
         <section className="mx-auto max-w-7xl px-6 py-20">
           <div className="mb-12 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -524,18 +768,49 @@ export default function Home() {
                       alt={product.title}
                       className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                     />
-                    <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4 text-white">
+                    <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4 text-white z-10">
                       <span className="rounded-full bg-black/45 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] backdrop-blur-md">{product.brand || "Designer edit"}</span>
-                      <span className="rounded-full bg-black/45 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] backdrop-blur-md">{product.sold ? `${product.sold} sold` : "Popular"}</span>
+                      
+                      {/* Heart Toggle Overlay */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleWishlistToggle(product._id);
+                        }}
+                        className={`h-7 w-7 rounded-full flex items-center justify-center transition-all bg-black/35 hover:bg-black/60 backdrop-blur-md cursor-pointer ${
+                          wishlistData?.wishlist?.some((w: any) => w.product?._id === product._id)
+                            ? "text-gold"
+                            : "text-white hover:text-gold"
+                        }`}
+                      >
+                        <Heart className={`h-4 w-4 ${wishlistData?.wishlist?.some((w: any) => w.product?._id === product._id) ? "fill-gold" : ""}`} />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickAdd(product)}
-                      disabled={addingId === product._id}
-                      className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white/92 text-xs font-semibold uppercase tracking-[0.24em] text-luxury-black opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white disabled:opacity-70"
-                    >
-                      {addingId === product._id ? "Adding..." : <><PackageCheck className="h-3.5 w-3.5" /> Quick add</>}
-                    </button>
+
+                    {/* Quick Add Block */}
+                    {(() => {
+                      const productSellerId = product.seller?._id || product.seller;
+                      const isProductOwner = currentUser && productSellerId && productSellerId.toString() === currentUser.id;
+                      if (isProductOwner) {
+                        return (
+                          <div className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider text-gold bg-background/95 shadow-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-full border border-gold/25 select-none z-10">
+                            <Lock className="h-3 w-3" /> Owner Account
+                          </div>
+                        );
+                      }
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAdd(product)}
+                          disabled={addingId === product._id}
+                          className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white/92 text-xs font-semibold uppercase tracking-[0.24em] text-luxury-black opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white disabled:opacity-70 cursor-pointer z-10"
+                        >
+                          {addingId === product._id ? "Adding..." : <><PackageCheck className="h-3.5 w-3.5" /> Quick add</>}
+                        </button>
+                      );
+                    })()}
                   </div>
 
                   <div className="flex flex-col gap-4 p-4">
@@ -603,18 +878,49 @@ export default function Home() {
                       alt={product.title}
                       className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                     />
-                    <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4 text-white">
+                    <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4 text-white z-10">
                       <span className="rounded-full bg-black/45 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] backdrop-blur-md">{product.brand || "Designer edit"}</span>
-                      <span className="rounded-full bg-black/45 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] backdrop-blur-md">{product.sold ? `${product.sold} sold` : "Popular"}</span>
+                      
+                      {/* Heart Toggle Overlay */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleWishlistToggle(product._id);
+                        }}
+                        className={`h-7 w-7 rounded-full flex items-center justify-center transition-all bg-black/35 hover:bg-black/60 backdrop-blur-md cursor-pointer ${
+                          wishlistData?.wishlist?.some((w: any) => w.product?._id === product._id)
+                            ? "text-gold"
+                            : "text-white hover:text-gold"
+                        }`}
+                      >
+                        <Heart className={`h-4 w-4 ${wishlistData?.wishlist?.some((w: any) => w.product?._id === product._id) ? "fill-gold" : ""}`} />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickAdd(product)}
-                      disabled={addingId === product._id}
-                      className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white/92 text-xs font-semibold uppercase tracking-[0.24em] text-luxury-black opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white disabled:opacity-70"
-                    >
-                      {addingId === product._id ? "Adding..." : <><PackageCheck className="h-3.5 w-3.5" /> Quick add</>}
-                    </button>
+
+                    {/* Quick Add Block */}
+                    {(() => {
+                      const productSellerId = product.seller?._id || product.seller;
+                      const isProductOwner = currentUser && productSellerId && productSellerId.toString() === currentUser.id;
+                      if (isProductOwner) {
+                        return (
+                          <div className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider text-gold bg-background/95 shadow-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-full border border-gold/25 select-none z-10">
+                            <Lock className="h-3 w-3" /> Owner Account
+                          </div>
+                        );
+                      }
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAdd(product)}
+                          disabled={addingId === product._id}
+                          className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white/92 text-xs font-semibold uppercase tracking-[0.24em] text-luxury-black opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white disabled:opacity-70 cursor-pointer z-10"
+                        >
+                          {addingId === product._id ? "Adding..." : <><PackageCheck className="h-3.5 w-3.5" /> Quick add</>}
+                        </button>
+                      );
+                    })()}
                   </div>
 
                   <div className="flex flex-col gap-4 p-4">
@@ -643,6 +949,98 @@ export default function Home() {
             </div>
           )}
         </section>
+
+        {/* PERSONALIZED RECOMMENDATIONS (RECENTLY VIEWED) */}
+        {recentlyViewedProducts.length > 0 && (
+          <section className="mx-auto max-w-7xl px-6 py-20 border-t border-card-border/50 bg-[radial-gradient(circle_at_top_left,_rgba(197,168,128,0.03),_transparent_35%)]">
+            <div className="mb-12 flex justify-between items-end">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">Tailored For You</p>
+                <h2 className="mt-2 font-serif text-4xl font-semibold">Based on Your Recent Browsing</h2>
+                <p className="mt-3 text-sm text-muted font-light">
+                  Pick up right where you left off with these premium selections.
+                </p>
+              </div>
+              <Link href="/products" className="group inline-flex items-center gap-2 text-sm font-semibold text-gold transition-colors hover:text-gold-hover">
+                Explore Full Catalog <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+              {recentlyViewedProducts.map((product) => (
+                <article key={product._id} className="group overflow-hidden rounded-[24px] border border-card-border bg-card-bg shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between">
+                  <div className="relative aspect-[1/1.03] overflow-hidden bg-muted-light">
+                    <img
+                      src={product.images?.[0]?.url || "https://placehold.co/800x800"}
+                      alt={product.title}
+                      className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4 text-white z-10">
+                      <span className="rounded-full bg-black/45 px-3 py-1 text-[9px] font-semibold uppercase tracking-widest backdrop-blur-md">{product.brand || "Designer edit"}</span>
+                      
+                      {/* Heart Toggle Overlay */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleWishlistToggle(product._id);
+                        }}
+                        className={`h-7 w-7 rounded-full flex items-center justify-center transition-all bg-black/35 hover:bg-black/60 backdrop-blur-md cursor-pointer ${
+                          wishlistData?.wishlist?.some((w: any) => w.product?._id === product._id)
+                            ? "text-gold"
+                            : "text-white hover:text-gold"
+                        }`}
+                      >
+                        <Heart className={`h-4 w-4 ${wishlistData?.wishlist?.some((w: any) => w.product?._id === product._id) ? "fill-gold" : ""}`} />
+                      </button>
+                    </div>
+
+                    {/* Quick Add Block */}
+                    {(() => {
+                      const productSellerId = product.seller?._id || product.seller;
+                      const isProductOwner = currentUser && productSellerId && productSellerId.toString() === currentUser.id;
+                      if (isProductOwner) {
+                        return (
+                          <div className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider text-gold bg-background/95 shadow-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-full border border-gold/25 select-none z-10">
+                            <Lock className="h-3 w-3" /> Owner Account
+                          </div>
+                        );
+                      }
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAdd(product)}
+                          disabled={addingId === product._id}
+                          className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white/92 text-xs font-semibold uppercase tracking-[0.24em] text-luxury-black opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white disabled:opacity-70 cursor-pointer z-10"
+                        >
+                          {addingId === product._id ? "Adding..." : <><PackageCheck className="h-3.5 w-3.5" /> Quick Add</>}
+                        </button>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="flex flex-col gap-4 p-5 flex-grow justify-between">
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">{product.brand || "Premium Collection"}</div>
+                      <Link href={product.slug ? `/product/${product.slug}` : `/products/${product._id}`} className="mt-1 block font-serif text-lg font-semibold leading-snug text-foreground transition-colors hover:text-gold line-clamp-1">
+                        {product.title}
+                      </Link>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 text-xs border-t border-card-border/40 pt-3">
+                      <div className="flex items-center gap-1 font-bold text-gold">
+                        <Star className="h-3.5 w-3.5 fill-gold text-gold" />
+                        <span>{product.ratingAverage?.toFixed(1) || "5.0"}</span>
+                      </div>
+                      <span className="font-bold text-gold">EGP {formatPrice(product.price)}</span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* TOP SELLERS / VERIFIED BRANDS */}
         <section className="mx-auto max-w-7xl px-6 py-20 border-t border-card-border/50">
