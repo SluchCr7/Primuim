@@ -87,7 +87,6 @@ export default function RegisterPage() {
     setErrorMsg(null);
     setSuccessMsg(null);
     
-    // Clean up optional fields if customer
     const payload = { ...data };
     if (payload.role === "customer") {
       delete payload.brandName;
@@ -120,27 +119,28 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground relative overflow-hidden">
+      {/* Premium dynamic ambient background overlay */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(197,168,128,0.12),_transparent_45%)] pointer-events-none" />
       
       <Header />
 
       <main className="flex-grow flex items-center justify-center py-20 px-6 relative z-10">
-        <div className="w-full max-w-md backdrop-blur-md bg-white/70 dark:bg-[#131312]/80 border border-card-border/80 p-8 shadow-2xl rounded-[32px]">
+        <div className="w-full max-w-md backdrop-blur-md bg-card-bg/80 border border-card-border/80 p-8 shadow-2xl rounded-[32px] luxury-shadow">
           
           <div className="text-center mb-8">
             <span className="text-xs font-bold tracking-widest text-gold uppercase">VIP Sign Up</span>
-            <h1 className="font-serif text-3xl font-bold mt-1">Create Profile</h1>
+            <h1 className="font-serif text-3xl font-bold mt-1 text-foreground">Create Profile</h1>
             <p className="text-sm text-muted mt-2">Choose account path and enter credentials</p>
           </div>
 
-          {/* Role Toggle Switch */}
-          <div className="flex bg-card-bg rounded-full p-1 border border-card-border/60 mb-6">
+          {/* Role Toggle Switch - Fully Dynamic */}
+          <div className="flex bg-background rounded-full p-1 border border-card-border mb-6">
             <button
               type="button"
               onClick={() => handleRoleToggle("customer")}
               className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-full transition-all cursor-pointer ${
                 accountType === "customer" 
-                  ? "bg-foreground text-background" 
+                  ? "bg-foreground text-background shadow-sm" 
                   : "text-muted hover:text-foreground"
               }`}
             >
@@ -151,7 +151,7 @@ export default function RegisterPage() {
               onClick={() => handleRoleToggle("seller")}
               className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-full transition-all cursor-pointer ${
                 accountType === "seller" 
-                  ? "bg-gold text-white" 
+                  ? "bg-gold text-background shadow-sm dark:text-luxury-black" 
                   : "text-muted hover:text-foreground"
               }`}
             >
@@ -160,17 +160,17 @@ export default function RegisterPage() {
           </div>
 
           {errorMsg && (
-            <div className="mb-6 rounded border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
+            <div className="mb-6 rounded-xl border border-error/20 bg-error/5 px-4 py-3 text-sm text-error">
               {errorMsg}
             </div>
           )}
 
           {successMsg ? (
-            <div className="mb-6 rounded border border-success/30 bg-success/10 px-4 py-4 text-sm text-success flex flex-col gap-4">
-              <p>{successMsg}</p>
+            <div className="mb-6 rounded-xl border border-success/20 bg-success/5 px-4 py-4 text-sm text-success flex flex-col gap-4">
+              <p className="leading-relaxed">{successMsg}</p>
               <Link
                 href="/login"
-                className="w-full rounded bg-foreground py-2.5 text-center font-semibold text-background hover:bg-gold hover:text-luxury-white transition-all text-xs uppercase tracking-widest"
+                className="w-full rounded-xl bg-foreground py-2.5 text-center font-semibold text-background hover:bg-gold-hover hover:text-luxury-white transition-all text-xs uppercase tracking-widest"
               >
                 Proceed to Sign In
               </Link>
@@ -186,7 +186,7 @@ export default function RegisterPage() {
                 <input
                   type="text"
                   {...register("username")}
-                  className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold transition-colors"
+                  className="w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-gold transition-all placeholder-muted/40"
                   placeholder="alex_lux"
                 />
                 {errors.username && (
@@ -201,7 +201,7 @@ export default function RegisterPage() {
                 <input
                   type="email"
                   {...register("email")}
-                  className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold transition-colors"
+                  className="w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-gold transition-all placeholder-muted/40"
                   placeholder="alex@example.com"
                 />
                 {errors.email && (
@@ -216,7 +216,7 @@ export default function RegisterPage() {
                 <input
                   type="password"
                   {...register("password")}
-                  className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold transition-colors"
+                  className="w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-gold transition-all placeholder-muted/40"
                   placeholder="••••••••"
                 />
                 {errors.password && (
@@ -238,7 +238,7 @@ export default function RegisterPage() {
                     <input
                       type="text"
                       {...register("brandName")}
-                      className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold transition-colors"
+                      className="w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-gold transition-all placeholder-muted/40"
                       placeholder="E.g. Nike Official"
                     />
                     {errors.brandName && (
@@ -253,7 +253,7 @@ export default function RegisterPage() {
                     <input
                       type="text"
                       {...register("storeName")}
-                      className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold transition-colors"
+                      className="w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-gold transition-all placeholder-muted/40"
                       placeholder="E.g. Nike Flagship Egypt"
                     />
                     {errors.storeName && (
@@ -268,7 +268,7 @@ export default function RegisterPage() {
                     <input
                       type="text"
                       {...register("country")}
-                      className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold transition-colors"
+                      className="w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-gold transition-all placeholder-muted/40"
                       placeholder="Egypt, UAE, USA..."
                     />
                     {errors.country && (
@@ -283,7 +283,7 @@ export default function RegisterPage() {
                     <textarea
                       rows={3}
                       {...register("storeDescription")}
-                      className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold transition-colors"
+                      className="w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-gold transition-all placeholder-muted/40 resize-none"
                       placeholder="Briefly describe your catalog..."
                     />
                   </div>
@@ -295,7 +295,7 @@ export default function RegisterPage() {
                     <input
                       type="text"
                       {...register("storeLogo")}
-                      className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold transition-colors"
+                      className="w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-gold transition-all placeholder-muted/40"
                       placeholder="https://..."
                     />
                   </div>
@@ -307,7 +307,7 @@ export default function RegisterPage() {
                     <input
                       type="text"
                       {...register("storeCover")}
-                      className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold transition-colors"
+                      className="w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-gold transition-all placeholder-muted/40"
                       placeholder="https://..."
                     />
                   </div>
@@ -326,7 +326,7 @@ export default function RegisterPage() {
                   <input
                     type="text"
                     {...register("referredByCode")}
-                    className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold uppercase transition-colors"
+                    className="w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-gold uppercase transition-all placeholder-muted/40"
                     placeholder="E.g. GOLD2026"
                   />
                   {errors.referredByCode && (
@@ -338,7 +338,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full rounded bg-foreground py-3 font-semibold text-background hover:bg-gold hover:text-luxury-white transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full rounded-xl bg-foreground py-3 font-semibold text-background hover:bg-gold-hover hover:text-luxury-white transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isLoading ? "Enrolling..." : <><UserPlus className="h-4 w-4" /> Request Invitation</>}
               </button>

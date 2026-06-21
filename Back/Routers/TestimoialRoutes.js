@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const testimonialController = require("../Controllers/TestimonialController");
-const { verifyToken, verifyAdmin } = require("../middlewares/authMiddleware"); // عدل المسميات حسب الـ Middlewares لديك
+const { verifyToken, verifyAdmin } = require("../Middelwares/verifyToken"); // عدل المسميات حسب الـ Middlewares لديك
 
 // مسار جلب الكل (متاح للجميع) وإنشاء رأي جديد (للمسجلين فقط)
 router.route("/")

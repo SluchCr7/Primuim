@@ -113,6 +113,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/articles" , require("./Routers/ArticleRoute"));
 app.use("/api/sellers", require("./Routers/sellerRoutes"));
 app.use("/api/superadmin", require("./Routers/superAdminRoutes"));
+app.use("/api/testimonials", require("./Routers/TestimoialRoutes"));
 app.use(notfound);
 app.use(errorhandler);
 
