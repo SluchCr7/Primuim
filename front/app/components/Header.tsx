@@ -119,10 +119,10 @@ export const Header: React.FC = () => {
     <header className="sticky top-0 z-50 w-full border-b border-card-border/50 bg-background/70 backdrop-blur-md transition-all duration-300">
       
       {/* 1. TOP ANNOUNCEMENT BAR */}
-      <div className="w-full bg-foreground text-background py-2 px-4 text-center text-xs font-medium tracking-wider uppercase select-none flex items-center justify-center gap-2">
+      {/* <div className="w-full bg-foreground text-background py-2 px-4 text-center text-xs font-medium tracking-wider uppercase select-none flex items-center justify-center gap-2">
         <span>✨ Free worldwide shipping on luxury orders over $150</span>
         <ArrowRight className="h-3 w-3 inline" />
-      </div>
+      </div> */}
 
       {/* 2. MAIN HEADER BAR */}
       <div className="mx-auto flex h-20 max-w-9xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
