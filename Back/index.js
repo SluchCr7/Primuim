@@ -83,7 +83,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(mongoSanitize());
 app.use(cookieParser());
-
+app.use('/images', express.static(path.join(__dirname, 'images')));
 // Routes
 app.get("/", (req, res) => {
     // Build the absolute path to index.html inside the public folder and send it to the client
