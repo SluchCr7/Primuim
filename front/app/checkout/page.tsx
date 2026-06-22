@@ -15,6 +15,7 @@ import {
   useCreateOrderMutation,
   useCreatePaymentMutation,
   useStartCheckoutMutation,
+  API_BASE_URL,
 } from "../../lib/api";
 import {
   CreditCard,
@@ -29,6 +30,7 @@ import {
   QrCode,
   Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -648,14 +650,14 @@ export default function CheckoutPage() {
 
             {/* INVOICE DOWNLOAD & CONTINUE ACTIONS */}
             <div className="w-full border-t border-card-border pt-6 flex flex-col sm:flex-row gap-4 justify-center">
-              <a
-                href={`http://localhost:5000/api/orders/${createdOrder._id}/invoice`}
+              <Link
+                href={`${API_BASE_URL}/orders/${createdOrder._id}/invoice`}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex h-12 items-center justify-center gap-2 rounded border border-gold hover:bg-gold/10 px-6 text-gold font-semibold text-xs uppercase tracking-wider transition-all"
               >
                 <FileText className="h-4 w-4" /> Download PDF Invoice
-              </a>
+              </Link>
               <button
                 onClick={() => router.push("/dashboard")}
                 className="h-12 rounded bg-foreground text-background hover:bg-gold hover:text-luxury-white px-8 font-semibold text-xs uppercase tracking-wider transition-all"
