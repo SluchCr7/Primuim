@@ -43,6 +43,7 @@ import {
   Lock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 type StoreProduct = {
   _id: string;
@@ -1146,8 +1147,10 @@ export default function Home() {
               {(articlesList.length > 0 ? articlesList : fallbackArticles).map((article: any) => (
                 <article key={article._id} className="group overflow-hidden rounded-[24px] border border-card-border bg-card-bg shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl flex flex-col h-full">
                   <div className="relative aspect-[16/10] overflow-hidden bg-muted-light">
-                    <img
-                      src={article.coverImage || "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?q=80&w=900&auto=format&fit=crop"}
+                    <Image
+                      width={500}
+                      height={500}
+                      src={article?.image?.url || "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?q=80&w=900&auto=format&fit=crop"}
                       alt={article.title}
                       className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                     />

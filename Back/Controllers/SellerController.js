@@ -1,9 +1,11 @@
+const mongoose = require("mongoose");
 const SellerRequest = require("../models/SellerRequest");
 const { Product } = require("../models/Product");
 const Order = require("../models/Order");
 const { User, validateUpdateStoreProfile } = require("../models/User");
 const Notification = require("../models/Notification");
 const asyncHandler = require("express-async-handler");
+const { cloudUpload } = require("../config/cloudUplaod");
 
 // ========================================
 // APPLY TO BECOME A SELLER (Customer only)
@@ -525,6 +527,137 @@ const updateSellerStoreProfile = asyncHandler(async (req, res) => {
   });
 });
 
+// ========================================
+// UPLOAD STORE LOGO (Seller only)
+// ========================================
+const uploadStoreLogo = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({
+      success: false,
+      message: "No image file provided"
+    });
+  }
+
+  const seller = await User.findById(req.user.id);
+  if (!seller || seller.role !== "seller") {
+    return res.status(404).json({
+      success: false,
+      message: "Seller not found"
+    });
+  }
+
+  const uploadedImage = await cloudUpload(req.file);
+  seller.storeLogo = uploadedImage.secure_url;
+  await seller.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Store logo uploaded successfully",
+    storeLogo: seller.storeLogo
+  });
+});
+
+// ========================================
+// UPLOAD STORE COVER (Seller only)
+// ========================================
+const uploadStoreCover = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({
+      success: false,
+      message: "No image file provided"
+    });
+  }
+
+  const seller = await User.findById(req.user.id);
+  if (!seller || seller.role !== "seller") {
+    return res.status(404).json({
+      success: false,
+      message: "Seller not found"
+    });
+  }
+
+  const uploadedImage = await cloudUpload(req.file);
+  seller.storeCover = uploadedImage.secure_url;
+  await seller.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Store cover uploaded successfully",
+    storeCover: seller.storeCover
+  });
+});
+
+// ========================================
+// GET PUBLIC STORE PROFILE BY ID (Public)
+// ========================================
+const getPublicStoreById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid store ID format"
+    });
+  }
+
+  const seller = await User.findOne({ _id: id, role: "seller" })
+    .select("-password -email -failedLoginAttempts -lockUntil -otpSecret -otpExpires -loginHistory -activityLogs");
+
+  if (!seller) {
+    return res.status(404).json({
+      success: false,
+      message: "Store not found"
+    });
+  }
+
+  if (seller.sellerStatus !== "approved") {
+    return res.status(403).json({
+      success: false,
+      message: "Store is currently pending review or suspended"
+    });
+  }
+
+  // 1. Fetch seller's products
+  const products = await Product.find({ seller: seller._id, isDeleted: false, isPublished: true })
+    .populate("category", "name")
+    .sort({ createdAt: -1 });
+
+  // 2. Fetch seller's articles
+  const { Article } = require("../models/Article");
+  const articles = await Article.find({ author: seller._id, status: "approved" })
+    .sort({ publishedAt: -1 });
+
+  // 3. Fetch reviews for all seller's products
+  const productIds = products.map(p => p._id);
+  const { Review } = require("../models/Review");
+  const reviews = await Review.find({ product: { $in: productIds }, isApproved: true })
+    .populate("user", "username profilePhoto")
+    .sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    seller: {
+      id: seller._id,
+      storeName: seller.storeName,
+      brandName: seller.brandName,
+      storeSlug: seller.storeSlug,
+      storeLogo: seller.storeLogo,
+      storeCover: seller.storeCover,
+      storeDescription: seller.storeDescription,
+      country: seller.country,
+      storeRating: seller.storeRating,
+      totalSales: seller.totalSales,
+      responseTime: seller.responseTime,
+      followersCount: seller.followers ? seller.followers.length : 0,
+      followers: seller.followers || [],
+      createdAt: seller.createdAt
+    },
+    products,
+    articles,
+    reviews
+  });
+});
+
 module.exports = {
   applyAsSeller,
   getMyApplicationStatus,
@@ -534,6 +667,9 @@ module.exports = {
   requestPayout,
   getPublicStoreBySlug,
   getApprovedSellers,
-  updateSellerStoreProfile
+  updateSellerStoreProfile,
+  uploadStoreLogo,
+  uploadStoreCover,
+  getPublicStoreById
 };
 

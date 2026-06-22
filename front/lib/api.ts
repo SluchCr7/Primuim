@@ -446,6 +446,22 @@ export const ecommerceApi = createApi({
       }),
       invalidatesTags: ["User"],
     }),
+    uploadStoreLogo: builder.mutation({
+      query: (formData) => ({
+        url: "/sellers/store-logo",
+        method: "PATCH",
+        body: formData,
+      }),
+      invalidatesTags: ["User"],
+    }),
+    uploadStoreCover: builder.mutation({
+      query: (formData) => ({
+        url: "/sellers/store-cover",
+        method: "PATCH",
+        body: formData,
+      }),
+      invalidatesTags: ["User"],
+    }),
     toggle2FA: builder.mutation({
       query: (data) => ({
         url: "/auth/2fa/toggle",
@@ -779,6 +795,8 @@ export const {
   useUpdateSellerOrderStatusMutation,
   useRequestPayoutMutation,
   useUpdateSellerStoreProfileMutation,
+  useUploadStoreLogoMutation,
+  useUploadStoreCoverMutation,
   useGetMyProductsQuery,
   useCreateProductMutation,
   useUpdateProductMutation,

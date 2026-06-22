@@ -58,7 +58,17 @@ const seedCategories = async () => {
         name: "Books & Stationery", 
         description: "Educational books, Novels, and Office supplies", 
         image: "/images/Books.jpg" 
-      }
+      },
+      { 
+        name: "Health & Wellness", 
+        description: "Vitamins, supplements, and medical devices", 
+        image: "/images/Books.jpg" 
+      },
+      { 
+        name: "Gaming", 
+        description: "PlayStation, Xbox, Nintendo, and PC Gaming gear", 
+        image: "/images/Books.jpg" 
+      },
     ];
 
     const mainCategories = await Category.create(mainCategoriesData);

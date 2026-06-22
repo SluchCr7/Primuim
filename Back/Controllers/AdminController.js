@@ -335,6 +335,9 @@ const moderateSellerRequest = asyncHandler(async (req, res) => {
   if (user) {
     if (status === "approved") {
       user.role = "seller";
+      user.sellerStatus = "approved";
+      user.storeName = sellerReq.storeName;
+      user.storeDescription = sellerReq.storeDescription;
       await user.save();
 
       // Notify User

@@ -18,6 +18,8 @@ import {
   useGetCategoriesQuery,
   useGetMeQuery,
   useUpdateSellerStoreProfileMutation,
+  useUploadStoreLogoMutation,
+  useUploadStoreCoverMutation,
   useGetMyArticlesQuery,
   useCreateArticleMutation,
   useUpdateArticleMutation,
@@ -101,6 +103,8 @@ export default function SellerDashboardPage() {
   const [updateOrderStatus, { isLoading: isUpdatingStatus }] = useUpdateSellerOrderStatusMutation();
   const [requestPayout, { isLoading: isRequestingPayout }] = useRequestPayoutMutation();
   const [updateSellerStoreProfile, { isLoading: isUpdatingProfile }] = useUpdateSellerStoreProfileMutation();
+  const [uploadStoreLogo, { isLoading: isUploadingLogo }] = useUploadStoreLogoMutation();
+  const [uploadStoreCover, { isLoading: isUploadingCover }] = useUploadStoreCoverMutation();
   const { data: myArticlesData, refetch: refetchMyArticles } = useGetMyArticlesQuery(undefined, { skip: !user || (user.role !== "seller" && user.role !== "admin") });
   const [createArticle, { isLoading: isCreatingArticle }] = useCreateArticleMutation();
   const [updateArticle, { isLoading: isUpdatingArticle }] = useUpdateArticleMutation();
@@ -189,6 +193,50 @@ export default function SellerDashboardPage() {
       refetchMe();
     } catch (err: any) {
       showToast(err?.data?.message || "Failed to update store settings", "error");
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      showToast("Logo image must be less than 2MB.", "error");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await uploadStoreLogo(formData).unwrap();
+      setStoreLogo(res.storeLogo);
+      showToast("Store logo updated successfully!", "success");
+      refetchMe();
+    } catch (err: any) {
+      showToast(err.data?.message || "Failed to upload store logo", "error");
+    }
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Cover image must be less than 5MB.", "error");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await uploadStoreCover(formData).unwrap();
+      setStoreCover(res.storeCover);
+      showToast("Store cover updated successfully!", "success");
+      refetchMe();
+    } catch (err: any) {
+      showToast(err.data?.message || "Failed to upload store cover", "error");
     }
   };
 
@@ -987,29 +1035,76 @@ export default function SellerDashboardPage() {
                         <option value="Within a week">Within a week</option>
                       </select>
                     </div>
+                  </div>
 
-                    {/* Store Logo URL */}
-                    <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Store Logo Image (URL)</label>
-                      <input
-                        type="url"
-                        value={storeLogo}
-                        onChange={(e) => setStoreLogo(e.target.value)}
-                        className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
-                        placeholder="e.g. https://domain.com/logo.png"
-                      />
+                  {/* Logo and Cover Upload Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 border border-card-border/40 rounded-2xl bg-card-bg/40 backdrop-blur-sm">
+                    {/* Logo Upload Card */}
+                    <div className="flex flex-col gap-3">
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Store Logo</label>
+                      <div className="flex items-center gap-5 p-4 rounded-xl border border-dashed border-card-border bg-background/50 hover:border-gold/50 transition-all duration-300">
+                        <div className="relative h-20 w-20 rounded-full border-2 border-gold bg-background overflow-hidden shadow-md shrink-0 group">
+                          <img
+                            src={storeLogo || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"}
+                            alt="Store Logo"
+                            className="h-full w-full object-cover transition-transform group-hover:scale-105 duration-300"
+                          />
+                          {isUploadingLogo && (
+                            <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
+                              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <p className="text-[11px] text-muted leading-relaxed font-light">
+                            Recommend square shape (PNG/JPG). Max 2MB.
+                          </p>
+                          <label className="inline-flex items-center justify-center gap-1.5 h-8 rounded border border-gold hover:bg-gold/10 text-gold px-4 text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors max-w-max">
+                            <Upload className="h-3 w-3" /> Upload Logo
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleLogoUpload}
+                              disabled={isUploadingLogo}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Store Cover URL */}
-                    <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Store Cover Image (URL)</label>
-                      <input
-                        type="url"
-                        value={storeCover}
-                        onChange={(e) => setStoreCover(e.target.value)}
-                        className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
-                        placeholder="e.g. https://domain.com/cover.png"
-                      />
+                    {/* Cover Upload Card */}
+                    <div className="flex flex-col gap-3">
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Store Cover Banner</label>
+                      <div className="flex flex-col gap-3 p-4 rounded-xl border border-dashed border-card-border bg-background/50 hover:border-gold/50 transition-all duration-300 justify-between min-h-[114px]">
+                        <div className="relative h-14 w-full rounded-lg border border-card-border bg-background overflow-hidden group">
+                          <img
+                            src={storeCover || "https://via.placeholder.com/800x300"}
+                            alt="Store Cover"
+                            className="h-full w-full object-cover saturate-[0.6] group-hover:saturate-[0.9] transition-all duration-500"
+                          />
+                          {isUploadingCover && (
+                            <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
+                              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <p className="text-[11px] text-muted font-light leading-none">
+                            Aspect ratio 3:1 recommended. Max 5MB.
+                          </p>
+                          <label className="inline-flex items-center justify-center gap-1.5 h-8 rounded border border-gold hover:bg-gold/10 text-gold px-4 text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors shrink-0">
+                            <Upload className="h-3 w-3" /> Upload Cover
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleCoverUpload}
+                              disabled={isUploadingCover}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      </div>
                     </div>
                   </div>
 

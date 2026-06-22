@@ -50,7 +50,7 @@ import Link from "next/link";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, accessToken } = useAppSelector((state) => state.auth);
   const { showToast } = useToast();
 
   // Active Tab: "profile" | "orders" | "addresses" | "wishlist" | "wallet" | "security2fa" | "securitylogs" | "seller"
@@ -171,8 +171,9 @@ export default function DashboardPage() {
 
       const response = await fetch(`${API_BASE_URL}/orders/${orderId}/invoice`, {
         method: "GET",
-        // السطر ده هو السحر اللي هيخلي المتصفح يبعت الـ Cookie مع الطلب تلقائياً
-        credentials: "include", 
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
 
       if (!response.ok) {
@@ -181,9 +182,15 @@ export default function DashboardPage() {
 
       const blob = await response.blob();
       const fileURL = URL.createObjectURL(blob);
-      window.open(fileURL, "_blank");
+      const link = document.createElement("a");
+      link.href = fileURL;
+      link.setAttribute("download", `invoice-${orderId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Invoice downloaded successfully!", "success");
     } catch (err: any) {
-      showToast("Could not retrieve pdf invoice.", "error");
+      showToast("Could not retrieve PDF invoice.", "error");
     }
   };
   const handleToggle2FA = async (enable: boolean) => {

@@ -6,12 +6,52 @@ import Link from "next/link";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import { CheckCircle2, FileText, ShoppingBag, ArrowRight } from "lucide-react";
+import { useAppSelector } from "../../../lib/store";
+import { API_BASE_URL } from "../../../lib/api";
+import { useToast } from "../../components/Toast";
 
 export default function CheckoutSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const fawryRef = searchParams.get("fawryRef");
+
+  const { accessToken } = useAppSelector((state) => state.auth);
+  const { showToast } = useToast();
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadInvoice = async () => {
+    if (!orderId) return;
+    try {
+      setDownloading(true);
+      showToast("Generating invoice PDF...", "info");
+
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/invoice`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to download invoice");
+      }
+
+      const blob = await response.blob();
+      const fileURL = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = fileURL;
+      link.setAttribute("download", `invoice-${orderId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Invoice downloaded successfully!", "success");
+    } catch (err: any) {
+      showToast("Could not retrieve PDF invoice.", "error");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -52,14 +92,13 @@ export default function CheckoutSuccessPage() {
 
           <div className="w-full border-t border-card-border pt-6 flex flex-col sm:flex-row gap-4 justify-center">
             {orderId && (
-              <a
-                href={`http://localhost:5000/api/orders/${orderId}/invoice`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded border border-gold hover:bg-gold/10 px-5 text-gold font-semibold text-xs uppercase tracking-wider transition-colors"
+              <button
+                onClick={handleDownloadInvoice}
+                disabled={downloading}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded border border-gold hover:bg-gold/10 px-5 text-gold font-semibold text-xs uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer"
               >
-                <FileText className="h-4 w-4" /> Download PDF Invoice
-              </a>
+                <FileText className="h-4 w-4" /> {downloading ? "Downloading..." : "Download PDF Invoice"}
+              </button>
             )}
             <Link
               href="/dashboard"
