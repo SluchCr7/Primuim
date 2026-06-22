@@ -14,12 +14,13 @@ import {
   useGetProductsQuery,
 } from "../../../lib/api";
 import { useAppSelector } from "../../../lib/store";
+import { formatPrice as formatCurrencyPrice } from "../../../lib/currencyUtils";
 import { Star, Shield, HelpCircle, FileText, CheckCircle, Award } from "lucide-react";
 import { addGuestCartItem } from "../../../lib/cartUtils";
 
 export default function ProductDetailsPage() {
   const { id } = useParams();
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, currency } = useAppSelector((state) => state.auth);
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
@@ -167,10 +168,10 @@ export default function ProductDetailsPage() {
 
             <div className="border-y border-card-border py-4">
               <span className="text-2xl font-bold text-gold">
-                {selectedVariant ? selectedVariant.price.toFixed(2) : product.price.toFixed(2)} EGP
+                {formatCurrencyPrice(selectedVariant ? selectedVariant.price : product.price, currency)}
               </span>
               {product.comparePrice && (
-                <span className="text-sm line-through text-muted ml-3">{product.comparePrice.toFixed(2)} EGP</span>
+                <span className="text-sm line-through text-muted ml-3">{formatCurrencyPrice(product.comparePrice, currency)}</span>
               )}
             </div>
 

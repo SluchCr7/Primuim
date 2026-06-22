@@ -7,9 +7,10 @@ import Breadcrumbs from "../components/Breadcrumbs";
 import { useGetProductsQuery, useAddToCartMutation } from "../../lib/api";
 import { Star, ShieldAlert, GitCompare, Trash2, ArrowRight } from "lucide-react";
 import { useAppSelector } from "../../lib/store";
+import { formatPrice as formatCurrencyPrice } from "../../lib/currencyUtils";
 
 export default function ComparePage() {
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, currency } = useAppSelector((state) => state.auth);
   const { data: productsData } = useGetProductsQuery({ limit: 12 });
   const [addToCart] = useAddToCartMutation();
 
@@ -156,7 +157,7 @@ export default function ComparePage() {
                   <td className="py-4 px-6 font-semibold text-xs text-muted uppercase tracking-wider">Price</td>
                   {comparedItems.map((item: any) => (
                     <td key={item._id} className="py-4 px-6 font-bold text-gold text-base">
-                      {item.price.toFixed(2)} EGP
+                      {formatCurrencyPrice(item.price, currency)}
                     </td>
                   ))}
                   {comparedItems.length < 3 && <td className="py-4 px-6 bg-muted-light/5 border-l border-card-border"></td>}

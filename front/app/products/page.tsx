@@ -7,13 +7,14 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useGetProductsQuery, useGetCategoriesQuery, useAddToCartMutation } from "../../lib/api";
 import { useAppSelector } from "../../lib/store";
+import { formatPrice as formatCurrencyPrice } from "../../lib/currencyUtils";
 import { Star, Search, SlidersHorizontal, ChevronLeft, ChevronRight, ShoppingBag, Store, RotateCcw } from "lucide-react";
 import Image from "next/image";
 
 export default function ProductsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, currency } = useAppSelector((state) => state.auth);
 
   // Read URL params
   const search = searchParams.get("search") || "";
@@ -358,7 +359,7 @@ export default function ProductsPage() {
                           <div className="flex flex-col">
                             <span className="text-xs text-slate-400 font-medium">Price</span>
                             <span className="text-base font-black text-slate-900">
-                              {product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-xs font-bold text-amber-600">EGP</span>
+                              {formatCurrencyPrice(product.price, currency)}
                             </span>
                           </div>
                           

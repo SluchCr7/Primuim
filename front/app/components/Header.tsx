@@ -5,7 +5,7 @@ import LinkNext from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "../context/ThemeContext";
 import { useAppDispatch, useAppSelector } from "../../lib/store";
-import { logOut } from "../../lib/authSlice";
+import { logOut, setCurrency } from "../../lib/authSlice";
 import {
   useGetCartQuery,
   useGetCategoriesQuery,
@@ -37,7 +37,7 @@ export const Header: React.FC = () => {
   const dispatch = useAppDispatch();
   const { theme, setTheme, resolvedTheme } = useTheme();
   
-  const { user, isAuthenticated } = useAppSelector((state) => state.auth);
+  const { user, isAuthenticated, currency } = useAppSelector((state) => state.auth);
   const { data: cartData } = useGetCartQuery(undefined, { skip: !isAuthenticated });
   const { data: wishlistData } = useGetWishlistQuery(undefined, { skip: !isAuthenticated });
   
@@ -197,6 +197,20 @@ export const Header: React.FC = () => {
             <Search className="h-5 w-5" />
           </button>
 
+          {/* CURRENCY SELECTOR */}
+          <div className="relative flex items-center mr-1">
+            <select
+              value={currency}
+              onChange={(e) => dispatch(setCurrency(e.target.value as any))}
+              className="bg-transparent border border-card-border/50 hover:border-gold rounded-full px-3 py-1 text-xs font-bold text-foreground outline-none cursor-pointer transition-all"
+              aria-label="Select Currency"
+            >
+              <option value="EGP" className="bg-card-bg text-foreground">EGP (L.E)</option>
+              <option value="USD" className="bg-card-bg text-foreground">USD ($)</option>
+              <option value="EUR" className="bg-card-bg text-foreground">EUR (€)</option>
+            </select>
+          </div>
+
           {/* THEME TOGGLER */}
           <button
             onClick={toggleTheme}
@@ -320,11 +334,11 @@ export const Header: React.FC = () => {
         <div className="mx-auto flex max-w-9xl w-full items-center justify-between px-8 py-0.5 text-sm">
           
           {/* Main Links */}
-          <div className="flex items-center gap-8 h-12">
-            <LinkNext href="/products" className="text-foreground hover:text-gold transition-colors font-bold relative h-full flex items-center">
+          <div className="flex items-center gap-5 h-12">
+            <LinkNext href="/products" className="text-foreground text-xs hover:text-gold transition-colors font-bold relative h-full flex items-center">
               All Collections
             </LinkNext>
-            <LinkNext href="/stores" className="text-foreground hover:text-gold transition-colors font-bold relative h-full flex items-center">
+            <LinkNext href="/stores" className="text-foreground text-xs hover:text-gold transition-colors font-bold relative h-full flex items-center">
               Flagship Stores
             </LinkNext>
             
@@ -337,7 +351,7 @@ export const Header: React.FC = () => {
                 >
                   <LinkNext
                     href={`/products?category=${cat._id}`}
-                    className={`text-foreground/90 hover:text-gold transition-colors h-full flex items-center font-semibold relative ${activeMegaMenu === cat._id ? 'text-gold' : ''}`}
+                    className={`text-foreground/90 text-xs hover:text-gold transition-colors h-full flex items-center font-semibold relative ${activeMegaMenu === cat._id ? 'text-gold' : ''}`}
                   >
                     {cat.name}
                     {activeMegaMenu === cat._id && (

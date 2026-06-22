@@ -18,6 +18,7 @@ import {
 import { useAppSelector } from "../../../lib/store";
 import { useToast } from "../../components/Toast";
 import { addGuestCartItem } from "../../../lib/cartUtils";
+import { formatPrice as formatCurrencyPrice } from "../../../lib/currencyUtils";
 import { 
   Star, 
   ShieldCheck, 
@@ -37,7 +38,7 @@ export default function ProductDetailsBySlugPage() {
   const { slug } = useParams();
   const router = useRouter();
   const { showToast } = useToast();
-  const { isAuthenticated, user: currentUser } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, user: currentUser, currency } = useAppSelector((state) => state.auth);
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
@@ -343,11 +344,11 @@ export default function ProductDetailsBySlugPage() {
               {/* Price segment */}
               <div className="border-y border-card-border py-5 flex items-baseline gap-4">
                 <span className="text-3xl font-bold text-gold">
-                  {displayPrice.toLocaleString()} <span className="text-xs font-bold uppercase tracking-wider">EGP</span>
+                  {formatCurrencyPrice(displayPrice, currency)}
                 </span>
                 {comparePriceVal && comparePriceVal > displayPrice && (
                   <span className="text-sm line-through text-muted font-light">
-                    {comparePriceVal.toLocaleString()} EGP
+                    {formatCurrencyPrice(comparePriceVal, currency)}
                   </span>
                 )}
               </div>
@@ -659,7 +660,7 @@ export default function ProductDetailsBySlugPage() {
                         <Star className="h-3.5 w-3.5 fill-gold text-gold" />
                         <span>{item.ratingAverage?.toFixed(1) || "5.0"}</span>
                       </div>
-                      <span className="font-bold text-gold">{item.price.toLocaleString()} EGP</span>
+                      <span className="font-bold text-gold">{formatCurrencyPrice(item.price, currency)}</span>
                     </div>
                   </div>
                 </article>

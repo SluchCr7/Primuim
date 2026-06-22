@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../components/Header";
+import Link from "next/link"
 import Footer from "../components/Footer";
 import { useAppSelector } from "../../lib/store";
 import {
@@ -84,7 +85,7 @@ export default function AdminPage() {
   }, []);
 
   // Admin Active Tab: "analytics" | "inventory" | "reviews" | "coupons" | "roles" | "cms" | "seller-requests"
-  const [activeTab, setActiveTab] = useState<"analytics" | "inventory" | "reviews" | "coupons" | "roles" | "cms" | "seller-requests">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "inventory" | "reviews" | "coupons" | "roles" | "cms" | "seller-requests" | "Testimonials">("analytics");
 
   // Inventory adjustment state
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -496,6 +497,12 @@ export default function AdminPage() {
             >
               CMS Blog
             </button>
+            <Link
+              href={"/admin/testimonials"}
+              className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider rounded border transition-all ${activeTab === "cms" ? "bg-foreground text-background" : "border-card-border hover:border-gold"}`}
+            >
+              Testimonials
+            </Link>
           </div>
         </div>
 

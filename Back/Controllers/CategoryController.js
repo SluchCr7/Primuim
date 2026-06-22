@@ -5,6 +5,9 @@ const {
     validateUpdateCategory 
 } = require("../models/Category");
 
+// استيراد دوال Cloudinary التي قمت بإنشائها
+const { cloudUpload, cloudRemove } = require("../config/cloudUplaod"); // تأكد من المسار الصحيح للملف
+
 // ========================================
 // @desc    Get All Categories (Hierarchical Tree or flat list)
 // @route   GET /api/categories
@@ -35,7 +38,40 @@ const getCategories = asyncHandler(async (req, res) => {
 // ========================================
 const getCategoryById = asyncHandler(async (req, res) => {
   const category = await Category.findById(req.params.id)
-    .populate("parent", "name")
+    .populate({
+      path: "parent",
+      populate: {
+        path: "parent",
+        populate: {
+          path: "parent"
+        }
+      }
+    })
+    .populate("subcategories");
+
+  if (!category) {
+    return res.status(404).json({ success: false, message: "Category not found" });
+  }
+
+  res.status(200).json({ success: true, category });
+});
+
+// ========================================
+// @desc    Get Category By Slug
+// @route   GET /api/categories/slug/:slug
+// @access  Public
+// ========================================
+const getCategoryBySlug = asyncHandler(async (req, res) => {
+  const category = await Category.findOne({ slug: req.params.slug })
+    .populate({
+      path: "parent",
+      populate: {
+        path: "parent",
+        populate: {
+          path: "parent"
+        }
+      }
+    })
     .populate("subcategories");
 
   if (!category) {
@@ -51,13 +87,13 @@ const getCategoryById = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 // ========================================
 const createCategory = asyncHandler(async (req, res) => {
+  // 1. التحقق من صحة البيانات النصية قادمة من req.body
   const { error } = validateCreateCategory(req.body);
   if (error) {
     return res.status(400).json({ success: false, message: error.details[0].message });
   }
 
-  // 🔥 إضافة image هنا لاستخراجها من الـ body
-  const { name, description, image, parent, isActive } = req.body;
+  const { name, description, parent, isActive } = req.body;
 
   const exists = await Category.findOne({ name });
   if (exists) {
@@ -71,11 +107,19 @@ const createCategory = asyncHandler(async (req, res) => {
     }
   }
 
-  // 🔥 تمرير حقل الـ image لكي يتم حفظه في قاعدة البيانات
+  // 2. التحقق من وجود ملف الصورة المرفوع عبر Multer
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: "Please upload a category image" });
+  }
+
+  // 3. رفع الصورة إلى Cloudinary باستخدام الـ Buffer
+  const uploadResult = await cloudUpload(req.file);
+
+  // 4. إنشاء القسم وحفظ رابط Cloudinary المستقر (secure_url)
   const category = await Category.create({
     name,
     description,
-    image, 
+    image: uploadResult.secure_url, // هنا يتم حفظ الرابط بالكامل تلقائياً
     parent: parent || null,
     isActive,
   });
@@ -99,8 +143,7 @@ const updateCategory = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: "Category not found" });
   }
 
-  // 🔥 إضافة image هنا لاستخراجها من الـ body
-  const { name, description, image, parent, isActive } = req.body;
+  const { name, description, parent, isActive } = req.body;
 
   if (name && name !== category.name) {
     const exists = await Category.findOne({ name });
@@ -128,8 +171,14 @@ const updateCategory = asyncHandler(async (req, res) => {
   if (description !== undefined) category.description = description;
   if (isActive !== undefined) category.isActive = isActive;
   
-  // 🔥 تحديث الصورة في الكائن إذا تم إرسالها في الطلب
-  if (image !== undefined) category.image = image;
+  // 5. إذا قام الأدمن برفع صورة جديدة لتحديث القسم
+  if (req.file) {
+    // اختياري: يمكنك هنا استخراج الـ publicId الخاص بالصورة القديمة من الرابط وحذفها باستخدام cloudRemove لتوفير مساحة Cloudinary
+    
+    // رفع الصورة الجديدة
+    const uploadResult = await cloudUpload(req.file);
+    category.image = uploadResult.secure_url;
+  }
 
   await category.save();
   res.status(200).json({ success: true, message: "Category updated successfully", category });
@@ -148,6 +197,8 @@ const deleteCategory = asyncHandler(async (req, res) => {
 
   await Category.updateMany({ parent: category._id }, { parent: null });
 
+  // اختياري: يمكنك حذف الصورة من Cloudinary هنا أيضاً قبل مسح الـ category نهائياً
+
   await category.deleteOne();
   res.status(200).json({ success: true, message: "Category deleted successfully and child links updated" });
 });
@@ -155,6 +206,7 @@ const deleteCategory = asyncHandler(async (req, res) => {
 module.exports = {
   getCategories,
   getCategoryById,
+  getCategoryBySlug,
   createCategory,
   updateCategory,
   deleteCategory

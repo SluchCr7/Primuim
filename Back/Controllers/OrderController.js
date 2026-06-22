@@ -93,6 +93,20 @@ const createOrder = asyncHandler(async (req, res) => {
 
             await product.save({ session });
 
+            // Trigger low-stock real-time alert
+            if (product.stock <= product.lowStockThreshold && product.seller) {
+                try {
+                    const { createNotification } = require("../utils/notifications");
+                    await createNotification({
+                        user: product.seller,
+                        title: "Low Stock Alert",
+                        message: `Product "${product.title}" has reached critical low stock level (${product.stock} left).`
+                    });
+                } catch (err) {
+                    console.error("Failed to generate low-stock alert notification:", err.message);
+                }
+            }
+
             orderItems.push({
                 product: product._id,
                 title: product.title,

@@ -52,7 +52,7 @@ exports.getAllTestimonials = async (req, res) => {
 
         // جلب البيانات مع عمل populate لبيانات المستخدم (الاسم، الصورة الشخصية)
         const testimonials = await Testimonial.find(filter)
-            .populate("User", "name avatar email") // جلب الحقول المحددة فقط من موديل الـ User
+            .populate("User", "name avatar email username profileName") // جلب الحقول المحددة فقط من موديل الـ User
             .sort({ createdAt: -1 }) // جلب الأحدث أولاً
             .skip(skip)
             .limit(limit);
@@ -93,7 +93,7 @@ exports.updateTestimonialStatus = async (req, res) => {
             req.params.id,
             { status: status },
             { new: true }
-        ).populate("User", "name");
+        ).populate("User", "name avatar email username profileName");
 
         if (!testimonial) {
             return res.status(404).json({ message: "هذا التقييم غير موجود" });

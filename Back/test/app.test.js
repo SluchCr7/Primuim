@@ -10,6 +10,13 @@ require.cache[require.resolve("../utils/sendEmail")] = {
   }
 };
 
+require.cache[require.resolve("../config/db")] = {
+  exports: async () => {
+    console.log("Mocked database connection success");
+    return {};
+  }
+};
+
 const app = require("../index");
 const { Product } = require("../models/Product");
 const { User } = require("../models/User");

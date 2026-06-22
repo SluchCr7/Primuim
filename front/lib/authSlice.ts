@@ -11,12 +11,24 @@ interface AuthState {
   user: UserProfile | null;
   accessToken: string | null;
   isAuthenticated: boolean;
+  currency: "EGP" | "USD" | "EUR";
 }
+
+const getInitialCurrency = (): "EGP" | "USD" | "EUR" => {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("selected_currency");
+    if (saved === "USD" || saved === "EUR" || saved === "EGP") {
+      return saved;
+    }
+  }
+  return "EGP";
+};
 
 const initialState: AuthState = {
   user: null,
   accessToken: null,
   isAuthenticated: false,
+  currency: getInitialCurrency(),
 };
 
 const authSlice = createSlice({
@@ -36,9 +48,15 @@ const authSlice = createSlice({
       state.accessToken = null;
       state.isAuthenticated = false;
     },
+    setCurrency: (state, action: PayloadAction<"EGP" | "USD" | "EUR">) => {
+      state.currency = action.payload;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("selected_currency", action.payload);
+      }
+    },
   },
 });
 
-export const { setCredentials, logOut } = authSlice.actions;
+export const { setCredentials, logOut, setCurrency } = authSlice.actions;
 
 export default authSlice.reducer;

@@ -64,7 +64,7 @@ export default function CategoriesPage() {
                     </p>
                   )}
                   <Link
-                    href={`/categories/${cat._id}`}
+                    href={`/category/${cat.slug || cat._id}`}
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold group-hover:text-gold-hover transition-colors uppercase tracking-widest mt-2"
                   >
                     Explore Subcategories <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />

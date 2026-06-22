@@ -255,7 +255,7 @@ const validateRegisterUser = (user) => {
             .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\\$%\\^&\\*])'))
             .message('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character')
             .required(),
-        referredByCode: Joi.string().uppercase().length(8).optional(),
+        referredByCode: Joi.string().uppercase().length(8).optional().allow("", null),
         role: Joi.string().valid("customer", "seller").optional(),
         
         // Seller specific fields

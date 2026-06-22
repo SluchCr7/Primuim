@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CountUp from "react-countup";
@@ -14,10 +14,12 @@ import {
   useGetArticlesQuery,
   useToggleWishlistMutation,
   useGetWishlistQuery,
+  useGetAllTestimonialsQuery,
 } from "../lib/api";
 import { useAppSelector } from "../lib/store";
 import { useToast } from "./components/Toast";
 import { addGuestCartItem } from "../lib/cartUtils";
+import { formatPrice as formatCurrencyPrice } from "../lib/currencyUtils";
 import { StatCard } from "./components/StatsCard";
 import { stats } from "../lib/data";
 import {
@@ -268,7 +270,7 @@ const formatPrice = (value: number | string | undefined) => {
 export default function Home() {
   const router = useRouter();
   const { showToast } = useToast();
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, currency } = useAppSelector((state) => state.auth);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
@@ -317,11 +319,23 @@ export default function Home() {
   const { data: sellersData, isLoading: sellersLoading } = useGetApprovedSellersQuery({ limit: 3, sort: "rating" });
   const { data: articlesData, isLoading: articlesLoading } = useGetArticlesQuery({ limit: 3 });
   const { data: allProductsQueryData } = useGetProductsQuery({ limit: 20 });
+  const { data: testimonialsData } = useGetAllTestimonialsQuery(undefined);
   const [addToCart] = useAddToCartMutation();
-
+  
   const { data: wishlistData, refetch: refetchWishlist } = useGetWishlistQuery(undefined, { skip: !isAuthenticated });
   const [toggleWishlist] = useToggleWishlistMutation();
   const { user: currentUser } = useAppSelector((state) => state.auth);
+
+  const displayTestimonials = useMemo(() => {
+    if (testimonialsData?.data && testimonialsData.data.length > 0) {
+      return testimonialsData.data.map((item: any) => ({
+        quote: item.body,
+        name: item.User?.username || "Anonymous",
+        title: "Verified Customer"
+      }));
+    }
+    return testimonials;
+  }, [testimonialsData]);
 
   const handleWishlistToggle = async (productId: string) => {
     if (!isAuthenticated) {
@@ -567,8 +581,8 @@ export default function Home() {
                   <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/75 backdrop-blur-md">
                     <Camera className="h-3.5 w-3.5 text-gold" /> Featured collection
                   </div>
-                  <h3 className="font-serif text-2xl font-semibold">{category.name}</h3>
-                  <p className="mt-2 line-clamp-3 text-sm leading-6 text-white/75">{category.description || "A curated edit built to feel premium, tactile, and easy to browse."}</p>
+                  <h3 className="font-serif text-xl font-semibold">{category.name}</h3>
+                  <p className="mt-2 line-clamp-1 text-xs leading-6 text-white/75">{category.description || "A curated edit built to feel premium, tactile, and easy to browse."}</p>
                   <div className="mt-5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-gold transition-colors group-hover:text-gold-hover">
                     Open collection <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                   </div>
@@ -706,9 +720,9 @@ export default function Home() {
                     <div className="flex flex-col gap-3">
                       {/* Price section with discount */}
                       <div className="flex items-baseline gap-2 text-sm border-t border-card-border/40 pt-3">
-                        <span className="font-bold text-gold">EGP {formatPrice(product.price)}</span>
+                        <span className="font-bold text-gold">{formatCurrencyPrice(product.price, currency)}</span>
                         {product.comparePrice && (
-                          <span className="text-xs line-through text-muted font-light">EGP {formatPrice(product.comparePrice)}</span>
+                          <span className="text-xs line-through text-muted font-light">{formatCurrencyPrice(product.comparePrice, currency)}</span>
                         )}
                       </div>
 
@@ -826,7 +840,7 @@ export default function Home() {
                         <Star className="h-4 w-4 fill-gold text-gold" />
                         <span className="font-medium">{product.ratingAverage || 5.0}</span>
                       </div>
-                      <span className="font-semibold text-gold">EGP {formatPrice(product.price)}</span>
+                      <span className="font-semibold text-gold">{formatCurrencyPrice(product.price, currency)}</span>
                     </div>
 
                     <div className="flex items-center gap-3 text-xs uppercase tracking-[0.22em] text-muted">
@@ -936,7 +950,7 @@ export default function Home() {
                         <Star className="h-4 w-4 fill-gold text-gold" />
                         <span className="font-medium">{product.ratingAverage || 5.0}</span>
                       </div>
-                      <span className="font-semibold text-gold">EGP {formatPrice(product.price)}</span>
+                      <span className="font-semibold text-gold">{formatCurrencyPrice(product.price, currency)}</span>
                     </div>
 
                     <div className="flex items-center gap-3 text-xs uppercase tracking-[0.22em] text-muted">
@@ -1033,7 +1047,7 @@ export default function Home() {
                         <Star className="h-3.5 w-3.5 fill-gold text-gold" />
                         <span>{product.ratingAverage?.toFixed(1) || "5.0"}</span>
                       </div>
-                      <span className="font-bold text-gold">EGP {formatPrice(product.price)}</span>
+                      <span className="font-bold text-gold">{formatCurrencyPrice(product.price, currency)}</span>
                     </div>
                   </div>
                 </article>
@@ -1214,7 +1228,7 @@ export default function Home() {
               <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">Client voice</p>
               <h2 className="mt-2 font-serif text-4xl font-semibold">Proof the experience feels premium in the real world.</h2>
               <div className="mt-8 grid gap-5">
-                {testimonials.map((item) => (
+                {displayTestimonials.map((item: any) => (
                   <figure key={item.name} className="luxury-card p-6 shadow-sm">
                     <QuoteMark />
                     <blockquote className="mt-4 text-base leading-8 text-foreground">{item.quote}</blockquote>

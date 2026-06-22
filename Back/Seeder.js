@@ -83,7 +83,7 @@ const seedCategories = async () => {
       // Fashion & Apparel
       { name: "Men's Fashion", parent: categoryMap["Fashion & Apparel"], description: "Men's clothing and shoes", image: "/images/men_fashion.jpg" },
       { name: "Women's Fashion", parent: categoryMap["Fashion & Apparel"], description: "Women's clothing, dresses, and bags", image: "/images/women_fashion.jpg" },
-      { name: "Kids' Fashion", parent: categoryMap["Fashion & Apparel"], description: "Children and baby clothing", image: "/images/kids_fashion.jpg" },
+      // { name: "Kids' Fashion", parent: categoryMap["Fashion & Apparel"], description: "Children and baby clothing", image: "/images/kids_fashion.jpg" },
       { name: "Watches & Jewelry", parent: categoryMap["Fashion & Apparel"], description: "Luxury watches and fine jewelry", image: "/images/watches_jewelry.jpg" },
 
       // Home & Kitchen
@@ -99,7 +99,7 @@ const seedCategories = async () => {
       // Sports & Outdoors
       { name: "Fitness & Gym", parent: categoryMap["Sports & Outdoors"], description: "Treadmills, dumbbells, and gym gear", image: "/images/fitness_gym.jpg" },
       { name: "Sports Wear", parent: categoryMap["Sports & Outdoors"], description: "Athletic clothing and shoes", image: "/images/sports_wear.jpg" },
-      { name: "Outdoor Recreation", parent: categoryMap["Sports & Outdoors"], description: "Camping, hiking, and cycling gear", image: "/images/outdoor_recreation.jpg" },
+      // { name: "Outdoor Recreation", parent: categoryMap["Sports & Outdoors"], description: "Camping, hiking, and cycling gear", image: "/images/outdoor_recreation.jpg" },
 
       // Supermarket & Groceries
       { name: "Beverages", parent: categoryMap["Supermarket & Groceries"], description: "Coffee, tea, juices, and water", image: "/images/beverages.jpg" },

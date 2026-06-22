@@ -4,26 +4,272 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sluchitte API</title>
+    <title>Premium API</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
+            background: linear-gradient(135deg, #111827, #1e293b);
+            color: white;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            padding: 30px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .card {
+            background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.08);
+            backdrop-filter: blur(12px);
+            border-radius: 25px;
+            padding: 50px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,.35);
+        }
+
+        .logo {
+            width: 90px;
+            height: 90px;
+            margin: auto;
+            margin-bottom: 25px;
+            border-radius: 50%;
+            background: linear-gradient(135deg,#e11d48,#991b1b);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 35px;
+            font-weight: bold;
+            color: white;
         }
 
         h1 {
-            color: red;
+            font-size: 40px;
+            margin-bottom: 15px;
         }
+
+        p {
+            color: #cbd5e1;
+            line-height: 1.8;
+            font-size: 17px;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(34,197,94,.15);
+            color: #22c55e;
+            padding: 10px 18px;
+            border-radius: 50px;
+            margin-top: 30px;
+            font-weight: 600;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.8);
+                opacity: .4;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .grid {
+            margin-top: 45px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
+            gap: 20px;
+        }
+
+        .box {
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 18px;
+            padding: 25px;
+            text-align: left;
+            transition: .3s;
+        }
+
+        .box:hover {
+            transform: translateY(-8px);
+            border-color: #dc2626;
+        }
+
+        .box h3 {
+            margin-bottom: 12px;
+            color: #fff;
+        }
+
+        .box p {
+            font-size: 14px;
+        }
+
+        .btns {
+            margin-top: 45px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            text-decoration: none;
+            padding: 14px 30px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: .3s;
+        }
+
+        .primary {
+            background: #dc2626;
+            color: white;
+        }
+
+        .primary:hover {
+            background: #b91c1c;
+        }
+
+        .secondary {
+            border: 1px solid rgba(255,255,255,.2);
+            color: white;
+        }
+
+        .secondary:hover {
+            background: rgba(255,255,255,.08);
+        }
+
+        footer {
+            margin-top: 45px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        code {
+            color: #22c55e;
+        }
+
+        @media(max-width:768px){
+
+            .card{
+                padding:35px;
+            }
+
+            h1{
+                font-size:30px;
+            }
+
+        }
+
     </style>
 </head>
 
 <body>
-    <h1>HomePage for Zamalek API Page</h1>
+
+    <div class="container">
+
+        <div class="card">
+
+            <div class="logo">
+                P
+            </div>
+
+            <h1>Premium API</h1>
+
+            <p>
+                Welcome to the official backend API for the Premium platform.
+                This service powers authentication, products, orders, news,
+                community, and all application resources.
+            </p>
+
+            <div class="status">
+                <div class="dot"></div>
+                API Status : Online
+            </div>
+
+            <div class="grid">
+
+                <div class="box">
+                    <h3>Authentication</h3>
+                    <p>
+                        Secure JWT authentication with protected routes.
+                    </p>
+                </div>
+
+                <div class="box">
+                    <h3>REST API</h3>
+                    <p>
+                        Clean RESTful endpoints with scalable architecture.
+                    </p>
+                </div>
+
+                <div class="box">
+                    <h3>Database</h3>
+                    <p>
+                        Connected successfully with MongoDB database.
+                    </p>
+                </div>
+
+                <div class="box">
+                    <h3>Version</h3>
+                    <p>
+                        API Version <code>v1.0.0</code>
+                    </p>
+                </div>
+
+            </div>
+
+            <div class="btns">
+
+                <a href="/api" class="btn primary">
+                    API Routes
+                </a>
+
+                <a href="/docs" class="btn secondary">
+                    Documentation
+                </a>
+
+            </div>
+
+            <footer>
+                © 2026 Premium API • Backend Server Running Successfully
+            </footer>
+
+        </div>
+
+    </div>
+
 </body>
 
 </html>

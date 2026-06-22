@@ -51,8 +51,8 @@ const register = asyncHandler(async (req, res) => {
   }   
 
   let referredByUser = null;
-  if (referredByCode) {
-    referredByUser = await User.findOne({ referralCode: referredByCode.toUpperCase() });
+  if (referredByCode && referredByCode.trim() !== "") {
+    referredByUser = await User.findOne({ referralCode: referredByCode.trim().toUpperCase() });
   }
 
   const user = await User.create({

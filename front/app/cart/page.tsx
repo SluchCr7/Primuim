@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useAppSelector } from "../../lib/store";
+import { formatPrice as formatCurrencyPrice } from "../../lib/currencyUtils";
 import {
   useGetCartQuery,
   useUpdateCartItemQuantityMutation,
@@ -22,7 +23,7 @@ import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Ticket, Sparkles, Shoppin
 
 export default function CartPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, currency } = useAppSelector((state) => state.auth);
   
   // States
   const [promoCode, setPromoCode] = useState("");
@@ -263,11 +264,11 @@ export default function CartPage() {
                         <div className="flex items-center gap-6">
                           <div className="text-right">
                             <span className="font-bold text-gold block text-sm">
-                              {(productObj.price * item.quantity).toFixed(2)} EGP
+                              {formatCurrencyPrice(productObj.price * item.quantity, currency)}
                             </span>
                             {item.quantity > 1 && (
                               <span className="text-[10px] text-muted font-light mt-0.5 block">
-                                {productObj.price.toFixed(2)} each
+                                {formatCurrencyPrice(productObj.price, currency)} each
                               </span>
                             )}
                           </div>
@@ -301,11 +302,11 @@ export default function CartPage() {
                 <div className="flex flex-col gap-3.5 text-sm">
                   <div className="flex justify-between items-center">
                     <span className="text-muted font-light">Subtotal</span>
-                    <span className="font-semibold">{subtotal.toFixed(2)} EGP</span>
+                    <span className="font-semibold">{formatCurrencyPrice(subtotal, currency)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted font-light">VAT (14% EG)</span>
-                    <span className="font-semibold">{vat.toFixed(2)} EGP</span>
+                    <span className="font-semibold">{formatCurrencyPrice(vat, currency)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted font-light">Shipping</span>
@@ -313,7 +314,7 @@ export default function CartPage() {
                       {shipping === 0 ? (
                         <span className="text-success font-bold uppercase tracking-wider text-xs">Free</span>
                       ) : (
-                        `${shipping.toFixed(2)} EGP`
+                        formatCurrencyPrice(shipping, currency)
                       )}
                     </span>
                   </div>
@@ -321,14 +322,14 @@ export default function CartPage() {
                   {discount > 0 && (
                     <div className="flex justify-between items-center text-success font-semibold">
                       <span className="flex items-center gap-1"><Sparkles className="h-3.5 w-3.5" /> Discount</span>
-                      <span>-{discount.toFixed(2)} EGP</span>
+                      <span>-{formatCurrencyPrice(discount, currency)}</span>
                     </div>
                   )}
 
                   <div className="border-t border-card-border pt-4 mt-2 flex justify-between items-end">
                     <span className="font-serif font-bold text-base">Estimated Total</span>
                     <span className="font-serif font-extrabold text-xl text-gold">
-                      {total.toFixed(2)} EGP
+                      {formatCurrencyPrice(total, currency)}
                     </span>
                   </div>
                 </div>

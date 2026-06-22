@@ -54,7 +54,7 @@ const baseQueryWithReauth: BaseQueryFn<
 export const ecommerceApi = createApi({
   reducerPath: "ecommerceApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["User", "Product", "Category", "Cart", "Checkout", "Order", "Review", "Payment", "Coupon", "Article", "SellerRequest"],
+  tagTypes: ["User", "Product", "Category", "Cart", "Checkout", "Order", "Review", "Payment", "Coupon", "Article", "SellerRequest", "Testimonial"], 
   endpoints: (builder) => ({
     // --- AUTHENTICATION ---
     login: builder.mutation({
@@ -243,6 +243,14 @@ export const ecommerceApi = createApi({
         params,
       }),
       providesTags: ["Category"],
+    }),
+    getCategoryById: builder.query({
+      query: (id) => `/categories/${id}`,
+      providesTags: (result, error, id) => [{ type: "Category", id }],
+    }),
+    getCategoryBySlug: builder.query({
+      query: (slug) => `/categories/slug/${slug}`,
+      providesTags: (result, error, slug) => [{ type: "Category", id: slug }],
     }),
 
     // --- CART ---
@@ -543,7 +551,12 @@ export const ecommerceApi = createApi({
       }),
       invalidatesTags: ["Article"],
     }),
-
+    getAllTestimonials : builder.query({
+      query : ()=>({
+        url : `/testimonials`,
+      }),
+      providesTags: ["Testimonial"],
+    }),
     // --- SELLER ---
     applyAsSeller: builder.mutation({
       query: (sellerData) => ({
@@ -678,6 +691,9 @@ export const ecommerceApi = createApi({
         params,
       }),
     }),
+    getExchangeRates: builder.query({
+      query: () => "/currency/rates",
+    }),
   }),
 });
 
@@ -698,6 +714,8 @@ export const {
   useGetSearchSuggestionsQuery,
   useGetTrendingSearchesQuery,
   useGetCategoriesQuery,
+  useGetCategoryByIdQuery,
+  useGetCategoryBySlugQuery,
   useGetCartQuery,
   useAddToCartMutation,
   useUpdateCartItemQuantityMutation,
@@ -783,4 +801,7 @@ export const {
   useGetSystemSettingsQuery,
   useUpdateSystemSettingsMutation,
   useGetAuditLogsQuery,
+  useGetExchangeRatesQuery,
+  // --- TESTIMONIALS ---
+  useGetAllTestimonialsQuery
 } = ecommerceApi;
