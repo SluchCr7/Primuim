@@ -165,7 +165,36 @@ export default function DashboardPage() {
       }
     }
   };
+  const handleDownloadInvoice = async (orderId: string) => {
+    try {
+      showToast("Generating invoice PDF...", "info");
 
+      // نقوم بجلب التوكن من الـ LocalStorage أو الـ Cookies حسب نظام الحماية عندك
+      // (تأكد من مطابقة اسم المفتاح 'token' لما تستخدمه في مشروعك)
+      const token = localStorage.getItem("token") || ""; 
+
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/invoice`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to download invoice");
+      }
+
+      // تحويل الاستجابة إلى Blob (ملف ثنائي)
+      const blob = await response.blob();
+      const fileURL = URL.createObjectURL(blob);
+      
+      // فتح الملف في تبويب جديد
+      window.open(fileURL, "_blank");
+    } catch (err: any) {
+      showToast(err.message || "Could not retrieve pdf invoice.", "error");
+    }
+  };
   const handleToggle2FA = async (enable: boolean) => {
     try {
       await toggle2FA({ enable }).unwrap();
@@ -637,14 +666,14 @@ export default function DashboardPage() {
                         </div>
                         
                         <div className="flex gap-3">
-                          <Link
-                            href={`${API_BASE_URL}/orders/${order._id}/invoice`}
-                            target="_blank"
-                            rel="noreferrer"
+                          {/* استبدل الـ Link القديم بهذا الزر المحمي */}
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadInvoice(order._id)}
                             className="inline-flex h-9 items-center gap-1.5 rounded border border-card-border px-3 text-[10px] font-bold uppercase tracking-wider hover:border-gold hover:text-gold transition-colors"
                           >
                             <FileText className="h-3.5 w-3.5" /> PDF Invoice
-                          </Link>
+                          </button>
 
                           {order.orderStatus === "pending" && (
                             <button
