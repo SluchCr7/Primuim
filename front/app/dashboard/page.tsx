@@ -22,6 +22,7 @@ import {
   useToggle2FAMutation,
   useApplyAsSellerMutation,
   useGetMyApplicationStatusQuery,
+  API_BASE_URL,
 } from "../../lib/api";
 import { useToast } from "../components/Toast";
 import {
@@ -45,6 +46,7 @@ import {
   Copy,
   Lock,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -635,14 +637,14 @@ export default function DashboardPage() {
                         </div>
                         
                         <div className="flex gap-3">
-                          <a
-                            href={`http://localhost:5000/api/orders/${order._id}/invoice`}
+                          <Link
+                            href={`${API_BASE_URL}/orders/${order._id}/invoice`}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex h-9 items-center gap-1.5 rounded border border-card-border px-3 text-[10px] font-bold uppercase tracking-wider hover:border-gold hover:text-gold transition-colors"
                           >
                             <FileText className="h-3.5 w-3.5" /> PDF Invoice
-                          </a>
+                          </Link>
 
                           {order.orderStatus === "pending" && (
                             <button
