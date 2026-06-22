@@ -169,30 +169,21 @@ export default function DashboardPage() {
     try {
       showToast("Generating invoice PDF...", "info");
 
-      // نقوم بجلب التوكن من الـ LocalStorage أو الـ Cookies حسب نظام الحماية عندك
-      // (تأكد من مطابقة اسم المفتاح 'token' لما تستخدمه في مشروعك)
-      const token = localStorage.getItem("token") || ""; 
-
       const response = await fetch(`${API_BASE_URL}/orders/${orderId}/invoice`, {
         method: "GET",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
+        // السطر ده هو السحر اللي هيخلي المتصفح يبعت الـ Cookie مع الطلب تلقائياً
+        credentials: "include", 
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to download invoice");
+        throw new Error("Failed to download invoice");
       }
 
-      // تحويل الاستجابة إلى Blob (ملف ثنائي)
       const blob = await response.blob();
       const fileURL = URL.createObjectURL(blob);
-      
-      // فتح الملف في تبويب جديد
       window.open(fileURL, "_blank");
     } catch (err: any) {
-      showToast(err.message || "Could not retrieve pdf invoice.", "error");
+      showToast("Could not retrieve pdf invoice.", "error");
     }
   };
   const handleToggle2FA = async (enable: boolean) => {
