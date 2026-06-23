@@ -24,6 +24,7 @@ import {
   useCreateArticleMutation,
   useUpdateArticleMutation,
   useDeleteArticleMutation,
+  useGetMyApplicationStatusQuery,
 } from "../../lib/api";
 import { useToast } from "../components/Toast";
 import {
@@ -75,23 +76,30 @@ export default function SellerDashboardPage() {
   // Active Tab: "analytics" | "products" | "orders" | "wallet" | "settings" | "articles"
   const [activeTab, setActiveTab] = useState<"analytics" | "products" | "orders" | "wallet" | "settings" | "articles">("analytics");
 
-  // Onboarding Security check
+  // Onboarding Security check — only redirect completely unauthenticated users or non-sellers WITHOUT an application
+  const { data: appStatusData, isLoading: appStatusLoading } = useGetMyApplicationStatusQuery(undefined, { skip: !isAuthenticated });
+
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/login");
-    } else if (user?.role !== "seller" && user?.role !== "admin") {
-      router.push("/dashboard");
     }
-  }, [isAuthenticated, user, router]);
+    // If user has seller role, let them in
+    // If user has a pending/rejected application, show the waiting screen (handled below)
+    // If user has no application and is not a seller, redirect to dashboard
+  }, [isAuthenticated, router]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // RTK Queries
-  const { data: statsData, refetch: refetchStats } = useGetSellerStatsQuery(undefined, { skip: !user || (user.role !== "seller" && user.role !== "admin") });
-  const { data: ordersData, refetch: refetchOrders } = useGetSellerOrdersQuery(undefined, { skip: !user || (user.role !== "seller" && user.role !== "admin") });
-  const { data: productsData, refetch: refetchProducts } = useGetMyProductsQuery(undefined, { skip: !user || (user.role !== "seller" && user.role !== "admin") });
+  const isApprovedSeller = user?.role === "seller" || user?.role === "admin";
+  const hasPendingApp = appStatusData?.request && appStatusData.request.status === "pending";
+  const hasRejectedApp = appStatusData?.request && appStatusData.request.status === "rejected";
+
+  // RTK Queries — only fetch if approved seller
+  const { data: statsData, refetch: refetchStats } = useGetSellerStatsQuery(undefined, { skip: !isApprovedSeller });
+  const { data: ordersData, refetch: refetchOrders } = useGetSellerOrdersQuery(undefined, { skip: !isApprovedSeller });
+  const { data: productsData, refetch: refetchProducts } = useGetMyProductsQuery(undefined, { skip: !isApprovedSeller });
   const { data: categoriesData } = useGetCategoriesQuery(undefined);
   const { data: meData, refetch: refetchMe } = useGetMeQuery(undefined, { skip: !isAuthenticated });
 
@@ -482,16 +490,145 @@ export default function SellerDashboardPage() {
     }
   };
 
-  if (!mounted || user?.role !== "seller" && user?.role !== "admin") {
+  // ── Loading state ──
+  if (!mounted || appStatusLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <Header />
         <div className="flex-grow flex items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
+            <span className="text-xs text-muted font-light tracking-widest uppercase">Loading Portal...</span>
+          </div>
         </div>
         <Footer />
       </div>
     );
+  }
+
+  // ── Not authenticated → redirect handled in useEffect ──
+  if (!isAuthenticated) return null;
+
+  // ── Pending or Rejected Application Screen ──
+  if (!isApprovedSeller && (hasPendingApp || hasRejectedApp)) {
+    const appReq = appStatusData!.request;
+    const isPending = appReq.status === "pending";
+    return (
+      <div className="min-h-screen flex flex-col bg-background text-foreground">
+        <Header />
+        <main className="flex-grow flex items-center justify-center px-6 py-20">
+          <div className="max-w-lg w-full">
+            {/* Status Card */}
+            <div className="luxury-card p-8 text-center border border-card-border relative overflow-hidden">
+              {/* Background accent */}
+              <div className={`absolute inset-0 opacity-5 ${isPending ? "bg-gold" : "bg-error"}`} />
+              
+              <div className={`inline-flex h-16 w-16 items-center justify-center rounded-full mb-6 mx-auto ${
+                isPending ? "bg-gold/15 text-gold" : "bg-error/15 text-error"
+              }`}>
+                {isPending ? <Clock className="h-8 w-8" /> : <XCircle className="h-8 w-8" />}
+              </div>
+
+              <span className={`text-[10px] font-bold tracking-[0.3em] uppercase block mb-2 ${
+                isPending ? "text-gold" : "text-error"
+              }`}>
+                {isPending ? "Application Under Review" : "Application Not Approved"}
+              </span>
+              <h1 className="font-serif text-2xl font-bold mb-3">
+                {isPending ? "Your Store Is Being Reviewed" : "Application Rejected"}
+              </h1>
+              <p className="text-sm text-muted font-light leading-relaxed mb-6">
+                {isPending
+                  ? "Our admin team is reviewing your seller application. You will receive a notification once a decision is made."
+                  : "Your seller application was reviewed and could not be approved at this time."
+                }
+              </p>
+
+              {/* Store Info */}
+              <div className="rounded border border-card-border bg-background/50 p-4 text-left mb-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-[10px] text-muted uppercase tracking-wider block">Store Name</span>
+                    <span className="font-bold text-foreground">{appReq.storeName}</span>
+                  </div>
+                  <span className={`inline-flex font-bold px-3 py-1 rounded-full text-[9px] uppercase tracking-wider ${
+                    isPending ? "bg-gold/20 text-gold" : "bg-error/20 text-error"
+                  }`}>
+                    {appReq.status}
+                  </span>
+                </div>
+                <div className="mt-3">
+                  <span className="text-[10px] text-muted uppercase tracking-wider block">Description</span>
+                  <span className="text-xs text-foreground/80 leading-relaxed">{appReq.storeDescription}</span>
+                </div>
+                <div className="mt-3">
+                  <span className="text-[10px] text-muted uppercase tracking-wider block">Submitted</span>
+                  <span className="text-xs text-muted">{new Date(appReq.createdAt).toLocaleDateString()}</span>
+                </div>
+                {appReq.adminNotes && (
+                  <div className="mt-3 p-3 bg-error/10 border border-error/20 rounded">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-error block mb-1">Admin Feedback</span>
+                    <span className="text-xs text-error/80 leading-relaxed">{appReq.adminNotes}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Timeline Steps */}
+              {isPending && (
+                <div className="flex items-center justify-center gap-2 mb-6">
+                  {[
+                    { label: "Applied", done: true },
+                    { label: "Under Review", done: false, active: true },
+                    { label: "Decision", done: false },
+                    { label: "Launch", done: false },
+                  ].map((step, i) => (
+                    <React.Fragment key={i}>
+                      <div className="flex flex-col items-center gap-1">
+                        <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                          step.done
+                            ? "bg-success text-white"
+                            : step.active
+                              ? "bg-gold text-luxury-black animate-pulse"
+                              : "bg-card-border text-muted"
+                        }`}>
+                          {step.done ? "✓" : i + 1}
+                        </div>
+                        <span className="text-[8px] text-muted uppercase tracking-wider">{step.label}</span>
+                      </div>
+                      {i < 3 && <div className="h-px w-8 bg-card-border" />}
+                    </React.Fragment>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <a
+                  href="/dashboard"
+                  className="px-6 py-2.5 border border-card-border rounded font-semibold text-xs uppercase tracking-wider hover:border-gold transition-all text-center"
+                >
+                  Back to Dashboard
+                </a>
+                {!isPending && (
+                  <a
+                    href="/dashboard"
+                    className="px-6 py-2.5 bg-gold hover:bg-gold-hover text-luxury-black rounded font-bold text-xs uppercase tracking-wider transition-all text-center"
+                  >
+                    Resubmit Application
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // ── No application and not a seller → redirect to dashboard ──
+  if (!isApprovedSeller && !appStatusData?.request) {
+    router.push("/dashboard");
+    return null;
   }
 
   const stats = statsData?.stats || {

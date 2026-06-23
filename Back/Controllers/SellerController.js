@@ -24,10 +24,22 @@ const applyAsSeller = asyncHandler(async (req, res) => {
   const existingRequest = await SellerRequest.findOne({ user: req.user.id });
 
   if (existingRequest) {
-    return res.status(400).json({
-      success: false,
-      message: `You already have a seller application. Status: ${existingRequest.status}`
-    });
+    if (existingRequest.status === "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Your application is already pending admin review. Please wait for a decision."
+      });
+    }
+    if (existingRequest.status === "approved") {
+      return res.status(400).json({
+        success: false,
+        message: "Your seller application has already been approved."
+      });
+    }
+    // If rejected, delete old request and allow resubmission
+    if (existingRequest.status === "rejected") {
+      await SellerRequest.deleteOne({ _id: existingRequest._id });
+    }
   }
 
   const newRequest = await SellerRequest.create({

@@ -357,6 +357,10 @@ const moderateSellerRequest = asyncHandler(async (req, res) => {
         message: `Congratulations! Your store "${sellerReq.storeName}" has been approved. You now have access to the Seller Portal.`
       });
     } else {
+      // Update the user's sellerStatus to "rejected" so they can see the rejection
+      user.sellerStatus = "rejected";
+      await user.save();
+
       // Notify User
       await Notification.create({
         user: user._id,

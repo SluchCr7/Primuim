@@ -1218,117 +1218,180 @@ export default function DashboardPage() {
             {/* BECOME A SELLER TAB */}
             {activeTab === "seller" && (
               <div className="luxury-card p-6 md:p-8">
-                <h2 className="font-serif text-2xl font-bold mb-2">Seller Onboarding Application</h2>
+                <h2 className="font-serif text-2xl font-bold mb-2">Seller Onboarding</h2>
                 <p className="text-xs text-muted font-light mt-1 mb-6">Apply to open a merchant store on Shop Premium and list your custom catalog</p>
 
-                {appStatusData?.request ? (
-                  <div className="p-6 rounded border border-card-border bg-card-bg/50">
-                    <h3 className="font-serif font-bold text-base mb-4">Application Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs mb-6">
+                {/* APPROVED — show portal CTA */}
+                {appStatusData?.request?.status === "approved" || user?.role === "seller" ? (
+                  <div className="flex flex-col items-center text-center py-6 gap-5">
+                    <div className="h-16 w-16 rounded-full bg-success/15 text-success flex items-center justify-center">
+                      <CheckCircle className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-success block mb-1">Store Approved</span>
+                      <h3 className="font-serif text-xl font-bold mb-2">Your store is live!</h3>
+                      <p className="text-sm text-muted font-light">Your seller account has been approved. Head to the Seller Portal to manage your store, list products, and track orders.</p>
+                    </div>
+                    <button
+                      onClick={() => router.push("/seller")}
+                      className="px-8 py-3 bg-gold hover:bg-gold-hover text-luxury-black font-bold rounded text-xs uppercase tracking-widest transition-all flex items-center gap-2"
+                    >
+                      <Sparkles className="h-4 w-4" /> Go to Seller Portal
+                    </button>
+                  </div>
+
+                /* PENDING — show status tracker */
+                ) : appStatusData?.request?.status === "pending" ? (
+                  <div className="p-6 rounded border border-gold/30 bg-gold/5">
+                    <div className="flex items-center gap-3 mb-5">
+                      <div className="h-10 w-10 rounded-full bg-gold/15 text-gold flex items-center justify-center flex-shrink-0">
+                        <Clock className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-base">Application Under Review</h3>
+                        <p className="text-xs text-muted font-light">Our team is reviewing your seller application</p>
+                      </div>
+                      <span className="ml-auto inline-flex font-bold px-3 py-1 rounded-full text-[9px] uppercase tracking-wider bg-gold/20 text-gold">Pending</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs mb-5 p-4 rounded border border-card-border bg-background/50">
                       <div>
                         <span className="text-muted block">Store Name</span>
                         <span className="font-semibold text-foreground">{appStatusData.request.storeName}</span>
                       </div>
                       <div>
-                        <span className="text-muted block">Status</span>
-                        <span className={`inline-flex font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wider mt-1 ${
-                          appStatusData.request.status === "pending"
-                            ? "bg-gold/20 text-gold"
-                            : appStatusData.request.status === "approved"
-                              ? "bg-success/20 text-success"
-                              : "bg-error/20 text-error"
-                        }`}>
-                          {appStatusData.request.status}
-                        </span>
+                        <span className="text-muted block">Phone</span>
+                        <span className="font-semibold text-foreground">{appStatusData.request.storePhone}</span>
                       </div>
-                      <div className="md:col-span-2">
-                        <span className="text-muted block">Store Description</span>
-                        <span className="text-foreground">{appStatusData.request.storeDescription}</span>
+                      <div>
+                        <span className="text-muted block">Submitted</span>
+                        <span className="font-semibold text-foreground">{new Date(appStatusData.request.createdAt).toLocaleDateString()}</span>
                       </div>
-                      {appStatusData.request.adminNotes && (
-                        <div className="md:col-span-2 p-3 bg-error/10 border border-error/20 text-error rounded mt-2">
-                          <span className="font-semibold block text-[10px] uppercase">Admin Feedback:</span>
-                          {appStatusData.request.adminNotes}
-                        </div>
-                      )}
+                      <div className="md:col-span-3">
+                        <span className="text-muted block">Description</span>
+                        <span className="text-foreground leading-relaxed">{appStatusData.request.storeDescription}</span>
+                      </div>
                     </div>
 
-                    {appStatusData.request.status === "rejected" && (
-                      <button
-                        onClick={() => {
-                          // Clear status locally to let them apply again
-                          // (or backend deletes it on new post request)
-                          // We can just let them resubmit
-                          location.reload();
-                        }}
-                        className="px-6 py-2.5 bg-foreground hover:bg-gold hover:text-luxury-white text-background text-xs font-semibold uppercase tracking-wider rounded transition-all"
-                      >
-                        Resubmit Application
-                      </button>
-                    )}
+                    {/* Timeline */}
+                    <div className="flex items-center gap-2">
+                      {[
+                        { label: "Applied", done: true },
+                        { label: "Under Review", done: false, active: true },
+                        { label: "Decision", done: false },
+                        { label: "Launch", done: false },
+                      ].map((step, i) => (
+                        <React.Fragment key={i}>
+                          <div className="flex flex-col items-center gap-1">
+                            <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                              step.done ? "bg-success text-white" : step.active ? "bg-gold text-luxury-black animate-pulse" : "bg-card-border text-muted"
+                            }`}>
+                              {step.done ? "✓" : i + 1}
+                            </div>
+                            <span className="text-[8px] text-muted uppercase tracking-wider whitespace-nowrap">{step.label}</span>
+                          </div>
+                          {i < 3 && <div className="h-px flex-1 bg-card-border" />}
+                        </React.Fragment>
+                      ))}
+                    </div>
                   </div>
+
+                /* REJECTED — show feedback + resubmit form */
+                ) : appStatusData?.request?.status === "rejected" ? (
+                  <div className="flex flex-col gap-5">
+                    <div className="p-4 rounded border border-error/30 bg-error/5 flex items-start gap-3">
+                      <XCircle className="h-5 w-5 text-error flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h3 className="font-bold text-sm text-error mb-1">Application Not Approved</h3>
+                        {appStatusData.request.adminNotes ? (
+                          <p className="text-xs text-muted leading-relaxed">
+                            <span className="font-semibold text-error/80">Admin feedback: </span>
+                            {appStatusData.request.adminNotes}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted">Your application did not meet our requirements at this time. You may resubmit below.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="border-t border-card-border pt-5">
+                      <h3 className="font-serif font-bold text-base mb-4">Resubmit Your Application</h3>
+                      <form onSubmit={handleApplySeller} className="flex flex-col gap-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          <div>
+                            <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Store / Brand Name</label>
+                            <input type="text" required value={storeName} onChange={(e) => setStoreName(e.target.value)}
+                              className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold font-bold"
+                              placeholder="e.g. Damascus Goldsmiths" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Business Phone Number</label>
+                            <input type="text" required value={storePhone} onChange={(e) => setStorePhone(e.target.value)}
+                              className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold"
+                              placeholder="e.g. +20 123 456 7890" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Store / Pickup Address</label>
+                          <input type="text" required value={storeAddress} onChange={(e) => setStoreAddress(e.target.value)}
+                            className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold"
+                            placeholder="e.g. 15 Zamalek St, Cairo, Egypt" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Brand Story & Description</label>
+                          <textarea rows={4} required value={storeDescription} onChange={(e) => setStoreDescription(e.target.value)}
+                            className="w-full rounded border border-card-border bg-background p-4 text-sm outline-none focus:border-gold leading-relaxed resize-none"
+                            placeholder="Describe the craft details, heritage, and products you intend to list..." />
+                        </div>
+                        <button type="submit" disabled={isApplyingSeller}
+                          className="w-full sm:w-auto px-8 py-3 bg-foreground hover:bg-gold hover:text-luxury-white text-background font-semibold rounded text-xs uppercase tracking-widest transition-all mt-2 disabled:opacity-50">
+                          {isApplyingSeller ? "Submitting..." : "Resubmit Application"}
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+
+                /* NO APPLICATION — show original form */
                 ) : (
                   <form onSubmit={handleApplySeller} className="flex flex-col gap-5">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Store / Brand Name</label>
-                        <input
-                          type="text"
-                          required
-                          value={storeName}
-                          onChange={(e) => setStoreName(e.target.value)}
+                        <input type="text" required value={storeName} onChange={(e) => setStoreName(e.target.value)}
                           className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold font-bold"
-                          placeholder="e.g. Damascus Goldsmiths"
-                        />
+                          placeholder="e.g. Damascus Goldsmiths" />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Business Phone Number</label>
-                        <input
-                          type="text"
-                          required
-                          value={storePhone}
-                          onChange={(e) => setStorePhone(e.target.value)}
+                        <input type="text" required value={storePhone} onChange={(e) => setStorePhone(e.target.value)}
                           className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold"
-                          placeholder="e.g. +20 123 456 7890"
-                        />
+                          placeholder="e.g. +20 123 456 7890" />
                       </div>
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Store / Pickup Address</label>
-                      <input
-                        type="text"
-                        required
-                        value={storeAddress}
-                        onChange={(e) => setStoreAddress(e.target.value)}
+                      <input type="text" required value={storeAddress} onChange={(e) => setStoreAddress(e.target.value)}
                         className="w-full rounded border border-card-border bg-background px-4 py-2.5 text-sm outline-none focus:border-gold"
-                        placeholder="e.g. 15 Zamalek St, Cairo, Egypt"
-                      />
+                        placeholder="e.g. 15 Zamalek St, Cairo, Egypt" />
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Brand Story & Description</label>
-                      <textarea
-                        rows={4}
-                        required
-                        value={storeDescription}
-                        onChange={(e) => setStoreDescription(e.target.value)}
-                        className="w-full rounded border border-card-border bg-background p-4 text-sm outline-none focus:border-gold leading-relaxed"
-                        placeholder="Describe the craft details, heritage, and products you intend to list..."
-                      />
+                      <textarea rows={4} required value={storeDescription} onChange={(e) => setStoreDescription(e.target.value)}
+                        className="w-full rounded border border-card-border bg-background p-4 text-sm outline-none focus:border-gold leading-relaxed resize-none"
+                        placeholder="Describe the craft details, heritage, and products you intend to list..." />
                     </div>
 
-                    <button
-                      type="submit"
-                      disabled={isApplyingSeller}
-                      className="w-full sm:w-auto px-8 py-3 bg-foreground hover:bg-gold hover:text-luxury-white text-background font-semibold rounded text-xs uppercase tracking-widest transition-all mt-2"
-                    >
+                    <button type="submit" disabled={isApplyingSeller}
+                      className="w-full sm:w-auto px-8 py-3 bg-foreground hover:bg-gold hover:text-luxury-white text-background font-semibold rounded text-xs uppercase tracking-widest transition-all mt-2 disabled:opacity-50">
                       {isApplyingSeller ? "Submitting Application..." : "Submit Seller Onboarding"}
                     </button>
                   </form>
                 )}
               </div>
             )}
+
           </div>
         </div>
       </main>

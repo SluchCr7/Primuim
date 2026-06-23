@@ -17,6 +17,7 @@ export const SessionInitializer: React.FC<{ children: React.ReactNode }> = ({
       try {
         const refreshResult = await refreshSession(undefined).unwrap();
         if (refreshResult && refreshResult.accessToken) {
+          // Always fetch /me to get the most up-to-date role and sellerStatus
           const userResult = await fetch(`${API_BASE_URL}/users/me`, {
             headers: {
               authorization: `Bearer ${refreshResult.accessToken}`,
@@ -35,6 +36,7 @@ export const SessionInitializer: React.FC<{ children: React.ReactNode }> = ({
                   username: userData.user.username,
                   email: userData.user.email,
                   role: userData.user.role,
+                  sellerStatus: userData.user.sellerStatus || null,
                 },
                 accessToken: refreshResult.accessToken,
               })

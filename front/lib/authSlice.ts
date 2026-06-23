@@ -5,6 +5,7 @@ interface UserProfile {
   username: string;
   email: string;
   role: string;
+  sellerStatus?: string | null;
 }
 
 interface AuthState {

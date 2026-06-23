@@ -297,7 +297,14 @@ const refresh = asyncHandler(async (req, res) => {
   res.cookie("refreshToken", newRefreshToken, cookieOptions);
 
   res.json({
-    accessToken: newAccessToken
+    accessToken: newAccessToken,
+    user: {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      sellerStatus: user.sellerStatus || null
+    }
   });
 });
 
