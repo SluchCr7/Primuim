@@ -208,6 +208,25 @@ export const ecommerceApi = createApi({
     getTrendingSearches: builder.query({
       query: () => "/products/search/trending",
     }),
+    getAdvancedSearch: builder.query({
+      query: (params: {
+        q?: string;
+        category?: string;
+        brand?: string;
+        tags?: string;
+        minPrice?: string;
+        maxPrice?: string;
+        rating?: string;
+        inStock?: string;
+        sort?: string;
+        page?: number;
+        limit?: number;
+      } = {}) => ({
+        url: "/products/search",
+        params,
+      }),
+      providesTags: ["Product"],
+    }),
     getMyProducts: builder.query({
       query: () => "/products/mine",
       providesTags: ["Product"],
@@ -857,4 +876,8 @@ export const {
   // --- SMART FIT & SIZE GUIDE ---
   useUpdateSizeProfileMutation,
   useVerifyAccountMutation,
+  // --- ADVANCED SEARCH ---
+  useGetAdvancedSearchQuery,
 } = ecommerceApi;
+
+

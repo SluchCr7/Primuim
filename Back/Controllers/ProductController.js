@@ -35,7 +35,7 @@ const getProducts = asyncHandler(async (req, res) => {
       try {
         await SearchAnalytics.findOneAndUpdate(
           { term: searchTerm.toLowerCase() },
-          { $inc: { count: 1 } },
+          { $inc: { count: 1 }, $set: { lastSearchedAt: new Date() } },
           { upsert: true, new: true }
         );
       } catch (err) {
@@ -163,6 +163,187 @@ const getProducts = asyncHandler(async (req, res) => {
 
 
 // ========================================
+// ADVANCED SEARCH (dedicated search endpoint)
+// ========================================
+const getAdvancedSearch = asyncHandler(async (req, res) => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(48, Math.max(1, Number(req.query.limit) || 12));
+  const skip = (page - 1) * limit;
+
+  const q = (req.query.q || "").trim();
+  const sort = req.query.sort || "relevance";
+
+  // ── Base filter ──────────────────────────────────────────
+  const baseFilter = { isDeleted: false, isPublished: true };
+
+  // ── Category filter ──────────────────────────────────────
+  if (req.query.category) {
+    const subcats = await Category.find({ parent: req.query.category }).select("_id");
+    const catIds = [req.query.category, ...subcats.map(c => c._id)];
+    baseFilter.category = { $in: catIds };
+  }
+
+  // ── Brand filter (supports comma-separated multi-brand) ──
+  if (req.query.brand) {
+    const brands = req.query.brand.split(",").map(b => b.trim()).filter(Boolean);
+    baseFilter.brand = brands.length === 1 ? brands[0] : { $in: brands };
+  }
+
+  // ── Price filter ─────────────────────────────────────────
+  if (req.query.minPrice || req.query.maxPrice) {
+    baseFilter.price = {};
+    if (req.query.minPrice) baseFilter.price.$gte = Number(req.query.minPrice);
+    if (req.query.maxPrice) baseFilter.price.$lte = Number(req.query.maxPrice);
+  }
+
+  // ── Tags filter ──────────────────────────────────────────
+  if (req.query.tags) {
+    const tagsArr = req.query.tags.split(",").map(t => t.trim()).filter(Boolean);
+    if (tagsArr.length > 0) baseFilter.tags = { $in: tagsArr };
+  }
+
+  // ── Rating filter ────────────────────────────────────────
+  if (req.query.rating) {
+    baseFilter.ratingAverage = { $gte: Number(req.query.rating) };
+  }
+
+  // ── In Stock filter ──────────────────────────────────────
+  if (req.query.inStock === "true") {
+    baseFilter.stock = { $gt: 0 };
+  }
+
+  // ── Text search / sorting ────────────────────────────────
+  let searchFilter = { ...baseFilter };
+  let sortObj = { createdAt: -1 };
+  let projection = {};
+
+  if (q.length >= 2) {
+    // Use text index for relevance scoring
+    searchFilter.$text = { $search: q };
+    projection = { score: { $meta: "textScore" } };
+
+    if (sort === "relevance") {
+      sortObj = { score: { $meta: "textScore" }, sold: -1 };
+    }
+
+    // Async analytics — don't await to keep response fast
+    SearchAnalytics.findOneAndUpdate(
+      { term: q.toLowerCase() },
+      { $inc: { count: 1 }, $set: { lastSearchedAt: new Date() } },
+      { upsert: true, new: true }
+    ).catch(err => console.error("Search analytics error:", err));
+
+  } else if (q.length === 1) {
+    // Single character — regex only (text index requires >= 2 chars typically)
+    searchFilter.$or = [
+      { title: { $regex: q, $options: "i" } },
+      { brand: { $regex: q, $options: "i" } },
+      { tags: { $regex: q, $options: "i" } }
+    ];
+  }
+
+  // Apply non-relevance sort
+  if (sort !== "relevance") {
+    switch (sort) {
+      case "price-asc":    sortObj = { price: 1 };           break;
+      case "price-desc":   sortObj = { price: -1 };          break;
+      case "rating":       sortObj = { ratingAverage: -1 };  break;
+      case "popular":      sortObj = { sold: -1 };           break;
+      case "newest":
+      default:             sortObj = { createdAt: -1 };      break;
+    }
+  }
+
+  // ── Run search + facets in parallel ──────────────────────
+  const [totalProducts, products, facetResults] = await Promise.all([
+    Product.countDocuments(searchFilter),
+
+    Product.find(searchFilter, projection)
+      .populate("category", "name slug")
+      .populate("seller", "username")
+      .sort(sortObj)
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+
+    // Single aggregation for all facets
+    Product.aggregate([
+      { $match: baseFilter }, // Facets based on base (no text filter for counts)
+      {
+        $facet: {
+          brands: [
+            { $group: { _id: "$brand", count: { $sum: 1 } } },
+            { $match: { _id: { $ne: null } } },
+            { $sort: { count: -1 } },
+            { $limit: 20 }
+          ],
+          categories: [
+            { $group: { _id: "$category", count: { $sum: 1 } } },
+            {
+              $lookup: {
+                from: "categories",
+                localField: "_id",
+                foreignField: "_id",
+                as: "cat"
+              }
+            },
+            { $unwind: { path: "$cat", preserveNullAndEmpty: false } },
+            { $project: { _id: 1, name: "$cat.name", slug: "$cat.slug", count: 1 } },
+            { $sort: { count: -1 } }
+          ],
+          tags: [
+            { $unwind: "$tags" },
+            { $group: { _id: "$tags", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 30 }
+          ],
+          priceRange: [
+            {
+              $group: {
+                _id: null,
+                min: { $min: "$price" },
+                max: { $max: "$price" }
+              }
+            }
+          ],
+          ratings: [
+            {
+              $group: {
+                _id: { $floor: "$ratingAverage" },
+                count: { $sum: 1 }
+              }
+            },
+            { $sort: { _id: -1 } }
+          ]
+        }
+      }
+    ])
+  ]);
+
+  const facet = facetResults[0] || {};
+
+  res.status(200).json({
+    success: true,
+    query: q,
+    page,
+    limit,
+    totalProducts,
+    totalPages: Math.ceil(totalProducts / limit),
+    hasNextPage: page < Math.ceil(totalProducts / limit),
+    hasPrevPage: page > 1,
+    products,
+    facets: {
+      brands: facet.brands || [],
+      categories: facet.categories || [],
+      tags: facet.tags || [],
+      priceRange: facet.priceRange?.[0] || { min: 0, max: 10000 },
+      ratings: facet.ratings || []
+    }
+  });
+});
+
+
+// ========================================
 // GET PRODUCT BY ID
 // ========================================
 const getProductById = asyncHandler(async (req, res) => {
@@ -191,7 +372,6 @@ const getProductBySlug = asyncHandler(async (req, res) => {
     const product = await Product.findOne({ slug: req.params.slug })
         .populate("category", "name")
         .populate("seller", "username");
-    // أضف السطرين القادمين في الـ terminal عندك لتفحص النتيجة
     console.log("الـ Slug المطلوب:", req.params.slug);
     console.log("المنتج الموجود في الداتابيز:", product);
     if (!product || product.isDeleted || !product.isPublished) {
@@ -286,8 +466,8 @@ const AddNewProduct = asyncHandler(async (req, res) => {
         stock,
         sku,
         isPublished,
-        specifications, // تم فكّها هنا لإنزالها بالـ create
-        tags           // تم فكّها هنا لإنزالها بالـ create
+        specifications,
+        tags
     } = req.body;
 
     const categoryExists = await Category.findById(category);
@@ -352,8 +532,8 @@ const AddNewProduct = asyncHandler(async (req, res) => {
         sku,
         isPublished,
         images,
-        specifications: specifications || [], // حفظ المواصفات في الداتابيز
-        tags: tags || []                      // حفظ الـ tags في الداتابيز
+        specifications: specifications || [],
+        tags: tags || []
     });
 
     res.status(201).json({
@@ -591,50 +771,88 @@ const getLatestCollections = asyncHandler(async (req, res) => {
 
 
 // ========================================
-// EXPORT
+// GET SEARCH SUGGESTIONS (enriched with image + price)
 // ========================================
 const getSearchSuggestions = asyncHandler(async (req, res) => {
   const { q } = req.query;
-  if (!q) {
+  if (!q || q.trim().length < 1) {
     return res.status(200).json({ success: true, suggestions: [] });
   }
 
+  const searchTerm = q.trim();
+
+  // Get product suggestions with enriched data
   const products = await Product.find({
     isDeleted: false,
     isPublished: true,
     $or: [
-      { title: { $regex: q, $options: "i" } },
-      { tags: { $regex: q, $options: "i" } }
+      { title: { $regex: searchTerm, $options: "i" } },
+      { tags: { $regex: searchTerm, $options: "i" } },
+      { brand: { $regex: searchTerm, $options: "i" } }
     ]
   })
-    .limit(8)
-    .select("title tags");
+    .limit(6)
+    .select("title tags brand images price comparePrice ratingAverage slug _id")
+    .lean();
 
-  const suggestions = [];
+  // Build structured suggestions
+  const productSuggestions = products.map(p => ({
+    type: "product",
+    id: p._id,
+    title: p.title,
+    brand: p.brand || null,
+    price: p.price,
+    comparePrice: p.comparePrice || null,
+    rating: p.ratingAverage || 0,
+    image: p.images?.[0]?.url || null,
+    slug: p.slug,
+    url: `/product/${p.slug}`
+  }));
+
+  // Also extract matching tags as keyword suggestions
+  const tagSet = new Set();
   products.forEach(p => {
-    if (p.title && !suggestions.includes(p.title)) {
-      suggestions.push(p.title);
-    }
-    p.tags.forEach(t => {
-      if (t.toLowerCase().includes(q.toLowerCase()) && !suggestions.includes(t)) {
-        suggestions.push(t);
+    (p.tags || []).forEach(tag => {
+      if (tag.toLowerCase().includes(searchTerm.toLowerCase()) && tagSet.size < 4) {
+        tagSet.add(tag);
       }
     });
   });
 
-  res.status(200).json({ success: true, suggestions: suggestions.slice(0, 10) });
+  const keywordSuggestions = [...tagSet].map(tag => ({
+    type: "keyword",
+    title: tag,
+    url: `/search?q=${encodeURIComponent(tag)}`
+  }));
+
+  res.status(200).json({
+    success: true,
+    suggestions: {
+      products: productSuggestions,
+      keywords: keywordSuggestions
+    }
+  });
 });
 
+
+// ========================================
+// GET TRENDING SEARCHES
+// ========================================
 const getTrendingSearches = asyncHandler(async (req, res) => {
   const trending = await SearchAnalytics.find()
-    .sort({ count: -1 })
+    .sort({ count: -1, lastSearchedAt: -1 })
     .limit(10)
-    .select("term count");
+    .select("term count lastSearchedAt");
   res.status(200).json({ success: true, trending });
 });
 
+
+// ========================================
+// EXPORT
+// ========================================
 module.exports = {
     getProducts,
+    getAdvancedSearch,
     getProductById,
     getProductsByCategory,
     getProductsBySeller,

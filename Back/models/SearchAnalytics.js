@@ -14,11 +14,18 @@ const searchAnalyticsSchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
+    lastSearchedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Compound index for trending (count desc) and recency
+searchAnalyticsSchema.index({ count: -1, lastSearchedAt: -1 });
 
 const SearchAnalytics = mongoose.model("SearchAnalytics", searchAnalyticsSchema);
 

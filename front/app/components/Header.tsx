@@ -13,6 +13,8 @@ import {
   useLogoutMutation,
   useGetWishlistQuery,
 } from "../../lib/api";
+import { useTranslation } from "react-i18next";
+import "../i18next"; // تأكد من ضبط المسار الصحيح لملف i18next.ts الخاص بك
 import {
   ShoppingBag,
   User,
@@ -36,6 +38,9 @@ import { languages } from "@/lib/data";
 export const Header: React.FC = () => {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { t, i18n } = useTranslation(); // <-- أضف هذا السطر هنا
+
+  
   const { theme, setTheme, resolvedTheme } = useTheme();
   
   const { user, isAuthenticated, currency } = useAppSelector((state) => state.auth);
@@ -43,7 +48,6 @@ export const Header: React.FC = () => {
   const { data: wishlistData } = useGetWishlistQuery(undefined, { skip: !isAuthenticated });
   
   // لغة افتراضية من المصفوفة
-  const [currentLangCode, setCurrentLangCode] = useState("EN");
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
 
@@ -58,7 +62,22 @@ export const Header: React.FC = () => {
   const [mounted, setMounted] = useState(false);
   
   const [logoutCall] = useLogoutMutation();
-
+  // تحديث الـ State لتقرأ اللغة الحالية المخزنة أو الافتراضية بالـ UpperCase
+  const [currentLangCode, setCurrentLangCode] = useState(
+    i18n.language ? i18n.language.toUpperCase() : "EN"
+  );
+  
+  // لضمان تزامن الـ State لو تم تغيير اللغة من أي مكان آخر أو عند أول تحميل
+  useEffect(() => {
+    if (i18n.language) {
+      setCurrentLangCode(i18n.language.toUpperCase());
+      
+      // كود إضافي اختياري: لقلب اتجاه الصفحة تلقائياً RTL / LTR بناءً على اللغة
+      const dir = i18n.language === "ar" ? "rtl" : "ltr";
+      document.documentElement.dir = dir;
+      document.documentElement.lang = i18n.language;
+    }
+  }, [i18n.language]);
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -150,7 +169,7 @@ export const Header: React.FC = () => {
           <div className="relative flex items-center">
             <input
               type="text"
-              placeholder="Search catalog, luxury designers..."
+              placeholder={t('search_placeholder', 'Search catalog, luxury designers...')}
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -171,7 +190,7 @@ export const Header: React.FC = () => {
               className="absolute left-0 mt-2 w-full rounded-2xl border border-card-border bg-card-bg/95 p-3 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200"
             >
               <div className="px-3 py-1.5 text-xs font-bold text-gold/80 tracking-wider uppercase">
-                Suggested Matches
+                {t('suggested_matches', 'Suggested Matches')}
               </div>
               <ul className="space-y-0.5 mt-1">
                 {suggestionsData.suggestions.map((item: string, idx: number) => (
@@ -226,6 +245,7 @@ export const Header: React.FC = () => {
                   <button
                     key={lang.value}
                     onClick={() => {
+                      i18n.changeLanguage(lang.value.toLowerCase()); // <-- سطر التغيير الفعلي
                       setCurrentLangCode(lang.value);
                       setShowLangDropdown(false);
                     }}
@@ -533,6 +553,7 @@ export const Header: React.FC = () => {
                     <button
                       key={lang.value}
                       onClick={() => {
+                        i18n.changeLanguage(lang.value.toLowerCase()); // <-- سطر التغيير الفعلي
                         setCurrentLangCode(lang.value);
                         setShowLangDropdown(false);
                       }}
