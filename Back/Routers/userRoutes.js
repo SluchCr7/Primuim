@@ -15,7 +15,8 @@ const {
   deleteAddress,
   setDefaultAddress,
   followSeller,
-  getSharedWishlist
+  getSharedWishlist,
+  updateSizeProfile             // Smart Fit & Size Guide
 } = require("../Controllers/UserController");
 const { verifyToken } = require("../Middelwares/verifyToken");
 const photoUpload = require("../Middelwares/UploadPhoto");
@@ -36,5 +37,8 @@ router.post("/addresses", verifyToken, addAddress);
 router.put("/addresses/:addressId", verifyToken, updateAddress);
 router.delete("/addresses/:addressId", verifyToken, deleteAddress);
 router.patch("/addresses/:addressId/default", verifyToken, setDefaultAddress);
+
+// Smart Fit & Size Guide — authenticated PUT endpoint
+router.put("/size-profile", verifyToken, updateSizeProfile);
 
 module.exports = router;

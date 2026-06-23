@@ -68,6 +68,8 @@ const register = asyncHandler(async (req, res) => {
     storeName: role === "seller" ? storeName : "",
     country: role === "seller" ? country : "",
     storeDescription: role === "seller" ? storeDescription : "",
+    storeLogo: role === "seller" && storeLogo ? storeLogo : "",
+    storeCover: role === "seller" && storeCover ? storeCover : "",
     sellerStatus: role === "seller" ? "pending" : null
   });
 
@@ -115,16 +117,59 @@ const register = asyncHandler(async (req, res) => {
 
   // Send email
   const verifyUrl = `${process.env.FRONTEND_ORIGIN || "http://localhost:3000"}/verify-email?id=${user._id}&token=${tokenVer}`;
+
   await sendEmail({
     email: user.email,
-    subject: "Verify your email - Shop Premium",
+    subject: "🔒 Activate Your Shop Premium Account",
     html: `
-      <h1>Welcome to Shop Premium</h1>
-      <p>Hi ${user.username},</p>
-      <p>Please verify your account by clicking the link below:</p>
-      <a href="${verifyUrl}" style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email</a>
-      <p>Or copy and paste this URL into your browser:</p>
-      <p>${verifyUrl}</p>
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #fff;">
+        
+        <!-- Header / Logo Area -->
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #111; font-size: 26px; font-weight: 700; margin: 0; letter-spacing: 1px;">SHOP PREMIUM</h1>
+          <p style="color: #666; font-size: 14px; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 2px;">Elevate Your Experience</p>
+        </div>
+        
+        <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 30px;" />
+        
+        <!-- Body Content -->
+        <div style="padding: 0 10px;">
+          <h2 style="color: #222; font-size: 20px; font-weight: 600; margin-top: 0;">Welcome aboard, ${user.username}! ✨</h2>
+          
+          <p style="color: #444; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+            Thank you for joining <strong>Shop Premium</strong>. We're thrilled to have you with us. To unlock your exclusive access and start exploring premium deals, please verify your email address.
+          </p>
+          
+          <!-- CTA Button -->
+          <div style="text-align: center; margin: 35px 0;">
+            <a href="${verifyUrl}" style="background-color: #000; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+              Verify Email Address
+            </a>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 10px;">
+            This verification link is valid for a limited time. If the button above doesn't work, please copy and paste the following URL into your browser:
+          </p>
+          
+          <!-- Fallback URL -->
+          <div style="background-color: #f9f9f9; padding: 12px; border-radius: 6px; word-break: break-all; margin-bottom: 30px;">
+            <a href="${verifyUrl}" style="color: #0066cc; font-size: 13px; text-decoration: none;">${verifyUrl}</a>
+          </div>
+        </div>
+        
+        <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 20px;" />
+        
+        <!-- Footer -->
+        <div style="text-align: center;">
+          <p style="color: #999; font-size: 12px; margin: 0 0 5px 0;">
+            If you didn't create an account, you can safely ignore this email.
+          </p>
+          <p style="color: #999; font-size: 12px; margin: 0;">
+            &copy; ${new Date().getFullYear()} Shop Premium. All rights reserved.
+          </p>
+        </div>
+        
+      </div>
     `
   });
 
@@ -372,15 +417,65 @@ const forgotPassword = asyncHandler(async (req, res) => {
   
   await sendEmail({
     email: user.email,
-    subject: "Reset Password - Shop Premium",
+    subject: "🔒 Reset Your Shop Premium Password",
     html: `
-      <h1>Password Reset Request</h1>
-      <p>You requested a password reset. Please click the button below to set a new password:</p>
-      <a href="${resetUrl}" style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
-      <p>This link will expire in 10 minutes.</p>
-    `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #fff;">
+        
+        <!-- Header / Logo Area -->
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #111; font-size: 26px; font-weight: 700; margin: 0; letter-spacing: 1px;">SHOP PREMIUM</h1>
+          <p style="color: #666; font-size: 14px; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 2px;">Securing Your Account</p>
+        </div>
+        
+        <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 30px;" />
+        
+        <!-- Body Content -->
+        <div style="padding: 0 10px;">
+          <h2 style="color: #222; font-size: 20px; font-weight: 600; margin-top: 0;">Password Reset Request 🔐</h2>
+          
+          <p style="color: #444; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+            We received a request to reset the password for your <strong>Shop Premium</strong> account. No changes have been made yet. You can set your new password by clicking the secure button below:
+          </p>
+          
+          <!-- CTA Button -->
+          <div style="text-align: center; margin: 35px 0;">
+            <a href="${resetUrl}" style="background-color: #000; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+              Reset Password
+            </a>
+          </div>
+          
+          <!-- Urgency & Security Note -->
+          <div style="background-color: #fff9e6; border-left: 4px solid #ffcc00; padding: 15px; border-radius: 4px; margin-bottom: 25px;">
+            <p style="color: #7a5c00; font-size: 14px; margin: 0; font-weight: 500;">
+              ⏳ For security purposes, this link is highly time-sensitive and will expire in <strong>10 minutes</strong>.
+            </p>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 10px;">
+            If the button doesn't work, please copy and paste this URL into your browser:
+          </p>
+          
+          <!-- Fallback URL -->
+          <div style="background-color: #f9f9f9; padding: 12px; border-radius: 6px; word-break: break-all; margin-bottom: 30px;">
+            <a href="${resetUrl}" style="color: #0066cc; font-size: 13px; text-decoration: none;">${resetUrl}</a>
+          </div>
+        </div>
+        
+        <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 20px;" />
+        
+        <!-- Footer -->
+        <div style="text-align: center;">
+          <p style="color: #999; font-size: 12px; margin: 0 0 5px 0;">
+            If you didn't request a password reset, you can safely ignore this email; your account remains secure.
+          </p>
+          <p style="color: #999; font-size: 12px; margin: 0;">
+            &copy; ${new Date().getFullYear()} Shop Premium. All rights reserved.
+          </p>
+        </div>
+        
+      </div>
+      `
   });
-
   res.status(200).json({ message: "Reset link sent successfully." });
 });
 

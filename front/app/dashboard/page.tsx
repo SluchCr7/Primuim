@@ -22,6 +22,7 @@ import {
   useToggle2FAMutation,
   useApplyAsSellerMutation,
   useGetMyApplicationStatusQuery,
+  useUpdateSizeProfileMutation,   // Smart Fit & Size Guide
   API_BASE_URL,
 } from "../../lib/api";
 import { useToast } from "../components/Toast";
@@ -45,6 +46,10 @@ import {
   Camera,
   Copy,
   Lock,
+  Ruler,          // Smart Fit & Size Guide
+  Pencil,
+  Shirt,
+  Footprints,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -53,9 +58,9 @@ export default function DashboardPage() {
   const { isAuthenticated, accessToken } = useAppSelector((state) => state.auth);
   const { showToast } = useToast();
 
-  // Active Tab: "profile" | "orders" | "addresses" | "wishlist" | "wallet" | "security2fa" | "securitylogs" | "seller"
+  // Active Tab union includes "fitprofile" for the Smart Fit & Size Guide tab
   const [activeTab, setActiveTab] = useState<
-    "profile" | "orders" | "addresses" | "wishlist" | "wallet" | "security2fa" | "securitylogs" | "seller"
+    "profile" | "orders" | "addresses" | "wishlist" | "wallet" | "security2fa" | "securitylogs" | "seller" | "fitprofile"
   >("profile");
 
   // Edit Profile form
@@ -475,6 +480,16 @@ export default function DashboardPage() {
               className={`flex items-center gap-3.5 px-4 py-3 rounded text-sm font-semibold tracking-wide text-left transition-all ${activeTab === "securitylogs" ? "bg-foreground text-background" : "hover:bg-muted-light"}`}
             >
               <History className="h-4 w-4" /> Security Logs
+            </button>
+
+            {/* My Fit Profile nav button */}
+            <button
+              onClick={() => setActiveTab("fitprofile")}
+              className={`flex items-center gap-3.5 px-4 py-3 rounded text-sm font-semibold tracking-wide text-left transition-all ${
+                activeTab === "fitprofile" ? "bg-foreground text-background" : "hover:bg-muted-light"
+              }`}
+            >
+              <Ruler className="h-4 w-4" /> My Fit Profile
             </button>
 
             {user && (user.role === "seller" || user.role === "admin") ? (
@@ -1388,6 +1403,175 @@ export default function DashboardPage() {
                       {isApplyingSeller ? "Submitting Application..." : "Submit Seller Onboarding"}
                     </button>
                   </form>
+                )}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════
+                MY FIT PROFILE TAB
+                Displays saved clothing & shoe size data from sizeProfile.
+                If empty, shows a luxury empty-state with a calibration CTA.
+            ════════════════════════════════════════════════════════════ */}
+            {activeTab === "fitprofile" && (
+              <div className="flex flex-col gap-8">
+                {/* Section header */}
+                <div>
+                  <span className="text-[10px] font-bold tracking-widest text-gold uppercase flex items-center gap-1.5 mb-1.5">
+                    <Ruler className="h-3.5 w-3.5" /> Smart Fit Technology
+                  </span>
+                  <h2 className="font-serif text-2xl font-bold">My Fit Profile</h2>
+                  <p className="text-xs text-muted mt-1 font-light">
+                    Your saved body measurements used to recommend sizes across the store.
+                  </p>
+                </div>
+
+                {/* Check if either clothing or shoe profile exists */}
+                {user?.sizeProfile?.clothing || user?.sizeProfile?.shoes ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+                    {/* Clothing Size Card */}
+                    {user.sizeProfile?.clothing && (
+                      <div className="luxury-card overflow-hidden">
+                        {/* Top accent bar */}
+                        <div className="h-1 gold-gradient" />
+                        <div className="p-6">
+                          <div className="flex items-center gap-3 mb-5">
+                            <div className="h-9 w-9 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center">
+                              <Shirt className="h-4.5 w-4.5 text-gold" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">Clothing Profile</p>
+                              <p className="text-[10px] text-muted">Apparel & outerwear</p>
+                            </div>
+                          </div>
+
+                          {/* Calculated size hero */}
+                          <div className="text-center py-5 border-y border-card-border mb-5">
+                            <p className="text-[9px] uppercase tracking-[0.2em] text-muted mb-1">Your Calibrated Size</p>
+                            <p className="font-serif text-5xl font-bold text-gold">
+                              {user.sizeProfile.clothing.calculatedSize}
+                            </p>
+                          </div>
+
+                          {/* Measurements grid */}
+                          <div className="grid grid-cols-3 gap-3 text-center">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[9px] uppercase tracking-wider text-muted">Height</span>
+                              <span className="font-semibold text-xs">{user.sizeProfile.clothing.height} cm</span>
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[9px] uppercase tracking-wider text-muted">Weight</span>
+                              <span className="font-semibold text-xs">{user.sizeProfile.clothing.weight} kg</span>
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[9px] uppercase tracking-wider text-muted">Fit</span>
+                              <span className="font-semibold text-xs capitalize">{user.sizeProfile.clothing.preference}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Shoe Size Card */}
+                    {user.sizeProfile?.shoes && (
+                      <div className="luxury-card overflow-hidden">
+                        <div className="h-1 gold-gradient" />
+                        <div className="p-6">
+                          <div className="flex items-center gap-3 mb-5">
+                            <div className="h-9 w-9 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center">
+                              <Footprints className="h-4.5 w-4.5 text-gold" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">Footwear Profile</p>
+                              <p className="text-[10px] text-muted">EU sizing standard</p>
+                            </div>
+                          </div>
+
+                          {/* Calculated size hero */}
+                          <div className="text-center py-5 border-y border-card-border mb-5">
+                            <p className="text-[9px] uppercase tracking-[0.2em] text-muted mb-1">Your EU Shoe Size</p>
+                            <p className="font-serif text-5xl font-bold text-gold">
+                              EU {user.sizeProfile.shoes.calculatedSizeEU}
+                            </p>
+                          </div>
+
+                          {/* Measurements grid */}
+                          <div className="grid grid-cols-1 gap-3 text-center">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[9px] uppercase tracking-wider text-muted">Foot Length</span>
+                              <span className="font-semibold text-xs">{user.sizeProfile.shoes.footLengthCM} cm</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Placeholder for missing profile half */}
+                    {!user.sizeProfile?.clothing && user.sizeProfile?.shoes && (
+                      <div className="luxury-card p-6 flex flex-col items-center justify-center gap-4 text-center border-dashed">
+                        <Shirt className="h-8 w-8 text-muted/40" />
+                        <p className="text-xs text-muted font-light">No clothing profile calibrated yet.</p>
+                        <Link
+                          href="/size-guide"
+                          className="text-[10px] font-bold uppercase tracking-widest text-gold hover:underline"
+                        >
+                          Add Clothing Profile →
+                        </Link>
+                      </div>
+                    )}
+
+                    {!user.sizeProfile?.shoes && user.sizeProfile?.clothing && (
+                      <div className="luxury-card p-6 flex flex-col items-center justify-center gap-4 text-center border-dashed">
+                        <Footprints className="h-8 w-8 text-muted/40" />
+                        <p className="text-xs text-muted font-light">No footwear profile calibrated yet.</p>
+                        <Link
+                          href="/size-guide"
+                          className="text-[10px] font-bold uppercase tracking-widest text-gold hover:underline"
+                        >
+                          Add Shoe Profile →
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* ── Empty state ── */
+                  <div className="luxury-card p-12 flex flex-col items-center gap-6 text-center">
+                    <div className="h-20 w-20 rounded-full bg-muted-light border border-card-border flex items-center justify-center">
+                      <Ruler className="h-8 w-8 text-muted/50" />
+                    </div>
+                    <div className="max-w-sm">
+                      <p className="font-serif text-lg font-semibold mb-2">No Fit Profile Yet</p>
+                      <p className="text-sm text-muted font-light leading-relaxed">
+                        You haven&apos;t calibrated your digital fit profile yet.
+                        Let our precision algorithm determine your ideal sizes in under a minute.
+                      </p>
+                    </div>
+                    <Link
+                      id="calibrate-now-btn"
+                      href="/size-guide"
+                      className="flex items-center gap-2.5 h-12 px-8 rounded-full bg-foreground text-background hover:bg-gold hover:text-white transition-all text-xs font-bold uppercase tracking-widest shadow-md hover:-translate-y-0.5"
+                    >
+                      <Sparkles className="h-4 w-4" /> Calibrate Now
+                    </Link>
+                  </div>
+                )}
+
+                {/* Edit Profile CTA — always shown when data exists */}
+                {(user?.sizeProfile?.clothing || user?.sizeProfile?.shoes) && (
+                  <div className="flex items-center justify-between luxury-card p-5">
+                    <div>
+                      <p className="font-semibold text-sm">Update your measurements</p>
+                      <p className="text-xs text-muted font-light mt-0.5">
+                        Re-calibrate anytime if your body measurements change.
+                      </p>
+                    </div>
+                    <Link
+                      href="/size-guide"
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-gold/40 text-gold hover:bg-gold/10 transition-all text-xs font-semibold uppercase tracking-widest shrink-0"
+                    >
+                      <Pencil className="h-3.5 w-3.5" /> Edit Profile
+                    </Link>
+                  </div>
                 )}
               </div>
             )}

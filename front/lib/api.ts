@@ -72,6 +72,13 @@ export const ecommerceApi = createApi({
         body: userData,
       }),
     }),
+    uploadImage: builder.mutation({
+      query: (formData) => ({
+        url: "/upload/image",
+        method: "POST",
+        body: formData,
+      }),
+    }),
     logout: builder.mutation({
       query: () => ({
         url: "/auth/logout",
@@ -710,6 +717,29 @@ export const ecommerceApi = createApi({
     getExchangeRates: builder.query({
       query: () => "/currency/rates",
     }),
+
+    // --- SMART FIT & SIZE GUIDE ---
+    // Sends clothing and/or shoe measurements to the server.
+    // The server applies the sizing matrix + ISO formula and persists the result.
+    updateSizeProfile: builder.mutation({
+      query: (sizeData) => ({
+        url: "/users/size-profile",
+        method: "PUT",
+        body: sizeData,
+      }),
+      // Invalidate "User" so useGetMeQuery re-fetches and the dashboard
+      // and product page always see the latest sizeProfile.
+      invalidatesTags: ["User"],
+    }),
+    // --- AUTHENTICATION ---
+    verifyAccount: builder.mutation({
+      query: ({ id, token }) => ({
+        url: `/auth/verify/${id}/${token}`,
+        method: "GET",
+      }),
+      // يمكنك جعلها تقوم بعمل invalidate لبيانات المستخدم لتحديث حالته فوراً إذا كان مسجلاً
+      invalidatesTags: ["User"], 
+    }),
   }),
 });
 
@@ -821,5 +851,10 @@ export const {
   useGetAuditLogsQuery,
   useGetExchangeRatesQuery,
   // --- TESTIMONIALS ---
-  useGetAllTestimonialsQuery
+  useGetAllTestimonialsQuery,
+  // --- UPLOAD ---
+  useUploadImageMutation,
+  // --- SMART FIT & SIZE GUIDE ---
+  useUpdateSizeProfileMutation,
+  useVerifyAccountMutation,
 } = ecommerceApi;

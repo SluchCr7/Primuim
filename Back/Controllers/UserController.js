@@ -523,6 +523,135 @@ const getSharedWishlist = asyncHandler(async (req, res) => {
     });
 });
 
+// ========================================
+// @desc    Update User Size Profile
+// @route   PUT /api/users/size-profile
+// @access  Private
+// ========================================
+const updateSizeProfile = asyncHandler(async (req, res) => {
+    // ------------------------------------------------------------------
+    // Joi validation schema for the incoming payload.
+    // Both `clothing` and `shoes` are optional — a user may update only
+    // one category at a time without wiping the other.
+    // ------------------------------------------------------------------
+    const sizeProfileSchema = Joi.object({
+        clothing: Joi.object({
+            height:     Joi.number().min(100).max(250).required(),  // centimetres
+            weight:     Joi.number().min(20).max(300).required(),   // kilograms
+            preference: Joi.string().valid("tight", "regular", "oversized").required()
+        }).optional(),
+        shoes: Joi.object({
+            footLengthCM: Joi.number().min(20).max(35).required()   // centimetres
+        }).optional()
+    });
+
+    const { error, value } = sizeProfileSchema.validate(req.body);
+    if (error) {
+        return res.status(400).json({
+            success: false,
+            message: error.details[0].message
+        });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // ------------------------------------------------------------------
+    // CLOTHING SIZE CALCULATION
+    // Strategy: derive a raw size from a height×weight matrix (BMI-like
+    // grid), then shift ±1 position based on fit preference.
+    // Size order array: [S, M, L, XL, XXL]
+    // ------------------------------------------------------------------
+    if (value.clothing) {
+        const { height, weight, preference } = value.clothing;
+
+        // Step 1: Determine base size index (0=S … 4=XXL) from matrix
+        const sizeLabels = ["S", "M", "L", "XL", "XXL"];
+
+        /**
+         * Matrix logic — rows are height bands (cm), columns are weight bands (kg).
+         * Each cell returns a base size index.
+         *
+         * Height bands   : ≤160 | 161-170 | 171-180 | 181-190 | >190
+         * Weight bands   : ≤55  | 56-70   | 71-85   | 86-100  | >100
+         */
+        let heightBand; // 0-4
+        if      (height <= 160) heightBand = 0;
+        else if (height <= 170) heightBand = 1;
+        else if (height <= 180) heightBand = 2;
+        else if (height <= 190) heightBand = 3;
+        else                    heightBand = 4;
+
+        let weightBand; // 0-4
+        if      (weight <= 55)  weightBand = 0;
+        else if (weight <= 70)  weightBand = 1;
+        else if (weight <= 85)  weightBand = 2;
+        else if (weight <= 100) weightBand = 3;
+        else                    weightBand = 4;
+
+        // 5×5 matrix: matrix[heightBand][weightBand] → base size index
+        const sizeMatrix = [
+        //  wt≤55  wt56-70  wt71-85  wt86-100  wt>100
+            [0,    0,       1,       2,        3],  // h≤160
+            [0,    1,       1,       2,        3],  // h161-170
+            [0,    1,       2,       2,        3],  // h171-180
+            [1,    1,       2,       3,        4],  // h181-190
+            [1,    2,       2,       3,        4],  // h>190
+        ];
+
+        let baseSizeIdx = sizeMatrix[heightBand][weightBand];
+
+        // Step 2: Shift by preference
+        if (preference === "tight")    baseSizeIdx -= 1; // one size down for tighter fit
+        if (preference === "oversized") baseSizeIdx += 1; // one size up for relaxed fit
+
+        // Clamp to valid range [0, 4]
+        baseSizeIdx = Math.max(0, Math.min(4, baseSizeIdx));
+
+        const calculatedSize = sizeLabels[baseSizeIdx];
+
+        // Save to user document (merge with existing shoe data)
+        user.sizeProfile = user.sizeProfile || {};
+        user.sizeProfile.clothing = {
+            height,
+            weight,
+            preference,
+            calculatedSize
+        };
+    }
+
+    // ------------------------------------------------------------------
+    // SHOE SIZE CALCULATION
+    // ISO 9407 standard formula: EU size = (footLengthCM + 1.5) × 1.5
+    // Result is rounded and clamped to EU 36–46.
+    // ------------------------------------------------------------------
+    if (value.shoes) {
+        const { footLengthCM } = value.shoes;
+
+        const rawSize = Math.round((footLengthCM + 1.5) * 1.5);
+        const calculatedSizeEU = Math.max(36, Math.min(46, rawSize));
+
+        // Merge with existing clothing data
+        user.sizeProfile = user.sizeProfile || {};
+        user.sizeProfile.shoes = {
+            footLengthCM,
+            calculatedSizeEU
+        };
+    }
+
+    // Persist changes using markModified so Mongoose detects nested update
+    user.markModified("sizeProfile");
+    await user.save();
+
+    res.status(200).json({
+        success: true,
+        message: "Size profile updated successfully",
+        sizeProfile: user.sizeProfile
+    });
+});
+
 module.exports = {
     getMe,
     updateProfile,
@@ -537,5 +666,6 @@ module.exports = {
     deleteAddress,
     setDefaultAddress,
     followSeller,
-    getSharedWishlist
+    getSharedWishlist,
+    updateSizeProfile
 };

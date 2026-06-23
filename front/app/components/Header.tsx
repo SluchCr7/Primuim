@@ -24,13 +24,14 @@ import {
   ChevronDown,
   Menu,
   X,
-  BookOpen,
-  Info,
   ArrowRight,
-  Heart
+  Heart,
+  Globe
 } from "lucide-react";
 
 import { getGuestCartTotals } from "../../lib/cartUtils";
+import Flag from 'react-world-flags';
+import { languages } from "@/lib/data";
 
 export const Header: React.FC = () => {
   const router = useRouter();
@@ -41,7 +42,11 @@ export const Header: React.FC = () => {
   const { data: cartData } = useGetCartQuery(undefined, { skip: !isAuthenticated });
   const { data: wishlistData } = useGetWishlistQuery(undefined, { skip: !isAuthenticated });
   
-  // جلب التصنيفات كـ Tree شجرية مجهزة من الـ Backend
+  // لغة افتراضية من المصفوفة
+  const [currentLangCode, setCurrentLangCode] = useState("EN");
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
+  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+
   const { data: categoriesData } = useGetCategoriesQuery({ tree: true });
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,6 +77,8 @@ export const Header: React.FC = () => {
 
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const langDropdownRef = useRef<HTMLDivElement>(null);
+  const currencyDropdownRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
 
   const { data: suggestionsData } = useGetSearchSuggestionsQuery(searchQuery, {
@@ -85,6 +92,12 @@ export const Header: React.FC = () => {
       }
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
+      }
+      if (langDropdownRef.current && !langDropdownRef.current.contains(event.target as Node)) {
+        setShowLangDropdown(false);
+      }
+      if (currencyDropdownRef.current && !currencyDropdownRef.current.contains(event.target as Node)) {
+        setShowCurrencyDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -115,16 +128,13 @@ export const Header: React.FC = () => {
 
   const cartItemsCount = isAuthenticated ? (cartData?.cart?.totalItems ?? 0) : guestCartCount;
 
+  // إيجاد بيانات اللغة الحالية المختارة لعرض علمها واسمها في الهيدر
+  const activeLanguage = languages.find(l => l.value === currentLangCode) || languages[0];
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-card-border/50 bg-background/70 backdrop-blur-md transition-all duration-300">
       
-      {/* 1. TOP ANNOUNCEMENT BAR */}
-      {/* <div className="w-full bg-foreground text-background py-2 px-4 text-center text-xs font-medium tracking-wider uppercase select-none flex items-center justify-center gap-2">
-        <span>✨ Free worldwide shipping on luxury orders over $150</span>
-        <ArrowRight className="h-3 w-3 inline" />
-      </div> */}
-
-      {/* 2. MAIN HEADER BAR */}
+      {/* MAIN HEADER BAR */}
       <div className="mx-auto flex h-20 max-w-9xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
         
         {/* LOGO */}
@@ -136,7 +146,7 @@ export const Header: React.FC = () => {
         </LinkNext>
 
         {/* SEARCH BAR (Desktop) */}
-        <form onSubmit={handleSearchSubmit} className="relative hidden md:block w-full max-w-md lg:max-w-xl mx-8">
+        <form onSubmit={handleSearchSubmit} className="relative hidden md:block w-full max-w-md lg:max-w-xl mx-4 lg:mx-8">
           <div className="relative flex items-center">
             <input
               type="text"
@@ -185,8 +195,8 @@ export const Header: React.FC = () => {
           )}
         </form>
 
-        {/* CONTROLS & CONTROLLER ACTIONS */}
-        <div className="flex items-center gap-1 sm:gap-3">
+        {/* CONTROLS & ACTIONS */}
+        <div className="flex items-center gap-1 sm:gap-2.5">
           
           {/* MOBILE SEARCH REDIRECT */}
           <button 
@@ -197,46 +207,94 @@ export const Header: React.FC = () => {
             <Search className="h-5 w-5" />
           </button>
 
-          {/* CURRENCY SELECTOR */}
-          <div className="relative flex items-center mr-1">
-            <select
-              value={currency}
-              onChange={(e) => dispatch(setCurrency(e.target.value as any))}
-              className="bg-transparent border border-card-border/50 hover:border-gold rounded-full px-3 py-1 text-xs font-bold text-foreground outline-none cursor-pointer transition-all"
-              aria-label="Select Currency"
+          {/* CUSTOM LANGUAGE SELECTOR (احترافي ومطابق للعملة) */}
+          <div className="relative hidden md:flex" ref={langDropdownRef}>
+            <button
+              onClick={() => { setShowLangDropdown(!showLangDropdown); setShowCurrencyDropdown(false); }}
+              className="flex items-center gap-1.5 border border-card-border/50 hover:border-gold rounded-full px-3 py-1.5 text-xs font-bold text-foreground bg-card-bg/10 hover:bg-card-bg/30 transition-all cursor-pointer"
             >
-              <option value="EGP" className="bg-card-bg text-foreground">EGP (L.E)</option>
-              <option value="USD" className="bg-card-bg text-foreground">USD ($)</option>
-              <option value="EUR" className="bg-card-bg text-foreground">EUR (€)</option>
-            </select>
+              <div className="w-4 h-3 overflow-hidden rounded-[2px] flex items-center shadow-sm">
+                <Flag code={activeLanguage?.flag || 'US'} className="w-full h-full object-cover" />
+              </div>
+              <span className="uppercase tracking-wider">{activeLanguage?.label || 'EN'}</span>
+              <ChevronDown className={`h-3 w-3 text-muted transition-transform duration-200 ${showLangDropdown ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showLangDropdown && (
+              <div className="absolute right-0 mt-2 w-36 rounded-xl border border-card-border bg-card-bg p-1 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                {languages.map((lang) => (
+                  <button
+                    key={lang.value}
+                    onClick={() => {
+                      setCurrentLangCode(lang.value);
+                      setShowLangDropdown(false);
+                    }}
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-left transition-all hover:bg-foreground/5 ${currentLangCode === lang.value ? 'text-gold bg-gold/5' : 'text-foreground'}`}
+                  >
+                    <div className="w-4 h-3 overflow-hidden rounded-[2px] flex items-center shrink-0 shadow-sm">
+                      <Flag code={lang.flag} className="w-full h-full object-cover" />
+                    </div>
+                    <span>{lang.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* CUSTOM CURRENCY SELECTOR */}
+          <div className="relative hidden md:flex" ref={currencyDropdownRef}>
+            <button
+              onClick={() => { setShowCurrencyDropdown(!showCurrencyDropdown); setShowLangDropdown(false); }}
+              className="flex items-center gap-1 border border-card-border/50 hover:border-gold rounded-full px-3 py-1.5 text-xs font-bold text-foreground bg-card-bg/10 hover:bg-card-bg/30 transition-all cursor-pointer"
+            >
+              <span className="tracking-wider">{currency}</span>
+              <ChevronDown className={`h-3 w-3 text-muted transition-transform duration-200 ${showCurrencyDropdown ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showCurrencyDropdown && (
+              <div className="absolute right-0 mt-2 w-32 rounded-xl border border-card-border bg-card-bg p-1 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                {["EGP", "USD", "EUR"].map((cur) => (
+                  <button
+                    key={cur}
+                    onClick={() => {
+                      dispatch(setCurrency(cur as any));
+                      setShowCurrencyDropdown(false);
+                    }}
+                    className={`flex w-full items-center px-3 py-2 text-xs font-semibold rounded-lg text-left transition-all hover:bg-foreground/5 ${currency === cur ? 'text-gold bg-gold/5' : 'text-foreground'}`}
+                  >
+                    {cur} {cur === "EGP" ? "(L.E)" : cur === "USD" ? "($)" : "(€)"}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* THEME TOGGLER */}
           <button
             onClick={toggleTheme}
-            className="rounded-full p-2.5 text-foreground hover:bg-foreground/5 transition-all min-w-[40px] min-h-[40px] flex items-center justify-center"
+            className="rounded-full p-2 text-foreground hover:bg-foreground/5 transition-all w-9 h-9 flex items-center justify-center"
             aria-label="Toggle Theme"
           >
             {mounted ? (
               resolvedTheme === "dark" ? (
-                <Sun className="h-5 w-5 text-gold" />
+                <Sun className="h-4.5 w-4.5 text-gold" />
               ) : (
-                <Moon className="h-5 w-5 text-muted" />
+                <Moon className="h-4.5 w-4.5 text-muted" />
               )
             ) : (
-              <div className="h-5 w-5" />
+              <div className="h-4.5 w-4.5" />
             )}
           </button>
             
           {/* WISHLIST */}
           <LinkNext
             href="/wishlist"
-            className="relative rounded-full p-2.5 text-foreground hover:bg-foreground/5 transition-all mr-1"
+            className="relative rounded-full p-2 text-foreground hover:bg-foreground/5 transition-all"
             aria-label="Wishlist"
           >
-            <Heart className="h-5 w-5 text-foreground hover:text-gold transition-colors" />
+            <Heart className="h-4.5 w-4.5 text-foreground hover:text-gold transition-colors" />
             {isAuthenticated && wishlistData?.wishlist && wishlistData.wishlist.length > 0 && (
-              <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-gold text-[9px] font-black text-white ring-2 ring-background animate-pulse">
+              <span className="absolute top-0.5 right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-gold text-[8px] font-black text-white ring-2 ring-background animate-pulse">
                 {wishlistData.wishlist.length}
               </span>
             )}
@@ -245,18 +303,18 @@ export const Header: React.FC = () => {
           {/* SHOPPING CART */}
           <LinkNext
             href="/cart"
-            className="relative rounded-full p-2.5 text-foreground hover:bg-foreground/5 transition-all"
+            className="relative rounded-full p-2 text-foreground hover:bg-foreground/5 transition-all"
           >
-            <ShoppingBag className="h-5 w-5 text-foreground" />
+            <ShoppingBag className="h-4.5 w-4.5 text-foreground" />
             {cartItemsCount > 0 && (
-              <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-gold text-[9px] font-black text-white ring-2 ring-background">
+              <span className="absolute top-0.5 right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-gold text-[8px] font-black text-white ring-2 ring-background">
                 {cartItemsCount}
               </span>
             )}
           </LinkNext>
 
-          {/* USER ACCOUNT DROPDOWN */}
-          <div className="relative hidden sm:block" ref={userMenuRef}>
+          {/* USER ACCOUNT DROPDOWN (Desktop) */}
+          <div className="relative hidden md:block" ref={userMenuRef}>
             {isAuthenticated ? (
               <>
                 <button
@@ -264,7 +322,7 @@ export const Header: React.FC = () => {
                   className="flex items-center gap-2 rounded-full border border-card-border bg-card-bg/20 px-4 py-2 hover:border-gold hover:bg-card-bg transition-all duration-300"
                 >
                   <User className="h-4 w-4 text-gold" />
-                  <span className="text-sm font-semibold text-foreground max-w-[90px] truncate">
+                  <span className="text-xs font-bold text-foreground max-w-[90px] truncate">
                     {user?.username}
                   </span>
                   <ChevronDown className={`h-3 w-3 text-muted transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
@@ -307,7 +365,7 @@ export const Header: React.FC = () => {
             ) : (
               <LinkNext
                 href="/login"
-                className="rounded-full bg-foreground px-6 py-2.5 text-sm font-bold text-background hover:bg-gold hover:text-white transition-all duration-300 shadow-sm block"
+                className="rounded-full bg-foreground px-5 py-2 text-xs font-bold text-background hover:bg-gold hover:text-white transition-all duration-300 shadow-sm block"
               >
                 Sign In
               </LinkNext>
@@ -316,7 +374,7 @@ export const Header: React.FC = () => {
 
           {/* MOBILE MENU TRIGGER */}
           <button 
-            className="rounded-full p-2.5 text-foreground hover:bg-foreground/5 transition-all md:hidden" 
+            className="rounded-full p-2 text-foreground hover:bg-foreground/5 transition-all md:hidden w-9 h-9 flex items-center justify-center" 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle Menu"
           >
@@ -325,16 +383,14 @@ export const Header: React.FC = () => {
         </div>
       </div>
         
-      {/* 3. LUXURY MEGA MENU NAVIGATION (Desktop) */}
+      {/* LUXURY MEGA MENU NAVIGATION (Desktop) */}
       <nav 
         ref={navRef}
         className="border-t w-full border-card-border/30 bg-background/20 hidden md:block"
         onMouseLeave={() => setActiveMegaMenu(null)}
       >
         <div className="mx-auto flex max-w-9xl w-full items-center justify-between px-8 py-0.5 text-sm">
-          
-          {/* Main Links */}
-          <div className="flex items-center gap-5 h-12">
+          <div className="flex items-center gap-6 h-12">
             <LinkNext href="/products" className="text-foreground text-xs hover:text-gold transition-colors font-bold relative h-full flex items-center">
               All Collections
             </LinkNext>
@@ -361,7 +417,6 @@ export const Header: React.FC = () => {
                 </div>
               ))}
           </div>
-
         </div>
 
         {/* Dynamic Mega Menu Dropdown */}
@@ -382,7 +437,6 @@ export const Header: React.FC = () => {
                         {sub.name}
                       </LinkNext>
                       
-                      {/* Sub-subcategories (Level 2) */}
                       {sub.subcategories && sub.subcategories.length > 0 && (
                         <ul className="space-y-2">
                           {sub.subcategories.map((deepSub: any) => (
@@ -400,7 +454,6 @@ export const Header: React.FC = () => {
                     </div>
                   ))}
 
-                  {/* Luxury Promo Banner inside the Mega Menu */}
                   <div className="col-span-1 bg-gradient-to-br from-gold/10 to-transparent rounded-2xl p-6 flex flex-col justify-between border border-gold/10">
                     <div>
                       <h4 className="font-serif text-lg font-bold text-gold tracking-wide">Seasonal Drop</h4>
@@ -410,7 +463,6 @@ export const Header: React.FC = () => {
                       Shop New Arrivals <ArrowRight className="h-3 w-3" />
                     </LinkNext>
                   </div>
-
                 </div>
               </div>
             );
@@ -418,12 +470,12 @@ export const Header: React.FC = () => {
         )}
       </nav>
 
-      {/* 4. MOBILE SLIDEOUT DROPDOWN */}
+      {/* MOBILE SLIDEOUT DROPDOWN */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-x-0 top-[112px] bg-background/95 backdrop-blur-2xl border-b border-card-border shadow-2xl z-40 p-5 space-y-6 animate-in slide-in-from-top duration-300 max-h-[calc(100vh-7rem)] overflow-y-auto">
+        <div className="md:hidden fixed inset-x-0 top-[80px] bg-background/95 backdrop-blur-2xl border-b border-card-border shadow-2xl z-40 p-5 space-y-6 animate-in slide-in-from-top duration-300 max-h-[calc(100vh-6rem)] overflow-y-auto">
           
-          {/* Mobile Auth */}
-          <div className="sm:hidden border-b border-card-border/40 pb-4">
+          {/* Mobile Auth & Account links */}
+          <div className="border-b border-card-border/40 pb-4">
             {isAuthenticated ? (
               <div className="bg-card-bg/60 border border-card-border/50 rounded-2xl p-4 space-y-3">
                 <div className="text-[10px] font-black text-gold uppercase tracking-widest">Account Details</div>
@@ -437,7 +489,7 @@ export const Header: React.FC = () => {
                   </LinkNext>
                   {user?.role === "admin" && (
                     <LinkNext href="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gold/10 text-xs font-bold text-gold col-span-2">
-                      <Sliders className="h-4 w-4" /> Admin
+                      <Sliders className="h-4 w-4" /> Admin Panel
                     </LinkNext>
                   )}
                 </div>
@@ -449,13 +501,84 @@ export const Header: React.FC = () => {
               <LinkNext
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center rounded-xl bg-foreground py-3.5 text-sm font-bold text-background block shadow-md"
+                className="w-full text-center rounded-xl bg-foreground py-3.5 text-sm font-bold text-background block shadow-md hover:bg-gold hover:text-white transition-all"
               >
                 Sign In to Account
               </LinkNext>
             )}
           </div>
-          
+
+          {/* REGIONAL SETTINGS (Language & Currency - Row Layout) */}
+          <div className="grid grid-cols-2 gap-4 border-b border-card-border/40 pb-5">
+            
+            {/* MOBILE LANGUAGE SELECTOR */}
+            <div className="relative" ref={langDropdownRef}>
+              <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1.5 px-1">Language</div>
+              <button
+                onClick={() => { setShowLangDropdown(!showLangDropdown); setShowCurrencyDropdown(false); }}
+                className="flex w-full items-center justify-between border border-card-border/60 hover:border-gold rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground bg-card-bg/20 transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-3 overflow-hidden rounded-[2px] flex items-center shadow-sm shrink-0">
+                    <Flag code={activeLanguage?.flag || 'US'} className="w-full h-full object-cover" />
+                  </div>
+                  <span className="uppercase tracking-wider">{activeLanguage?.label || 'EN'}</span>
+                </div>
+                <ChevronDown className={`h-3 w-3 text-muted transition-transform duration-200 ${showLangDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showLangDropdown && (
+                <div className="absolute left-0 mt-2 w-full rounded-xl border border-card-border bg-card-bg p-1 shadow-xl z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.value}
+                      onClick={() => {
+                        setCurrentLangCode(lang.value);
+                        setShowLangDropdown(false);
+                      }}
+                      className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-xs font-semibold rounded-lg text-left transition-all ${currentLangCode === lang.value ? 'text-gold bg-gold/5 font-bold' : 'text-foreground hover:bg-foreground/5'}`}
+                    >
+                      <div className="w-4 h-3 overflow-hidden rounded-[2px] flex items-center shrink-0 shadow-sm">
+                        <Flag code={lang.flag} className="w-full h-full object-cover" />
+                      </div>
+                      <span>{lang.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* MOBILE CURRENCY SELECTOR */}
+            <div className="relative" ref={currencyDropdownRef}>
+              <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1.5 px-1">Currency</div>
+              <button
+                onClick={() => { setShowCurrencyDropdown(!showCurrencyDropdown); setShowLangDropdown(false); }}
+                className="flex w-full items-center justify-between border border-card-border/60 hover:border-gold rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground bg-card-bg/20 transition-all cursor-pointer"
+              >
+                <span className="tracking-wider uppercase">{currency}</span>
+                <ChevronDown className={`h-3 w-3 text-muted transition-transform duration-200 ${showCurrencyDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showCurrencyDropdown && (
+                <div className="absolute right-0 mt-2 w-full rounded-xl border border-card-border bg-card-bg p-1 shadow-xl z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {["EGP", "USD", "EUR"].map((cur) => (
+                    <button
+                      key={cur}
+                      onClick={() => {
+                        dispatch(setCurrency(cur as any));
+                        setShowCurrencyDropdown(false);
+                      }}
+                      className={`flex w-full items-center px-3 py-2.5 text-xs font-semibold rounded-lg text-left transition-all ${currency === cur ? 'text-gold bg-gold/5 font-bold' : 'text-foreground hover:bg-foreground/5'}`}
+                    >
+                      {cur} {cur === "EGP" ? "(L.E)" : cur === "USD" ? "($)" : "(€)"}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+
           {/* Shop Categories (Mobile) */}
           <div>
             <div className="text-xs font-black text-muted uppercase tracking-widest mb-3 px-1">Shop Collections</div>
@@ -487,7 +610,6 @@ export const Header: React.FC = () => {
                 ))}
             </div>
           </div>
-
 
         </div>
       )}

@@ -14,6 +14,7 @@ import {
   useGetProductsQuery,
   useToggleWishlistMutation,
   useGetWishlistQuery,
+  useGetMeQuery,               // Smart Fit — read sizeProfile
 } from "../../../lib/api";
 import { useAppSelector } from "../../../lib/store";
 import { useToast } from "../../components/Toast";
@@ -30,7 +31,10 @@ import {
   ArrowRight, 
   Sparkles,
   Heart,
-  Lock
+  Lock,
+  Ruler,       // Smart Fit — size guide icon
+  Footprints,  // Smart Fit — shoe guide icon
+  GitCompare,  // Compare feature
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -45,6 +49,30 @@ export default function ProductDetailsBySlugPage() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [addingToCart, setAddingToCart] = useState(false);
+
+  // ── Compare list state (synced with localStorage) ─────────────────────────
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  useEffect(() => {
+    try { setCompareIds(JSON.parse(localStorage.getItem("compare_list") || "[]")); } catch {}
+  }, []);
+  const toggleCompare = (productId: string) => {
+    setCompareIds(prev => {
+      let next: string[];
+      if (prev.includes(productId)) {
+        next = prev.filter(id => id !== productId);
+        showToast("Removed from comparison.", "info");
+      } else {
+        if (prev.length >= 4) {
+          showToast("You can compare up to 4 products at once.", "error");
+          return prev;
+        }
+        next = [...prev, productId];
+        showToast("Added to comparison!", "success");
+      }
+      localStorage.setItem("compare_list", JSON.stringify(next));
+      return next;
+    });
+  };
 
   // Hover Zoom States & Event Handlers
   const [zoomStyle, setZoomStyle] = useState({ transformOrigin: "center center", transform: "scale(1)" });
@@ -95,6 +123,54 @@ export default function ProductDetailsBySlugPage() {
       setSelectedVariant(product.variants[0]);
     }
   }, [product]);
+
+  // ── Smart Fit: fetch the logged-in user's full profile (including sizeProfile)
+  // Skip if not authenticated to avoid unnecessary API calls.
+  const { data: meData } = useGetMeQuery(undefined, { skip: !isAuthenticated });
+  const userSizeProfile = meData?.user?.sizeProfile;
+
+  /**
+   * Determine whether this product's category is size-relevant.
+   * We normalise category name to lowercase for comparison.
+   * Returns: "clothing" | "shoes" | null
+   */
+  const categoryName = (
+    product?.category?.name ||
+    product?.category ||
+    ""
+  ).toString().toLowerCase();
+
+  const isSizeableCategory =
+    categoryName.includes("clothing") ||
+    categoryName.includes("apparel") ||
+    categoryName.includes("fashion") ||
+    categoryName.includes("shirt") ||
+    categoryName.includes("dress") ||
+    categoryName.includes("jacket")
+      ? "clothing"
+      : categoryName.includes("shoe") ||
+        categoryName.includes("footwear") ||
+        categoryName.includes("boot") ||
+        categoryName.includes("sneaker")
+      ? "shoes"
+      : null;
+
+  /**
+   * The recommended size string for this product:
+   * - For clothing: the user's calculatedSize ("S", "M", "L", etc.)
+   * - For shoes:    "EU {calculatedSizeEU}"
+   * - null if no profile exists for this category
+   */
+  const recommendedSize: string | null = (() => {
+    if (!isSizeableCategory || !userSizeProfile) return null;
+    if (isSizeableCategory === "clothing" && userSizeProfile.clothing?.calculatedSize) {
+      return userSizeProfile.clothing.calculatedSize;
+    }
+    if (isSizeableCategory === "shoes" && userSizeProfile.shoes?.calculatedSizeEU) {
+      return `EU ${userSizeProfile.shoes.calculatedSizeEU}`;
+    }
+    return null;
+  })();
 
   // Log recently viewed product
   useEffect(() => {
@@ -366,20 +442,99 @@ export default function ProductDetailsBySlugPage() {
                 <div className="flex flex-col gap-3">
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Aesthetic Variant</span>
                   <div className="flex flex-wrap gap-2.5">
-                    {product.variants.map((v: any) => (
-                      <button
-                        key={v.sku}
-                        onClick={() => setSelectedVariant(v)}
-                        className={`px-4 py-2.5 text-xs rounded-xl border transition-all cursor-pointer ${
-                          selectedVariant?.sku === v.sku 
-                            ? "border-gold bg-gold/10 text-gold font-bold" 
-                            : "border-card-border hover:border-gold/40 text-muted"
-                        }`}
-                      >
-                        {Object.values(v.attributes).join(" / ")}
-                      </button>
-                    ))}
+                    {product.variants.map((v: any) => {
+                      // Case A: auto-highlight the variant that matches the user's recommended size
+                      const variantLabel = Object.values(v.attributes).join(" / ");
+                      const isRecommended =
+                        recommendedSize !== null &&
+                        variantLabel.toUpperCase().includes(
+                          recommendedSize.replace("EU ", "").toUpperCase()
+                        );
+
+                      return (
+                        <button
+                          key={v.sku}
+                          onClick={() => setSelectedVariant(v)}
+                          className={`relative px-4 py-2.5 text-xs rounded-xl border transition-all cursor-pointer ${
+                            selectedVariant?.sku === v.sku
+                              ? "border-gold bg-gold/10 text-gold font-bold"
+                              : isRecommended
+                              ? "border-gold/60 bg-gold/5 text-gold/80"
+                              : "border-card-border hover:border-gold/40 text-muted"
+                          }`}
+                        >
+                          {variantLabel}
+                          {/* Small "Recommended" dot for the matched size */}
+                          {isRecommended && (
+                            <span
+                              title="Recommended based on your Fit Profile"
+                              className="absolute -top-1.5 -right-1.5 h-3 w-3 rounded-full bg-gold border-2 border-card-bg"
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
+
+                  {/* ── Smart Fit Badge ── render only for clothing/shoes */}
+                  {isSizeableCategory && (
+                    <>
+                      {/* Case A: Profile exists → gold recommended-size badge */}
+                      {recommendedSize ? (
+                        <motion.div
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4 }}
+                          className="flex items-center gap-2 mt-1 px-3.5 py-2 rounded-xl bg-gold/8 border border-gold/25 w-fit"
+                        >
+                          <Sparkles className="h-3.5 w-3.5 text-gold shrink-0" />
+                          <span className="text-[10px] font-semibold text-gold">
+                            Recommended size{" "}
+                            <strong className="font-bold">{recommendedSize}</strong>{" "}
+                            based on your Fit Profile
+                          </span>
+                        </motion.div>
+                      ) : (
+                        /* Case B: No profile → Fitting Guide CTA */
+                        isAuthenticated ? (
+                          <motion.div
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4 }}
+                          >
+                            <Link
+                              id="fitting-guide-cta"
+                              href="/size-guide"
+                              className="inline-flex items-center gap-2 mt-1 px-3.5 py-2 rounded-xl border border-dashed border-gold/40 hover:border-gold hover:bg-gold/5 transition-all text-[10px] font-semibold text-muted hover:text-gold group"
+                            >
+                              {isSizeableCategory === "shoes"
+                                ? <Footprints className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
+                                : <Ruler className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
+                              }
+                              Unsure about your size? Use our AI Fitting Guide
+                              <ArrowRight className="h-3 w-3 shrink-0" />
+                            </Link>
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4 }}
+                          >
+                            <Link
+                              href="/login"
+                              id="fitting-guide-cta-guest"
+                              className="inline-flex items-center gap-2 mt-1 px-3.5 py-2 rounded-xl border border-dashed border-gold/40 hover:border-gold hover:bg-gold/5 transition-all text-[10px] font-semibold text-muted hover:text-gold group"
+                            >
+                              <Ruler className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
+                              Log in to use our AI Fitting Guide
+                              <ArrowRight className="h-3 w-3 shrink-0" />
+                            </Link>
+                          </motion.div>
+                        )
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 
@@ -438,6 +593,30 @@ export default function ProductDetailsBySlugPage() {
                   <Heart className={`h-5 w-5 ${isWishlisted ? "fill-destructive" : ""}`} />
                 </button>
               </div>
+
+              {/* ── Add to Compare button ── */}
+              {product && (
+                <button
+                  id="add-to-compare-btn"
+                  onClick={() => toggleCompare(product._id)}
+                  className={`w-full flex items-center justify-center gap-2 h-10 rounded-full border text-xs font-semibold uppercase tracking-widest transition-all cursor-pointer ${
+                    compareIds.includes(product._id)
+                      ? "border-gold bg-gold/10 text-gold"
+                      : "border-card-border hover:border-gold/50 text-muted hover:text-gold"
+                  }`}
+                >
+                  <GitCompare className="h-4 w-4" />
+                  {compareIds.includes(product._id) ? "In Comparison — View Compare" : "Add to Comparison"}
+                </button>
+              )}
+              {compareIds.includes(product?._id) && (
+                <Link
+                  href="/compare"
+                  className="text-center text-[10px] text-gold hover:underline underline-offset-2 font-semibold tracking-wider"
+                >
+                  → Open Compare Page ({compareIds.length} item{compareIds.length !== 1 ? "s" : ""})
+                </Link>
+              )}
               
               <div className="flex items-center justify-center gap-6 text-[10px] text-muted uppercase tracking-wider font-semibold mt-2">
                 <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-gold" /> Encrypted Checkout</span>

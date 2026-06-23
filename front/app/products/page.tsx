@@ -8,13 +8,39 @@ import Footer from "../components/Footer";
 import { useGetProductsQuery, useGetCategoriesQuery, useAddToCartMutation } from "../../lib/api";
 import { useAppSelector } from "../../lib/store";
 import { formatPrice as formatCurrencyPrice } from "../../lib/currencyUtils";
-import { Star, Search, SlidersHorizontal, ChevronLeft, ChevronRight, ShoppingBag, Store, RotateCcw } from "lucide-react";
+import { Star, Search, SlidersHorizontal, ChevronLeft, ChevronRight, ShoppingBag, Store, RotateCcw, GitCompare } from "lucide-react";
 import Image from "next/image";
+import { useToast } from "../components/Toast";
 
 export default function ProductsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, currency } = useAppSelector((state) => state.auth);
+  const { showToast } = useToast();
+
+  // ── Compare list state (synced with localStorage) ─────────────────────────
+  const [compareIds, setCompareIds] = React.useState<string[]>([]);
+  useEffect(() => {
+    try { setCompareIds(JSON.parse(localStorage.getItem("compare_list") || "[]")); } catch {}
+  }, []);
+  const toggleCompare = (productId: string) => {
+    setCompareIds(prev => {
+      let next: string[];
+      if (prev.includes(productId)) {
+        next = prev.filter(id => id !== productId);
+        showToast("Removed from comparison.", "info");
+      } else {
+        if (prev.length >= 4) {
+          showToast("You can compare up to 4 products at once.", "error");
+          return prev;
+        }
+        next = [...prev, productId];
+        showToast("Added to comparison! View at /compare.", "success");
+      }
+      localStorage.setItem("compare_list", JSON.stringify(next));
+      return next;
+    });
+  };
 
   // Read URL params
   const search = searchParams.get("search") || "";
@@ -84,14 +110,14 @@ export default function ProductsPage() {
 
   const handleQuickAdd = async (productId: string) => {
     if (!isAuthenticated) {
-      alert("Please sign in to add items to your cart.");
+      showToast("Please sign in to add items to your cart.", "error");
       return;
     }
     try {
       await addToCart({ productId, quantity: 1 }).unwrap();
-      alert("Product added to cart!");
+      showToast("Product added to your bag!", "success");
     } catch (err) {
-      alert("Could not add item to cart.");
+      showToast("Could not add item to cart.", "error");
     }
   };
 
@@ -317,7 +343,7 @@ export default function ProductsPage() {
                           className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-700"
                         />
                         
-                        {/* Quick Add Overlay */}
+                        {/* Quick Add + Compare Overlay */}
                         <div className="absolute inset-x-0 bottom-0 p-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 bg-gradient-to-t from-black/50 via-black/20 to-transparent">
                           <button
                             onClick={() => handleQuickAdd(product._id)}
@@ -326,6 +352,19 @@ export default function ProductsPage() {
                             <ShoppingBag className="h-3.5 w-3.5" /> Quick Add
                           </button>
                         </div>
+
+                        {/* Compare toggle badge — top-right */}
+                        <button
+                          onClick={(e) => { e.preventDefault(); toggleCompare(product._id); }}
+                          title={compareIds.includes(product._id) ? "Remove from Compare" : "Add to Compare"}
+                          className={`absolute top-3 right-3 h-7 w-7 rounded-full flex items-center justify-center shadow-md transition-all z-10 cursor-pointer ${
+                            compareIds.includes(product._id)
+                              ? "bg-gold text-white scale-110"
+                              : "bg-white/90 backdrop-blur-sm text-slate-500 opacity-0 group-hover:opacity-100 hover:bg-gold hover:text-white"
+                          }`}
+                        >
+                          <GitCompare className="h-3.5 w-3.5" />
+                        </button>
                       </div>
 
                       {/* Content Container */}

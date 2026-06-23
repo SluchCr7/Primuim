@@ -30,3 +30,11 @@ export const Links: NavLink[] = [
   { name: "Blog", href: "/blog", type: "editorial" },
   { name: "Our Story", href: "/about", type: "editorial" },
 ];
+
+export const languages = [  
+  { value: "en", label: "English", flag: "US" },
+  { value: "es", label: "Español", flag: "ES" },
+  { value: "fr", label: "Français", flag: "FR" },
+  {value : "de", label: "Deutsch", flag: "DE" },
+  { value: "ar", label: "العربية", flag: "EG" },
+]

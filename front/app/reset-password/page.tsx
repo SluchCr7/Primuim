@@ -71,24 +71,24 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground relative overflow-hidden">
       {/* Premium ambient light effect */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(197,168,128,0.12),_transparent_45%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(197,168,128,0.08),_transparent_45%)] pointer-events-none" />
       
       <Header />
 
       <main className="flex-grow flex items-center justify-center py-20 px-6 relative z-10">
-        <div className="w-full max-w-md backdrop-blur-md bg-white/70 dark:bg-[#131312]/80 border border-card-border/80 p-8 shadow-2xl rounded-[32px]">
+        <div className="w-full max-w-md backdrop-blur-md bg-card-bg/80 border border-card-border/80 p-8 shadow-2xl rounded-[32px] luxury-shadow">
           
           <div className="text-center mb-8">
             <span className="text-xs font-bold tracking-widest text-gold uppercase">Credentials Recovery</span>
-            <h1 className="font-serif text-3xl font-bold mt-1">Reset Password</h1>
+            <h1 className="font-serif text-3xl font-bold mt-1 text-foreground">Reset Password</h1>
             <p className="text-sm text-muted mt-2">Enter your new premium security credentials below</p>
           </div>
 
           {statusMsg && (
-            <div className={`mb-6 rounded border px-4 py-3 text-sm ${
+            <div className={`mb-6 rounded-xl border px-4 py-3 text-sm ${
               statusMsg.type === "success" 
-                ? "border-success/30 bg-success/10 text-success" 
-                : "border-error/30 bg-error/10 text-error"
+                ? "border-success/20 bg-success/5 text-success" 
+                : "border-error/20 bg-error/5 text-error"
             }`}>
               {statusMsg.text}
             </div>
@@ -104,8 +104,8 @@ export default function ResetPasswordPage() {
                   <input
                     type="password"
                     {...register("password")}
-                    className="w-full rounded border border-card-border bg-background pl-11 pr-4 py-2.5 text-sm outline-none focus:border-gold transition-colors"
-                    placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
+                    className="w-full rounded-xl border border-card-border bg-background pl-11 pr-4 py-2.5 text-sm text-foreground outline-none focus:border-gold transition-all placeholder-muted/50"
+                    placeholder="••••••••"
                   />
                   <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
                 </div>
@@ -122,8 +122,8 @@ export default function ResetPasswordPage() {
                   <input
                     type="password"
                     {...register("confirmPassword")}
-                    className="w-full rounded border border-card-border bg-background pl-11 pr-4 py-2.5 text-sm outline-none focus:border-gold transition-colors"
-                    placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
+                    className="w-full rounded-xl border border-card-border bg-background pl-11 pr-4 py-2.5 text-sm text-foreground outline-none focus:border-gold transition-all placeholder-muted/50"
+                    placeholder="••••••••"
                   />
                   <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
                 </div>
@@ -135,7 +135,7 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full rounded bg-foreground py-3 font-semibold text-background hover:bg-gold hover:text-luxury-white transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full rounded-xl bg-foreground py-3 font-semibold text-background hover:bg-gold-hover hover:shadow-lg hover:shadow-gold/10 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isLoading ? (
                   <>

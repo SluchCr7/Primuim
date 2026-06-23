@@ -348,6 +348,9 @@ const moderateSellerRequest = asyncHandler(async (req, res) => {
       user.storeDescription = sellerReq.storeDescription;
       user.storeSlug = slug;
       user.phone = user.phone || sellerReq.storePhone;
+      // Preserve any logo/cover uploaded at registration; don't overwrite them
+      if (!user.storeLogo) user.storeLogo = "";
+      if (!user.storeCover) user.storeCover = "";
       await user.save();
 
       // Notify User

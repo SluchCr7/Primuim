@@ -212,7 +212,19 @@ const UserSchema = new mongoose.Schema({
             details: String,
             createdAt: { type: Date, default: Date.now }
         }
-    ]
+    ], 
+    sizeProfile: {
+        clothing: {
+            height: Number,      // سم
+            weight: Number,      // كجم
+            preference: { type: String, enum: ['tight', 'regular', 'oversized'] },
+            calculatedSize: String // S, M, L, XL
+        },
+        shoes: {
+            footLengthCM: Number, // طول القدم بالسم
+            calculatedSizeEU: Number // 41, 42, 43
+        }
+    }
 },{
     timestamps: true
 })
