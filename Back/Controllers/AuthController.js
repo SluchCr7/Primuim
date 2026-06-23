@@ -10,6 +10,7 @@ const {
 const { User, validateRegisterUser, validateLoginUser } = require("../models/User");
 const Verification = require("../models/VerificationToken");
 const sendEmail = require("../utils/sendEmail");
+const SellerRequest = require("../models/SellerRequest");
 
 const cookieOptions = {
   httpOnly: true,
@@ -60,16 +61,33 @@ const register = asyncHandler(async (req, res) => {
     email,
     password,
     referredBy: referredByUser ? referredByUser._id : null,
-    role: role || "customer",
+    // Sellers start as "customer" role until admin approves their store request
+    role: "customer",
     phone: phone || "",
     brandName: role === "seller" ? brandName : "",
     storeName: role === "seller" ? storeName : "",
     country: role === "seller" ? country : "",
     storeDescription: role === "seller" ? storeDescription : "",
-    storeLogo: role === "seller" ? (storeLogo ? { url: storeLogo } : undefined) : undefined,
-    storeCover: role === "seller" ? (storeCover ? { url: storeCover } : undefined) : undefined,
     sellerStatus: role === "seller" ? "pending" : null
   });
+
+  // If registering as seller, automatically create a SellerRequest document
+  // so the admin can see and approve/reject it from the admin panel
+  if (role === "seller" && storeName) {
+    try {
+      await SellerRequest.create({
+        user: user._id,
+        storeName: storeName || "My Store",
+        storeDescription: storeDescription || "No description provided.",
+        storePhone: phone || "N/A",
+        storeAddress: country || "N/A",
+        status: "pending"
+      });
+    } catch (sellerReqErr) {
+      // Non-fatal: seller request creation failed (e.g., duplicate), but user was created
+      console.error("Could not auto-create SellerRequest during registration:", sellerReqErr.message);
+    }
+  }
 
   // Award referral reward points if referred
   if (referredByUser) {

@@ -334,10 +334,20 @@ const moderateSellerRequest = asyncHandler(async (req, res) => {
 
   if (user) {
     if (status === "approved") {
+      // Generate a unique URL-safe slug from the store name
+      const baseSlug = sellerReq.storeName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      // Ensure slug uniqueness by appending last 4 chars of user ID if needed
+      const slug = `${baseSlug}-${user._id.toString().slice(-4)}`;
+
       user.role = "seller";
       user.sellerStatus = "approved";
       user.storeName = sellerReq.storeName;
       user.storeDescription = sellerReq.storeDescription;
+      user.storeSlug = slug;
+      user.phone = user.phone || sellerReq.storePhone;
       await user.save();
 
       // Notify User

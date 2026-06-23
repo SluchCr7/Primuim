@@ -108,6 +108,11 @@ export default function AdminPage() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectionModal, setShowRejectionModal] = useState(false);
 
+  // Seller Request Moderation states
+  const [showSellerRejectionModal, setShowSellerRejectionModal] = useState(false);
+  const [rejectingSellerRequestId, setRejectingSellerRequestId] = useState<string | null>(null);
+  const [sellerRejectionNotes, setSellerRejectionNotes] = useState("");
+
   // CMS Blog state
   const [blogTitle, setBlogTitle] = useState("");
   const [blogSubtitle, setBlogSubtitle] = useState("");
@@ -314,19 +319,39 @@ export default function AdminPage() {
   };
 
   const handleModerateSellerRequest = async (id: string, status: "approved" | "rejected") => {
-    let notes = "";
     if (status === "rejected") {
-      const reason = prompt("Enter reason for rejection:");
-      if (reason === null) return; // user cancelled
-      notes = reason;
+      // Open our styled modal instead of the ugly native prompt()
+      setRejectingSellerRequestId(id);
+      setSellerRejectionNotes("");
+      setShowSellerRejectionModal(true);
+      return;
     }
 
     try {
-      await moderateSellerRequest({ id, status, adminNotes: notes }).unwrap();
-      showToast(`Seller application was ${status}.`, "success");
+      await moderateSellerRequest({ id, status, adminNotes: "" }).unwrap();
+      showToast(`Seller application approved successfully.`, "success");
       refetchRequests();
     } catch (err) {
       showToast("Failed to moderate seller request.", "error");
+    }
+  };
+
+  const handleSellerRejectionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectingSellerRequestId) return;
+    try {
+      await moderateSellerRequest({
+        id: rejectingSellerRequestId,
+        status: "rejected",
+        adminNotes: sellerRejectionNotes,
+      }).unwrap();
+      showToast("Seller application rejected.", "success");
+      setShowSellerRejectionModal(false);
+      setRejectingSellerRequestId(null);
+      setSellerRejectionNotes("");
+      refetchRequests();
+    } catch (err) {
+      showToast("Failed to reject seller application.", "error");
     }
   };
 
@@ -1338,85 +1363,183 @@ export default function AdminPage() {
 
         {/* TAB 7: SELLER ONBOARDING REQUESTS */}
         {activeTab === "seller-requests" && (
-          <div className="luxury-card p-6">
-            <h3 className="font-serif font-bold text-lg mb-6 flex items-center gap-2">
-              <ShoppingBag className="h-5.5 w-5.5 text-gold" /> Pending Seller Applications ({sellerRequestsData?.requests?.filter((r: any) => r.status === "pending").length || 0})
-            </h3>
+          <div className="flex flex-col gap-6">
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
-                <thead>
-                  <tr className="border-b border-card-border">
-                    <th className="py-3 px-4 font-semibold text-muted uppercase tracking-wider">User Details</th>
-                    <th className="py-3 px-4 font-semibold text-muted uppercase tracking-wider">Store Details</th>
-                    <th className="py-3 px-4 font-semibold text-muted uppercase tracking-wider">Phone / Address</th>
-                    <th className="py-3 px-4 font-semibold text-muted uppercase tracking-wider">Status</th>
-                    <th className="py-3 px-4 font-semibold text-muted uppercase tracking-wider text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!sellerRequestsData?.requests || sellerRequestsData.requests.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-8 text-center text-muted font-light">No seller onboarding requests found.</td>
+            {/* Summary stat cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="luxury-card p-4 flex flex-col gap-1">
+                <span className="text-[10px] text-muted uppercase tracking-wider">Total Applications</span>
+                <span className="text-2xl font-bold">{sellerRequestsData?.requests?.length || 0}</span>
+              </div>
+              <div className="luxury-card p-4 flex flex-col gap-1">
+                <span className="text-[10px] text-gold uppercase tracking-wider">Pending Review</span>
+                <span className="text-2xl font-bold text-gold">{sellerRequestsData?.requests?.filter((r: any) => r.status === "pending").length || 0}</span>
+              </div>
+              <div className="luxury-card p-4 flex flex-col gap-1">
+                <span className="text-[10px] text-success uppercase tracking-wider">Approved</span>
+                <span className="text-2xl font-bold text-success">{sellerRequestsData?.requests?.filter((r: any) => r.status === "approved").length || 0}</span>
+              </div>
+              <div className="luxury-card p-4 flex flex-col gap-1">
+                <span className="text-[10px] text-error uppercase tracking-wider">Rejected</span>
+                <span className="text-2xl font-bold text-error">{sellerRequestsData?.requests?.filter((r: any) => r.status === "rejected").length || 0}</span>
+              </div>
+            </div>
+
+            <div className="luxury-card p-6">
+              <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                <h3 className="font-serif font-bold text-lg flex items-center gap-2">
+                  <ShoppingBag className="h-5 w-5 text-gold" /> Store Applications
+                </h3>
+                <div className="flex gap-2 flex-wrap">
+                  {(["all", "pending", "approved", "rejected"] as const).map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => {/* filter handled inline below */}}
+                      className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded border border-card-border hover:border-gold transition-all"
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead>
+                    <tr className="border-b border-card-border">
+                      <th className="py-3 px-4 font-semibold text-muted uppercase tracking-wider">Applicant</th>
+                      <th className="py-3 px-4 font-semibold text-muted uppercase tracking-wider">Store Details</th>
+                      <th className="py-3 px-4 font-semibold text-muted uppercase tracking-wider">Contact / Location</th>
+                      <th className="py-3 px-4 font-semibold text-muted uppercase tracking-wider">Submitted</th>
+                      <th className="py-3 px-4 font-semibold text-muted uppercase tracking-wider">Status</th>
+                      <th className="py-3 px-4 font-semibold text-muted uppercase tracking-wider text-right">Actions</th>
                     </tr>
-                  ) : (
-                    sellerRequestsData.requests.map((req: any) => (
-                      <tr key={req._id} className="border-b border-card-border/50 hover:bg-muted-light/10">
-                        <td className="py-4 px-4">
-                          <span className="font-semibold text-foreground block">{req.user?.username}</span>
-                          <span className="font-mono text-[10px] text-muted">{req.user?.email}</span>
-                        </td>
-                        <td className="py-4 px-4 max-w-[200px]">
-                          <span className="font-bold text-gold block">{req.storeName}</span>
-                          <span className="text-muted leading-relaxed block text-[11px] truncate" title={req.storeDescription}>
-                            {req.storeDescription}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 text-muted">
-                          <span className="block">{req.storePhone}</span>
-                          <span className="block text-[10px] leading-relaxed truncate" title={req.storeAddress}>{req.storeAddress}</span>
-                        </td>
-                        <td className="py-4 px-4">
-                          <span className={`inline-flex font-bold px-2.5 py-0.5 rounded uppercase text-[9px] tracking-wider ${
-                            req.status === "pending"
-                              ? "bg-gold/20 text-gold"
-                              : req.status === "approved"
-                                ? "bg-success/20 text-success"
-                                : "bg-error/20 text-error"
-                          }`}>
-                            {req.status}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 text-right">
-                          {req.status === "pending" ? (
-                            <div className="flex gap-2 justify-end">
-                              <button
-                                onClick={() => handleModerateSellerRequest(req._id, "approved")}
-                                className="px-3 py-1.5 bg-success text-luxury-white rounded font-bold uppercase text-[9px] tracking-wider transition-colors hover:bg-success/80"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleModerateSellerRequest(req._id, "rejected")}
-                                className="px-3 py-1.5 bg-error text-luxury-white rounded font-bold uppercase text-[9px] tracking-wider transition-colors hover:bg-error/80"
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-muted italic">Processed</span>
-                          )}
+                  </thead>
+                  <tbody>
+                    {!sellerRequestsData?.requests || sellerRequestsData.requests.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center">
+                          <div className="flex flex-col items-center gap-3 text-muted">
+                            <ShoppingBag className="h-10 w-10 opacity-20" />
+                            <span className="font-light text-sm">No seller onboarding requests found.</span>
+                            <span className="text-[11px]">Applications submitted from the dashboard will appear here.</span>
+                          </div>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      sellerRequestsData.requests.map((req: any) => (
+                        <tr key={req._id} className="border-b border-card-border/50 hover:bg-gold/5 transition-colors">
+                          <td className="py-4 px-4">
+                            <span className="font-semibold text-foreground block">{req.user?.username || "Unknown User"}</span>
+                            <span className="font-mono text-[10px] text-muted">{req.user?.email}</span>
+                            <span className="text-[9px] text-muted/60 block mt-0.5 capitalize">{req.user?.role || "customer"}</span>
+                          </td>
+                          <td className="py-4 px-4 max-w-[200px]">
+                            <span className="font-bold text-gold block">{req.storeName}</span>
+                            <span className="text-muted leading-relaxed block text-[11px] truncate" title={req.storeDescription}>
+                              {req.storeDescription || <span className="italic opacity-50">No description</span>}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-muted">
+                            <span className="block">{req.storePhone}</span>
+                            <span className="block text-[10px] leading-relaxed truncate" title={req.storeAddress}>{req.storeAddress}</span>
+                          </td>
+                          <td className="py-4 px-4 text-muted">
+                            <span className="block">{new Date(req.createdAt).toLocaleDateString()}</span>
+                            <span className="text-[10px]">{new Date(req.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className={`inline-flex font-bold px-2.5 py-0.5 rounded uppercase text-[9px] tracking-wider ${
+                              req.status === "pending"
+                                ? "bg-gold/20 text-gold"
+                                : req.status === "approved"
+                                  ? "bg-success/20 text-success"
+                                  : "bg-error/20 text-error"
+                            }`}>
+                              {req.status}
+                            </span>
+                            {req.adminNotes && req.status === "rejected" && (
+                              <span className="block text-[10px] text-error/70 mt-1 max-w-[120px] truncate" title={req.adminNotes}>
+                                Note: {req.adminNotes}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            {req.status === "pending" ? (
+                              <div className="flex gap-2 justify-end">
+                                <button
+                                  onClick={() => handleModerateSellerRequest(req._id, "approved")}
+                                  className="px-3 py-1.5 bg-success text-luxury-white rounded font-bold uppercase text-[9px] tracking-wider transition-colors hover:bg-success/80"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleModerateSellerRequest(req._id, "rejected")}
+                                  className="px-3 py-1.5 bg-error text-luxury-white rounded font-bold uppercase text-[9px] tracking-wider transition-colors hover:bg-error/80"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-muted italic capitalize">{req.status}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Rejection Reason Modal */}
+
+        {/* Seller Rejection Modal */}
+        {showSellerRejectionModal && rejectingSellerRequestId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-luxury-black/80 backdrop-blur-sm p-4">
+            <div className="bg-card-bg border border-card-border rounded-lg max-w-md w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
+              <h3 className="font-serif font-bold text-lg mb-4 text-foreground">Reject Seller Application</h3>
+              <p className="text-xs text-muted mb-4 font-light leading-relaxed">
+                Provide a reason for rejecting this seller application. The applicant will be notified with your feedback.
+              </p>
+              <form onSubmit={handleSellerRejectionSubmit} className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-2">Rejection Reason / Admin Notes</label>
+                  <textarea
+                    rows={4}
+                    required
+                    value={sellerRejectionNotes}
+                    onChange={(e) => setSellerRejectionNotes(e.target.value)}
+                    className="w-full rounded border border-card-border bg-background p-3 text-xs outline-none focus:border-gold resize-none leading-relaxed"
+                    placeholder="e.g. Your store description is too vague. Please provide more detail about your products and brand identity."
+                  />
+                </div>
+                <div className="flex gap-3 justify-end mt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSellerRejectionModal(false);
+                      setRejectingSellerRequestId(null);
+                      setSellerRejectionNotes("");
+                    }}
+                    className="px-4 py-2 border border-card-border rounded font-semibold uppercase tracking-wider text-[10px] cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-error text-luxury-white hover:bg-error/80 rounded font-semibold uppercase tracking-wider text-[10px] cursor-pointer"
+                  >
+                    Reject Application
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Article Rejection Reason Modal */}
         {showRejectionModal && moderatingArticle && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-luxury-black/80 backdrop-blur-sm p-4">
             <div className="bg-card-bg border border-card-border rounded-lg max-w-md w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
