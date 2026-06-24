@@ -10,6 +10,7 @@ const morgan = require("morgan");
 const logger = require("./config/logger");
 const { errorhandler } = require("./Middelwares/errorHandler");
 const { notfound } = require("./Middelwares/errorHandler");
+const { swaggerUi, specs } = require('./swagger');
 const mongoSanitize = () => (req, res, next) => {
   const sanitizeInput = (obj) => {
     if (obj && typeof obj === "object") {
@@ -119,6 +120,7 @@ app.use("/api/sellers", require("./Routers/sellerRoutes"));
 app.use("/api/superadmin", require("./Routers/superAdminRoutes"));
 app.use("/api/testimonials", require("./Routers/TestimoialRoutes"));
 app.use("/api/upload", require("./Routers/uploadRoutes"));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 app.use(notfound);
 app.use(errorhandler);
 

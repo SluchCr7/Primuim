@@ -12,6 +12,7 @@ import {
   useUpdateCartItemQuantityMutation,
   useRemoveFromCartMutation,
   useClearCartMutation,
+  useGetCouponsQuery,
 } from "../../lib/api";
 import {
   getGuestCartTotals,
@@ -36,7 +37,7 @@ export default function CartPage() {
   const { data: dbCartData, isLoading: isCartLoading } = useGetCartQuery(undefined, {
     skip: !isAuthenticated,
   });
-  
+  const { data: couponsData } = useGetCouponsQuery(undefined);
   const [updateDbQuantity, { isLoading: isUpdating }] = useUpdateCartItemQuantityMutation();
   const [removeFromDb, { isLoading: isRemoving }] = useRemoveFromCartMutation();
   const [clearDbCart] = useClearCartMutation();
@@ -108,22 +109,70 @@ export default function CartPage() {
     setDiscountError("");
     setDiscountSuccess("");
     
-    // Stub codes
-    const code = promoCode.trim().toUpperCase();
-    if (code === "GOLD2026") {
-      const discountVal = subtotal * 0.20; // 20% Off
-      setDiscount(discountVal);
-      setDiscountSuccess("VIP Promo Code 'GOLD2026' Applied (20% Off)!");
-    } else if (code === "WELCOME10") {
-      const discountVal = subtotal * 0.10; // 10% Off
-      setDiscount(discountVal);
-      setDiscountSuccess("Promo Code 'WELCOME10' Applied (10% Off)!");
-    } else if (code === "") {
+    const inputCode = promoCode.trim().toUpperCase();
+    
+    if (!inputCode) {
       setDiscount(0);
-    } else {
-      setDiscountError("Invalid or expired VIP invitation code.");
-      setDiscount(0);
+      return;
     }
+
+    // التأكد من وجود بيانات الكوبونات
+    if (!couponsData?.coupons) {
+      setDiscountError("System currently unavailable. Please try again later.");
+      return;
+    }
+
+    // البحث عن الكوبون في البيانات القادمة من API
+    const coupon = couponsData.coupons.find((c: any) => c.code === inputCode);
+
+    // 1. التحقق من وجود الكوبون
+    if (!coupon) {
+      setDiscountError("Invalid coupon code.");
+      setDiscount(0);
+      return;
+    }
+
+    // 2. التحقق من حالة التفعيل (isActive)
+    if (!coupon.isActive) {
+      setDiscountError("This coupon is no longer active.");
+      setDiscount(0);
+      return;
+    }
+
+    // 3. التحقق من التاريخ (startDate & endDate)
+    const now = new Date();
+    const startDate = new Date(coupon.startDate);
+    const endDate = new Date(coupon.endDate);
+
+    if (now < startDate || now > endDate) {
+      setDiscountError("This coupon has expired.");
+      setDiscount(0);
+      return;
+    }
+
+    // 4. التحقق من الحد الأدنى للطلب (minOrderAmount)
+    if (subtotal < coupon.minOrderAmount) {
+      setDiscountError(`Minimum order of ${formatCurrencyPrice(coupon.minOrderAmount, currency)} required.`);
+      setDiscount(0);
+      return;
+    }
+
+    // 5. حساب الخصم ديناميكياً
+    let discountVal = 0;
+    
+    if (coupon.type === "fixed") {
+      discountVal = coupon.value;
+    } else if (coupon.type === "percentage") {
+      discountVal = (subtotal * coupon.value) / 100;
+    }
+
+    // التحقق من وجود سقف للخصم (maxDiscount)
+    if (coupon.maxDiscount && discountVal > coupon.maxDiscount) {
+      discountVal = coupon.maxDiscount;
+    }
+
+    setDiscount(discountVal);
+    setDiscountSuccess(`Coupon '${coupon.code}' applied successfully!`);
   };
 
   const handleCheckoutRedirect = () => {
