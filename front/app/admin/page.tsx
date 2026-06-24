@@ -116,7 +116,6 @@ export default function AdminPage() {
   // CMS Blog state
   const [blogTitle, setBlogTitle] = useState("");
   const [blogSubtitle, setBlogSubtitle] = useState("");
-  const [blogAuthor, setBlogAuthor] = useState("VIP Editorial Team");
   const [blogContent, setBlogContent] = useState("");
   const [blogCategory, setBlogCategory] = useState("Lifestyle");
   const [blogImage, setBlogImage] = useState<File | null>(null);
@@ -1119,28 +1118,16 @@ export default function AdminPage() {
               </h3>
 
               <form onSubmit={handleCreateBlog} className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-2">Title</label>
-                    <input
-                      type="text"
-                      required
-                      value={blogTitle}
-                      onChange={(e) => setBlogTitle(e.target.value)}
-                      className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold font-bold"
-                      placeholder="Luxury Design Trends 2026"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-2">Author</label>
-                    <input
-                      type="text"
-                      required
-                      value={blogAuthor}
-                      onChange={(e) => setBlogAuthor(e.target.value)}
-                      className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-2">Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={blogTitle}
+                    onChange={(e) => setBlogTitle(e.target.value)}
+                    className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold font-bold"
+                    placeholder="Luxury Design Trends 2026"
+                  />
                 </div>
 
                 <div>
@@ -1187,15 +1174,16 @@ export default function AdminPage() {
                     value={blogContent}
                     onChange={(e) => setBlogContent(e.target.value)}
                     className="w-full rounded border border-card-border bg-background p-4 text-xs outline-none focus:border-gold leading-relaxed"
-                    placeholder="Write article details using rich markdown syntax here..."
+                    placeholder="Create official platform articles and insights. Add article details using rich markdown syntax here..."
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full h-10 bg-gold text-luxury-white hover:bg-gold-hover rounded text-xs font-semibold uppercase tracking-wider transition-all mt-2"
+                  disabled={isCreatingArticle}
+                  className="w-full h-11 bg-gold text-luxury-white hover:bg-gold-hover rounded text-xs font-bold uppercase tracking-[0.2em] transition-all mt-2 disabled:opacity-60 flex items-center justify-center gap-2"
                 >
-                  Save Article Draft
+                  {isCreatingArticle ? "Publishing…" : "PUBLISH ADMIN ARTICLE"}
                 </button>
               </form>
             </div>

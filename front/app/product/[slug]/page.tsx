@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import AttributeSelector from "../../components/product/AttributeSelector";
 import {
   useGetProductBySlugQuery,
   useAddToCartMutation,
@@ -49,6 +50,10 @@ export default function ProductDetailsBySlugPage() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [addingToCart, setAddingToCart] = useState(false);
+
+  // ── Dynamic Attribute Selection (new system) ───────────────────────────────
+  // Tracks the user's current per-axis pick, e.g. { Color: "Red", Size: "M" }
+  const [attrSelection, setAttrSelection] = useState<Record<string, string>>({});
 
   // ── Compare list state (synced with localStorage) ─────────────────────────
   const [compareIds, setCompareIds] = useState<string[]>([]);
@@ -117,11 +122,13 @@ export default function ProductDetailsBySlugPage() {
   const { data: wishlistData, refetch: refetchWishlist } = useGetWishlistQuery(undefined, { skip: !isAuthenticated });
   const [toggleWishlist] = useToggleWishlistMutation();
 
-  // Set default variant if available
+  // Set default variant if available (legacy: no attributes array)
   useEffect(() => {
-    if (product?.variants && product.variants.length > 0) {
+    if (product?.variants && product.variants.length > 0 && (!product.attributes || product.attributes.length === 0)) {
       setSelectedVariant(product.variants[0]);
     }
+    // Reset attribute selection when product changes
+    setAttrSelection({});
   }, [product]);
 
   // ── Smart Fit: fetch the logged-in user's full profile (including sizeProfile)
@@ -191,6 +198,42 @@ export default function ProductDetailsBySlugPage() {
   const isOwner = currentUser && productSellerId && productSellerId.toString() === currentUser.id;
   const isWishlisted = wishlistData?.wishlist?.some((w: any) => w.product?._id === product?._id);
 
+  /**
+   * Derive the active variant from the current attrSelection.
+   * Supports both new `combination` Map and legacy `attributes` Map.
+   * Falls back to `selectedVariant` for products without the attributes system.
+   */
+  const activeVariant = useMemo(() => {
+    const attrs = product?.attributes || [];
+    const variants = product?.variants || [];
+
+    // New system: match against combination
+    if (attrs.length > 0 && Object.keys(attrSelection).length > 0) {
+      return variants.find((v: any) => {
+        const combo: Record<string, string> =
+          v.combination && Object.keys(v.combination).length > 0
+            ? v.combination
+            : v.attributes
+            ? Object.fromEntries(Object.entries(v.attributes))
+            : {};
+        return Object.entries(attrSelection).every(([k, val]) => combo[k] === val);
+      }) ?? null;
+    }
+
+    // Legacy system: use selectedVariant
+    return selectedVariant;
+  }, [attrSelection, product, selectedVariant]);
+
+  /**
+   * Whether all attribute axes have been selected by the user.
+   * If the product has no attributes, this is always true.
+   */
+  const allAttributesSelected = useMemo(() => {
+    const attrs = product?.attributes || [];
+    if (attrs.length === 0) return true;
+    return attrs.every((axis: any) => attrSelection[axis.name] !== undefined);
+  }, [attrSelection, product]);
+
   const handleAddToCart = async () => {
     if (!product) return;
 
@@ -199,10 +242,25 @@ export default function ProductDetailsBySlugPage() {
       return;
     }
 
+    // Guard: require full attribute selection before adding
+    if (!allAttributesSelected) {
+      showToast("Please select all options before adding to bag.", "error");
+      return;
+    }
+
+    // Guard: selected combination must be in-stock
+    if (activeVariant !== null && activeVariant !== undefined && activeVariant.stock <= 0) {
+      showToast("This combination is currently out of stock.", "error");
+      return;
+    }
+
     setAddingToCart(true);
 
+    // Determine which SKU to use
+    const variantSku = activeVariant?.sku ?? (selectedVariant?.sku || undefined);
+
     if (!isAuthenticated) {
-      addGuestCartItem(product, 1, selectedVariant ? selectedVariant.sku : undefined);
+      addGuestCartItem(product, 1, variantSku);
       showToast("Added to guest cart successfully.", "success");
       setAddingToCart(false);
       return;
@@ -212,7 +270,7 @@ export default function ProductDetailsBySlugPage() {
       await addToCart({
         productId: product._id,
         quantity: 1,
-        variantSku: selectedVariant ? selectedVariant.sku : undefined,
+        variantSku,
       }).unwrap();
       showToast("Item added to your shopping bag.", "success");
     } catch (err: any) {
@@ -312,7 +370,7 @@ export default function ProductDetailsBySlugPage() {
   }
 
   // Price calculations
-  const displayPrice = selectedVariant ? selectedVariant.price : product.price;
+  const displayPrice = activeVariant ? activeVariant.price : product.price;
   const comparePriceVal = product.comparePrice;
   const discountPercent = comparePriceVal ? Math.round(((comparePriceVal - displayPrice) / comparePriceVal) * 100) : 0;
 
@@ -437,14 +495,75 @@ export default function ProductDetailsBySlugPage() {
                 </p>
               </div>
 
-              {/* Variants Selector */}
-              {product.variants && product.variants.length > 0 && (
+              {/* ── NEW: Dynamic Attribute Selector (Color, Size, etc.) ── */}
+              {product.attributes && product.attributes.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Options</span>
+                  <AttributeSelector
+                    attributes={product.attributes}
+                    variants={product.variants || []}
+                    selection={attrSelection}
+                    onSelectionChange={setAttrSelection}
+                    activeVariant={activeVariant}
+                  />
+
+                  {/* Smart Fit badge — shown only for clothing/shoes when attributes include Size */}
+                  {isSizeableCategory && (
+                    <>
+                      {recommendedSize ? (
+                        <motion.div
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4 }}
+                          className="flex items-center gap-2 mt-1 px-3.5 py-2 rounded-xl bg-gold/8 border border-gold/25 w-fit"
+                        >
+                          <Sparkles className="h-3.5 w-3.5 text-gold shrink-0" />
+                          <span className="text-[10px] font-semibold text-gold">
+                            Recommended size{" "}
+                            <strong className="font-bold">{recommendedSize}</strong>{" "}
+                            based on your Fit Profile
+                          </span>
+                        </motion.div>
+                      ) : isAuthenticated ? (
+                        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+                          <Link
+                            id="fitting-guide-cta"
+                            href="/size-guide"
+                            className="inline-flex items-center gap-2 mt-1 px-3.5 py-2 rounded-xl border border-dashed border-gold/40 hover:border-gold hover:bg-gold/5 transition-all text-[10px] font-semibold text-muted hover:text-gold group"
+                          >
+                            {isSizeableCategory === "shoes"
+                              ? <Footprints className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
+                              : <Ruler className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
+                            }
+                            Unsure about your size? Use our AI Fitting Guide
+                            <ArrowRight className="h-3 w-3 shrink-0" />
+                          </Link>
+                        </motion.div>
+                      ) : (
+                        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+                          <Link
+                            href="/login"
+                            id="fitting-guide-cta-guest"
+                            className="inline-flex items-center gap-2 mt-1 px-3.5 py-2 rounded-xl border border-dashed border-gold/40 hover:border-gold hover:bg-gold/5 transition-all text-[10px] font-semibold text-muted hover:text-gold group"
+                          >
+                            <Ruler className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
+                            Log in to use our AI Fitting Guide
+                            <ArrowRight className="h-3 w-3 shrink-0" />
+                          </Link>
+                        </motion.div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* ── LEGACY: Old variant selector (for products without attributes array) ── */}
+              {product.variants && product.variants.length > 0 && (!product.attributes || product.attributes.length === 0) && (
                 <div className="flex flex-col gap-3">
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Aesthetic Variant</span>
                   <div className="flex flex-wrap gap-2.5">
                     {product.variants.map((v: any) => {
-                      // Case A: auto-highlight the variant that matches the user's recommended size
-                      const variantLabel = Object.values(v.attributes).join(" / ");
+                      const variantLabel = Object.values(v.attributes || {}).join(" / ");
                       const isRecommended =
                         recommendedSize !== null &&
                         variantLabel.toUpperCase().includes(
@@ -463,8 +582,7 @@ export default function ProductDetailsBySlugPage() {
                               : "border-card-border hover:border-gold/40 text-muted"
                           }`}
                         >
-                          {variantLabel}
-                          {/* Small "Recommended" dot for the matched size */}
+                          {variantLabel || v.sku}
                           {isRecommended && (
                             <span
                               title="Recommended based on your Fit Profile"
@@ -476,10 +594,9 @@ export default function ProductDetailsBySlugPage() {
                     })}
                   </div>
 
-                  {/* ── Smart Fit Badge ── render only for clothing/shoes */}
+                  {/* Smart Fit badge for legacy variants */}
                   {isSizeableCategory && (
                     <>
-                      {/* Case A: Profile exists → gold recommended-size badge */}
                       {recommendedSize ? (
                         <motion.div
                           initial={{ opacity: 0, y: 6 }}
@@ -494,44 +611,26 @@ export default function ProductDetailsBySlugPage() {
                             based on your Fit Profile
                           </span>
                         </motion.div>
+                      ) : isAuthenticated ? (
+                        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+                          <Link id="fitting-guide-cta" href="/size-guide"
+                            className="inline-flex items-center gap-2 mt-1 px-3.5 py-2 rounded-xl border border-dashed border-gold/40 hover:border-gold hover:bg-gold/5 transition-all text-[10px] font-semibold text-muted hover:text-gold group">
+                            {isSizeableCategory === "shoes"
+                              ? <Footprints className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
+                              : <Ruler className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />}
+                            Unsure about your size? Use our AI Fitting Guide
+                            <ArrowRight className="h-3 w-3 shrink-0" />
+                          </Link>
+                        </motion.div>
                       ) : (
-                        /* Case B: No profile → Fitting Guide CTA */
-                        isAuthenticated ? (
-                          <motion.div
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.4 }}
-                          >
-                            <Link
-                              id="fitting-guide-cta"
-                              href="/size-guide"
-                              className="inline-flex items-center gap-2 mt-1 px-3.5 py-2 rounded-xl border border-dashed border-gold/40 hover:border-gold hover:bg-gold/5 transition-all text-[10px] font-semibold text-muted hover:text-gold group"
-                            >
-                              {isSizeableCategory === "shoes"
-                                ? <Footprints className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
-                                : <Ruler className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
-                              }
-                              Unsure about your size? Use our AI Fitting Guide
-                              <ArrowRight className="h-3 w-3 shrink-0" />
-                            </Link>
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.4 }}
-                          >
-                            <Link
-                              href="/login"
-                              id="fitting-guide-cta-guest"
-                              className="inline-flex items-center gap-2 mt-1 px-3.5 py-2 rounded-xl border border-dashed border-gold/40 hover:border-gold hover:bg-gold/5 transition-all text-[10px] font-semibold text-muted hover:text-gold group"
-                            >
-                              <Ruler className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
-                              Log in to use our AI Fitting Guide
-                              <ArrowRight className="h-3 w-3 shrink-0" />
-                            </Link>
-                          </motion.div>
-                        )
+                        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+                          <Link href="/login" id="fitting-guide-cta-guest"
+                            className="inline-flex items-center gap-2 mt-1 px-3.5 py-2 rounded-xl border border-dashed border-gold/40 hover:border-gold hover:bg-gold/5 transition-all text-[10px] font-semibold text-muted hover:text-gold group">
+                            <Ruler className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
+                            Log in to use our AI Fitting Guide
+                            <ArrowRight className="h-3 w-3 shrink-0" />
+                          </Link>
+                        </motion.div>
                       )}
                     </>
                   )}
@@ -564,16 +663,27 @@ export default function ProductDetailsBySlugPage() {
 
               <div className="flex gap-4 items-center">
                 <button
+                  id="add-to-cart-btn"
                   onClick={handleAddToCart}
-                  disabled={addingToCart || product.stock === 0 || isOwner}
+                  disabled={
+                    addingToCart ||
+                    product.stock === 0 ||
+                    isOwner ||
+                    !allAttributesSelected ||
+                    (allAttributesSelected && activeVariant !== undefined && activeVariant !== null && activeVariant.stock <= 0)
+                  }
                   className="flex-grow h-14 rounded-full bg-foreground text-background hover:bg-gold hover:text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-black/5 uppercase tracking-widest text-xs font-semibold disabled:opacity-50 cursor-pointer hover:-translate-y-0.5"
                 >
                   {addingToCart ? (
-                    "Reserving Allocation..."
+                    "Reserving Allocation…"
                   ) : product.stock === 0 ? (
                     "Allocation Closed"
                   ) : isOwner ? (
                     "Self-Owned Product"
+                  ) : !allAttributesSelected ? (
+                    "Select All Options"
+                  ) : allAttributesSelected && activeVariant !== undefined && activeVariant !== null && activeVariant.stock <= 0 ? (
+                    "Combination Out of Stock"
                   ) : (
                     <>
                       <ShoppingBag className="h-4 w-4" /> Add To Shopping Bag

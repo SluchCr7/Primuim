@@ -35,14 +35,24 @@ const createArticle = asyncHandler(async (req, res) => {
     }
   }
 
-  // Ensure sellers cannot publish directly
-  let initialStatus = status || "draft";
-  if (req.user.role === "seller" && initialStatus === "approved") {
-    initialStatus = "pending";
-  }
+  // ── Determine status & authorName based on the user's role ────────────
+  const isAdminUser = req.user.role === "admin" || req.user.role === "superadmin";
 
-  const authorUser = await User.findById(req.user.id);
-  const authorName = authorUser ? authorUser.storeName || authorUser.username : "VIP Author";
+  let initialStatus;
+  let authorName;
+
+  if (isAdminUser) {
+    // Admin-created articles bypass the moderation queue entirely
+    initialStatus = (req.body.isPublished === "true" || req.body.isPublished === true)
+      ? "approved"
+      : (status || "approved");
+    authorName = "Admin";
+  } else {
+    // Sellers/other roles must go through moderation — force "pending"
+    initialStatus = "pending";
+    const authorUser = await User.findById(req.user.id);
+    authorName = authorUser ? authorUser.storeName || authorUser.username : "VIP Author";
+  }
 
   const article = new Article({
     title,
@@ -62,7 +72,7 @@ const createArticle = asyncHandler(async (req, res) => {
 
   const savedArticle = await article.save();
 
-  // If submitted for review, notify admins
+  // If submitted for review (non-admin), notify admins
   if (initialStatus === "pending") {
     const admins = await User.find({ role: { $in: ["admin", "superadmin"] } });
     for (const admin of admins) {
@@ -76,7 +86,9 @@ const createArticle = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
-    message: "Article created successfully",
+    message: isAdminUser
+      ? "Article published successfully"
+      : "Article submitted for review",
     data: savedArticle
   });
 });

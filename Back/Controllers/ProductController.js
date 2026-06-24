@@ -428,7 +428,7 @@ const getProductsBySeller = asyncHandler(async (req, res) => {
 // ========================================
 const AddNewProduct = asyncHandler(async (req, res) => {
     
-    // 1️⃣ تحويل حقل specifications من نص JSON إلى مصفوفة فعليّة قبل الـ Validation
+    // 1️⃣ Parse specifications (JSON string from FormData)
     if (req.body.specifications && typeof req.body.specifications === "string") {
         try {
             req.body.specifications = JSON.parse(req.body.specifications);
@@ -440,9 +440,35 @@ const AddNewProduct = asyncHandler(async (req, res) => {
         }
     }
 
-    // 2️⃣ تحويل حقل tags إذا كان مرسلاً كنص مفصول بفاصلة (من الفرونت-إند) إلى مصفوفة
+    // 2️⃣ Parse attributes (JSON string from FormData)
+    // Expected shape: [{ name: "Color", values: ["Red","Black"] }, ...]
+    if (req.body.attributes && typeof req.body.attributes === "string") {
+        try {
+            req.body.attributes = JSON.parse(req.body.attributes);
+        } catch (error) {
+            return res.status(400).json({
+                success: false,
+                errors: ["Invalid format for attributes. Must be a valid JSON array."]
+            });
+        }
+    }
+
+    // 3️⃣ Parse variants (JSON string from FormData)
+    // Expected shape: [{ sku, price, stock, combination: { Color: "Red", Size: "M" } }, ...]
+    if (req.body.variants && typeof req.body.variants === "string") {
+        try {
+            req.body.variants = JSON.parse(req.body.variants);
+        } catch (error) {
+            return res.status(400).json({
+                success: false,
+                errors: ["Invalid format for variants. Must be a valid JSON array."]
+            });
+        }
+    }
+
+    // 4️⃣ Parse tags (comma-separated string from FormData)
     if (req.body.tags && typeof req.body.tags === "string") {
-        req.body.tags = req.body.tags.split(",").map(tag => tag.trim());
+        req.body.tags = req.body.tags.split(",").map(tag => tag.trim()).filter(Boolean);
     }
 
     // 3️⃣ التحقق من صحة البيانات باستخدام Joi
@@ -455,11 +481,12 @@ const AddNewProduct = asyncHandler(async (req, res) => {
         });
     }
 
-    // 4️⃣ تفكيك البيانات (تأكد من سحب الحقول الجديدة هنا)
+    // 5️⃣ Destructure all fields including new attributes & variants
     const {
         title,
         description,
         category,
+        subcategory,
         brand,
         price,
         comparePrice,
@@ -467,6 +494,8 @@ const AddNewProduct = asyncHandler(async (req, res) => {
         sku,
         isPublished,
         specifications,
+        attributes,
+        variants,
         tags
     } = req.body;
 
@@ -518,21 +547,27 @@ const AddNewProduct = asyncHandler(async (req, res) => {
         slug = `${slug}-${Date.now()}`;
     }
 
-    // 5️⃣ إنشاء المنتج مع الحقول الجديدة
+    // 6️⃣ Create product with all fields including dynamic attributes & variants
     const product = await Product.create({
         seller: req.user.id,
         title,
         slug,
         description,
         category,
+        subcategory: subcategory || null,
         brand,
         price,
         comparePrice,
-        stock,
+        stock: (variants && variants.length > 0)
+            // If variants are provided, aggregate total stock from them
+            ? variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+            : (stock || 0),
         sku,
         isPublished,
         images,
         specifications: specifications || [],
+        attributes: attributes || [],
+        variants: variants || [],
         tags: tags || []
     });
 
@@ -569,12 +604,20 @@ const updateProduct = asyncHandler(async (req, res) => {
         "title",
         "description",
         "category",
+        "subcategory",
         "brand",
         "price",
         "comparePrice",
+        "stock",
         "sku",
         "isPublished",
-        "lowStockThreshold"
+        "lowStockThreshold",
+        "specifications",
+        "attributes",
+        "variants",
+        "tags",
+        "metaTitle",
+        "metaDescription",
     ];
 
     const updatePayload = {};
