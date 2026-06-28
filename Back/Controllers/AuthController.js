@@ -12,10 +12,12 @@ const Verification = require("../models/VerificationToken");
 const sendEmail = require("../utils/sendEmail");
 const SellerRequest = require("../models/SellerRequest");
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax",
+  secure: isProduction,            // must be true on HTTPS
+  sameSite: "lax",                 // Lax is best practice when proxying via Next.js rewrites (same-origin to browser)
   path: "/",
   maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
 };
@@ -195,6 +197,96 @@ const register = asyncHandler(async (req, res) => {
   });
 });
 
+// const login = asyncHandler(async (req, res) => {
+//   const { email, password } = req.body;
+
+//   const { error } = validateLoginUser({ email, password });
+
+//   if (error) {
+//     return res.status(400).json({ message: error.details[0].message });
+//   }
+
+//   const user = await User.findOne({ email }).select("+password");
+
+//   if (!user) {
+//     return res.status(401).json({ message: "Invalid credentials" });
+//   }
+
+//   // Account Locking check
+//   if (user.lockUntil && user.lockUntil > Date.now()) {
+//     const timeRemaining = Math.ceil((user.lockUntil - Date.now()) / (60 * 1000));
+//     return res.status(403).json({
+//       message: `Account is temporarily locked. Try again in ${timeRemaining} minutes.`
+//     });
+//   }
+
+//   const isMatch = await bcrypt.compare(password, user.password);
+
+//   if (!isMatch) {
+//     // Increment failed attempts
+//     user.failedLoginAttempts += 1;
+//     if (user.failedLoginAttempts >= 5) {
+//       user.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes lockout
+//       user.activityLogs.push({
+//         action: "account_locked",
+//         ip: req.ip,
+//         details: "Account locked due to 5 failed login attempts."
+//       });
+//     } else {
+//       user.activityLogs.push({
+//         action: "failed_login_attempt",
+//         ip: req.ip,
+//         details: `Failed attempt ${user.failedLoginAttempts} of 5.`
+//       });
+//     }
+//     await user.save();
+//     return res.status(401).json({ message: "Invalid credentials" });
+//   }
+
+//   // Reset login locking & attempts
+//   user.failedLoginAttempts = 0;
+//   user.lockUntil = undefined;
+//   user.lastLogin = new Date();
+
+//   // Save history
+//   const device = req.headers["user-agent"] || "unknown";
+//   user.loginHistory.push({
+//     ip: req.ip,
+//     device,
+//     loginAt: new Date()
+//   });
+
+//   user.activityLogs.push({
+//     action: "login",
+//     ip: req.ip,
+//     details: `Successfully logged in via ${device}.`
+//   });
+
+//   await user.save();
+
+//   const accessToken = generateAccessToken(user);
+//   const refreshToken = generateRefreshToken(user);
+
+//   await RefreshToken.create({
+//     user: user._id,
+//     token: hashRefreshToken(refreshToken),
+//     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+//   });
+
+//   res.cookie("refreshToken", refreshToken, cookieOptions);
+
+//   res.json({
+//     accessToken,
+//     user: {
+//       id: user._id,
+//       username: user.username,
+//       email: user.email,
+//       role: user.role
+//     }
+//   });
+// });
+
+
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -204,6 +296,7 @@ const login = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: error.details[0].message });
   }
 
+  // ملحوظة: تأكدت هنا إننا بنجيب الـ isVerify لو مش نازلة باي ديفولت في الـ Schema
   const user = await User.findOne({ email }).select("+password");
 
   if (!user) {
@@ -241,7 +334,60 @@ const login = asyncHandler(async (req, res) => {
     return res.status(401).json({ message: "Invalid credentials" });
   }
 
-  // Reset login locking & attempts
+  // ==================== التعديل الجديد هنا ====================
+  // الفحص: هل الحساب مفعل؟ (استخدمنا نفس الـ Property اللي في الـ verifyAccount وهي isVerify)
+  if (!user.isVerify) {
+    // 1. مسح أي توكن تفعيل قديم للمستخدم ده عشان ميبقاش فيه زحمة في الـ DB
+    await Verification.deleteOne({ userId: user._id });
+
+    // 2. توليد توكن تفعيل جديد
+    const tokenVer = crypto.randomBytes(32).toString("hex");
+    await Verification.create({
+      userId: user._id,
+      tokenVer
+    });
+
+    // 3. تجهيز رابط التفعيل (نفس اللي عملته في الـ register)
+    const verifyUrl = `${process.env.FRONTEND_ORIGIN || "http://localhost:3000"}/verify-email?id=${user._id}&token=${tokenVer}`;
+
+    // 4. إرسال الإيميل
+    await sendEmail({
+      email: user.email,
+      subject: "🔒 Activate Your Shop Premium Account",
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #fff;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #111; font-size: 26px; font-weight: 700; margin: 0; letter-spacing: 1px;">SHOP PREMIUM</h1>
+            <p style="color: #666; font-size: 14px; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 2px;">Elevate Your Experience</p>
+          </div>
+          <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 30px;" />
+          <div style="padding: 0 10px;">
+            <h2 style="color: #222; font-size: 20px; font-weight: 600; margin-top: 0;">Welcome back, ${user.username}! ✨</h2>
+            <p style="color: #444; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+              Your account is not activated yet. Please click the button below to verify your email address and unlock your account.
+            </p>
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${verifyUrl}" style="background-color: #000; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                Verify Email Address
+              </a>
+            </div>
+            <div style="background-color: #f9f9f9; padding: 12px; border-radius: 6px; word-break: break-all; margin-bottom: 30px;">
+              <a href="${verifyUrl}" style="color: #0066cc; font-size: 13px; text-decoration: none;">${verifyUrl}</a>
+            </div>
+          </div>
+        </div>
+      `
+    });
+
+    // 5. الرد على الـ Frontend بـ 403 ورسالة واضحة مع إرجاع flag يسهل على الفرونت إظهار زرار إعادة الإرسال لو احتاج
+    return res.status(403).json({
+      isVerified: false,
+      message: "Your account is not verified. A new verification link has been sent to your email."
+    });
+  }
+  // ==========================================================
+
+  // Reset login locking & attempts (يكمل عادي لو الحساب مفعل)
   user.failedLoginAttempts = 0;
   user.lockUntil = undefined;
   user.lastLogin = new Date();
@@ -305,7 +451,12 @@ const refresh = asyncHandler(async (req, res) => {
     // REUSE DETECTION!
     // Someone is trying to refresh with an old/used token. Revoke all sessions!
     await RefreshToken.deleteMany({ user: decoded.id });
-    res.clearCookie("refreshToken");
+    res.clearCookie("refreshToken", {
+      httpOnly: cookieOptions.httpOnly,
+      secure: cookieOptions.secure,
+      sameSite: cookieOptions.sameSite,
+      path: cookieOptions.path,
+    });
     
     // Log security incident
     const user = await User.findById(decoded.id);
@@ -360,7 +511,14 @@ const logout = asyncHandler(async (req, res) => {
     await RefreshToken.deleteOne({ token: hashRefreshToken(token) });
   }
 
-  res.clearCookie("refreshToken");
+  // Must pass the same options used when setting the cookie, otherwise the
+  // browser will ignore the clear instruction (especially sameSite/secure).
+  res.clearCookie("refreshToken", {
+    httpOnly: cookieOptions.httpOnly,
+    secure: cookieOptions.secure,
+    sameSite: cookieOptions.sameSite,
+    path: cookieOptions.path,
+  });
 
   res.json({ message: "Logged out successfully" });
 });

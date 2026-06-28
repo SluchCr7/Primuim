@@ -10,8 +10,13 @@ import {
   useGetCartQuery,
   useGetCategoriesQuery,
   useGetSearchSuggestionsQuery,
+  useGetTrendingSearchesQuery,
   useLogoutMutation,
   useGetWishlistQuery,
+  useGetNotificationsQuery,
+  useMarkNotificationAsReadMutation,
+  useMarkAllNotificationsAsReadMutation,
+  useDeleteNotificationMutation,
 } from "../../lib/api";
 import { useTranslation } from "react-i18next";
 import "../i18next"; // تأكد من ضبط المسار الصحيح لملف i18next.ts الخاص بك
@@ -28,7 +33,14 @@ import {
   X,
   ArrowRight,
   Heart,
-  Globe
+  Globe,
+  Bell,
+  AlertTriangle,
+  Star,
+  BookOpen,
+  Info,
+  Check,
+  Sparkles
 } from "lucide-react";
 
 import { getGuestCartTotals } from "../../lib/cartUtils";
@@ -54,12 +66,26 @@ export const Header: React.FC = () => {
   const { data: categoriesData } = useGetCategoriesQuery({ tree: true });
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null);
   const [guestCartCount, setGuestCartCount] = useState(0);
   const [mounted, setMounted] = useState(false);
+
+  // Notifications state
+  const socketConnected = useAppSelector((state) => state.auth.socketConnected);
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+  const notificationsDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
   
   const [logoutCall] = useLogoutMutation();
   // تحديث الـ State لتقرأ اللغة الحالية المخزنة أو الافتراضية بالـ UpperCase
@@ -100,9 +126,23 @@ export const Header: React.FC = () => {
   const currencyDropdownRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
 
-  const { data: suggestionsData } = useGetSearchSuggestionsQuery(searchQuery, {
-    skip: searchQuery.trim().length < 2,
+  const { data: suggestionsData } = useGetSearchSuggestionsQuery(debouncedQuery, {
+    skip: debouncedQuery.trim().length < 2,
   });
+
+  const { data: trendingSearchesData } = useGetTrendingSearchesQuery(undefined, {
+    skip: !showSuggestions,
+  });
+
+  const { data: notificationsData } = useGetNotificationsQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+
+  const [markAsReadCall] = useMarkNotificationAsReadMutation();
+  const [markAllAsReadCall] = useMarkAllNotificationsAsReadMutation();
+
+  const notifications = notificationsData?.notifications || [];
+  const unreadNotificationsCount = notificationsData?.unreadCount || 0;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -118,10 +158,29 @@ export const Header: React.FC = () => {
       if (currencyDropdownRef.current && !currencyDropdownRef.current.contains(event.target as Node)) {
         setShowCurrencyDropdown(false);
       }
+      if (notificationsDropdownRef.current && !notificationsDropdownRef.current.contains(event.target as Node)) {
+        setShowNotificationsDropdown(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const formatRelativeTime = (dateStr: string) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffSec < 60) return "Just now";
+    if (diffMin < 60) return `${diffMin}m ago`;
+    if (diffHour < 24) return `${diffHour}h ago`;
+    return `${diffDay}d ago`;
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,7 +228,7 @@ export const Header: React.FC = () => {
           <div className="relative flex items-center">
             <input
               type="text"
-              placeholder={t('search_placeholder', 'Search catalog, luxury designers...')}
+              placeholder={t('header.search_placeholder', 'Search catalog, luxury designers...')}
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -178,38 +237,132 @@ export const Header: React.FC = () => {
               onFocus={() => setShowSuggestions(true)}
               className="w-full rounded-full border border-card-border/80 bg-card-bg/30 py-2.5 pl-6 pr-12 text-sm text-foreground outline-none focus:border-gold focus:ring-4 focus:ring-gold/5 transition-all duration-300"
             />
-            <button type="submit" className="absolute right-4 text-muted hover:text-gold transition-colors duration-200">
+            <button type="submit" className="absolute right-4 text-muted hover:text-gold transition-colors duration-200" aria-label={t('header.search_aria', 'Submit search')}>
               <Search className="h-4 w-4" />
             </button>
           </div>
 
           {/* SUGGESTIONS DROPDOWN */}
-          {showSuggestions && suggestionsData?.suggestions && suggestionsData.suggestions.length > 0 && (
+          {showSuggestions && (
             <div
               ref={suggestionsRef}
-              className="absolute left-0 mt-2 w-full rounded-2xl border border-card-border bg-card-bg/95 p-3 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200"
+              className="absolute left-0 mt-2 w-full rounded-2xl border border-card-border bg-card-bg/95 p-4 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in slide-in-from-top-1 duration-200"
             >
-              <div className="px-3 py-1.5 text-xs font-bold text-gold/80 tracking-wider uppercase">
-                {t('suggested_matches', 'Suggested Matches')}
-              </div>
-              <ul className="space-y-0.5 mt-1">
-                {suggestionsData.suggestions.map((item: string, idx: number) => (
-                  <li key={idx}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearchQuery(item);
-                        setShowSuggestions(false);
-                        router.push(`/products?search=${encodeURIComponent(item)}`);
-                      }}
-                      className="w-full text-left rounded-xl px-3 py-2.5 text-sm text-foreground hover:bg-foreground/5 hover:text-gold transition-all duration-150 flex items-center gap-2"
-                    >
-                      <Search className="h-3.5 w-3.5 text-muted/60" />
-                      {item}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              {/* Case 1: Empty input -> Show Trending Searches */}
+              {!searchQuery.trim() && trendingSearchesData?.trending && trendingSearchesData.trending.length > 0 && (
+                <div>
+                  <div className="px-3 py-1.5 text-xs font-bold text-gold/80 tracking-wider uppercase flex items-center gap-1.5 mb-2">
+                    <Sparkles className="h-3.5 w-3.5" /> {t('search.trending_title', 'Trending Searches')}
+                  </div>
+                  <div className="flex flex-wrap gap-2 px-3 pb-2">
+                    {trendingSearchesData.trending.map((t: any, idx: number) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery(t.term);
+                          setShowSuggestions(false);
+                          router.push(`/products?search=${encodeURIComponent(t.term)}`);
+                        }}
+                        className="rounded-full bg-foreground/5 hover:bg-gold/10 hover:text-gold border border-card-border/50 px-3.5 py-1.5 text-xs font-semibold text-foreground transition-all duration-200 cursor-pointer"
+                      >
+                        {t.term}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Case 2: Active input and we have suggestions */}
+              {searchQuery.trim().length >= 2 && suggestionsData?.suggestions ? (
+                (() => {
+                  const suggestions = suggestionsData.suggestions || { products: [], keywords: [] };
+                  const hasProducts = Array.isArray(suggestions.products) && suggestions.products.length > 0;
+                  const hasKeywords = Array.isArray(suggestions.keywords) && suggestions.keywords.length > 0;
+
+                  if (!hasProducts && !hasKeywords) {
+                    return (
+                      <div className="text-center py-6 text-xs text-muted">
+                        {t('search.no_results_title', 'No matches found')} for "{searchQuery}"
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* Keywords Column */}
+                      {hasKeywords && (
+                        <div className="md:col-span-1 border-r border-card-border/40 pr-4">
+                          <div className="px-2 py-1 text-xs font-bold text-gold/80 tracking-wider uppercase mb-2">
+                            {t('search.suggestions_title', 'Suggested Matches')}
+                          </div>
+                          <ul className="space-y-1">
+                            {suggestions.keywords.map((item: any, idx: number) => (
+                              <li key={idx}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSearchQuery(item.title);
+                                    setShowSuggestions(false);
+                                    router.push(`/products?search=${encodeURIComponent(item.title)}`);
+                                  }}
+                                  className="w-full text-left rounded-xl px-3 py-2 text-xs font-medium text-foreground hover:bg-foreground/5 hover:text-gold transition-all duration-150 flex items-center gap-2"
+                                >
+                                  <Search className="h-3 w-3 text-muted/60" />
+                                  {item.title}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Products Column */}
+                      {hasProducts && (
+                        <div className={`${hasKeywords ? 'md:col-span-2' : 'md:col-span-3'}`}>
+                          <div className="px-2 py-1 text-xs font-bold text-gold/80 tracking-wider uppercase mb-2">
+                            {t('compare.title', 'Matching Products')}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {suggestions.products.map((p: any) => (
+                              <LinkNext
+                                key={p.id}
+                                href={p.url}
+                                onClick={() => setShowSuggestions(false)}
+                                className="flex items-center gap-3 p-2 rounded-xl hover:bg-foreground/5 group transition-all duration-200 border border-transparent hover:border-card-border/30"
+                              >
+                                <div className="w-12 h-12 rounded-lg bg-card-bg border border-card-border/60 overflow-hidden flex-shrink-0 relative">
+                                  {p.image ? (
+                                    <img src={p.image} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                  ) : (
+                                    <div className="w-full h-full bg-foreground/5 flex items-center justify-center text-[10px] text-muted font-bold">PREMIUM</div>
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-grow">
+                                  <div className="text-xs font-bold text-foreground truncate group-hover:text-gold transition-colors">{p.title}</div>
+                                  {p.brand && <div className="text-[10px] text-muted truncate">{p.brand}</div>}
+                                  <div className="text-xs font-black text-gold mt-1">
+                                    {p.price.toLocaleString()} EGP
+                                    {p.comparePrice && p.comparePrice > p.price && (
+                                      <span className="text-[10px] text-muted line-through font-normal ml-1.5">
+                                        {p.comparePrice.toLocaleString()} EGP
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </LinkNext>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              ) : searchQuery.trim().length >= 2 ? (
+                <div className="text-center py-6 text-xs text-muted">
+                  Searching suggestions...
+                </div>
+              ) : null}
             </div>
           )}
         </form>
@@ -333,6 +486,148 @@ export const Header: React.FC = () => {
             )}
           </LinkNext>
 
+          {/* NOTIFICATION BELL */}
+          {isAuthenticated && (
+            <div className="relative" ref={notificationsDropdownRef}>
+              <button
+                onClick={() => {
+                  setShowNotificationsDropdown(!showNotificationsDropdown);
+                  setShowUserMenu(false);
+                  setShowLangDropdown(false);
+                  setShowCurrencyDropdown(false);
+                }}
+                className="relative rounded-full p-2 text-foreground hover:bg-foreground/5 transition-all w-9 h-9 flex items-center justify-center cursor-pointer"
+                aria-label="Notifications"
+              >
+                <Bell className="h-4.5 w-4.5 text-foreground hover:text-gold transition-colors" />
+                {unreadNotificationsCount > 0 && (
+                  <span className="absolute top-0.5 right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-gold text-[8px] font-black text-white ring-2 ring-background animate-pulse">
+                    {unreadNotificationsCount}
+                  </span>
+                )}
+                {/* Socket Connection Status Dot */}
+                <span 
+                  className={`absolute bottom-0.5 left-0.5 block h-2 w-2 rounded-full ring-1 ring-background ${
+                    socketConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+                  }`} 
+                  title={socketConnected ? "Real-time Connected" : "Disconnected / Reconnecting"} 
+                />
+              </button>
+
+              {showNotificationsDropdown && (
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-card-border bg-card-bg p-2 shadow-2xl z-50 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-card-border/40">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-serif text-sm font-bold text-foreground">{t('dashboard.notifications', 'Notifications')}</span>
+                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${socketConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+                      <span className="text-[9px] uppercase tracking-wider text-muted font-sans font-semibold">
+                        {socketConnected ? "Live" : "Offline"}
+                      </span>
+                    </div>
+                    {unreadNotificationsCount > 0 && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await markAllAsReadCall(undefined).unwrap();
+                          } catch (err) {
+                            console.error(err);
+                          }
+                        }}
+                        className="text-[10px] font-bold text-gold hover:underline cursor-pointer"
+                      >
+                        {t('dashboard.mark_all_read', 'Mark all as read')}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto py-1">
+                    {notifications.length === 0 ? (
+                      <div className="text-center py-8 text-xs text-muted">
+                        {t('dashboard.no_notifications', 'No notifications yet')}
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-card-border/20">
+                        {notifications.slice(0, 5).map((notif: any) => (
+                          <div
+                            key={notif._id}
+                            onClick={async () => {
+                              if (!notif.isread) {
+                                try {
+                                  await markAsReadCall(notif._id).unwrap();
+                                } catch (err) {
+                                  console.error(err);
+                                }
+                              }
+                              setShowNotificationsDropdown(false);
+                              router.push("/notifications");
+                            }}
+                            className={`flex items-start gap-3 p-3 hover:bg-foreground/5 cursor-pointer transition-all duration-150 ${!notif.isread ? 'bg-gold/5' : ''}`}
+                          >
+                            <div className="flex-shrink-0 mt-0.5">
+                              {notif.type === "order" && (
+                                <div className="p-1.5 rounded-lg bg-success/10 text-success">
+                                  <ShoppingBag className="h-3.5 w-3.5" />
+                                </div>
+                              )}
+                              {notif.type === "stock" && (
+                                <div className="p-1.5 rounded-lg bg-error/10 text-error">
+                                  <AlertTriangle className="h-3.5 w-3.5" />
+                                </div>
+                              )}
+                              {notif.type === "review" && (
+                                <div className="p-1.5 rounded-lg bg-gold/10 text-gold">
+                                  <Star className="h-3.5 w-3.5" />
+                                </div>
+                              )}
+                              {notif.type === "article" && (
+                                <div className="p-1.5 rounded-lg bg-info/10 text-info">
+                                  <BookOpen className="h-3.5 w-3.5" />
+                                </div>
+                              )}
+                              {notif.type === "system" && (
+                                <div className="p-1.5 rounded-lg bg-foreground/10 text-foreground">
+                                  <Info className="h-3.5 w-3.5" />
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-grow">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className={`text-xs font-bold truncate ${!notif.isread ? 'text-foreground' : 'text-foreground/80'}`}>
+                                  {notif.title}
+                                </span>
+                                <span className="text-[9px] text-muted whitespace-nowrap shrink-0">
+                                  {formatRelativeTime(notif.createdAt)}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-muted leading-relaxed mt-0.5 line-clamp-2">
+                                {notif.message}
+                              </p>
+                            </div>
+
+                            {!notif.isread && (
+                              <div className="w-1.5 h-1.5 rounded-full bg-gold shrink-0 self-center"></div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border-t border-card-border/40 p-1">
+                    <LinkNext
+                      href="/notifications"
+                      onClick={() => setShowNotificationsDropdown(false)}
+                      className="flex w-full items-center justify-center py-2 text-xs font-bold text-foreground hover:text-gold hover:bg-foreground/5 rounded-xl transition-all"
+                    >
+                      {t('dashboard.view_all_notifications', 'View All Notifications')}
+                    </LinkNext>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* USER ACCOUNT DROPDOWN (Desktop) */}
           <div className="relative hidden md:block" ref={userMenuRef}>
             {isAuthenticated ? (
@@ -356,7 +651,7 @@ export const Header: React.FC = () => {
                       className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-foreground hover:bg-foreground/5 transition-all"
                     >
                       <User className="h-4 w-4 text-muted" />
-                      My Dashboard
+                      {t('header.dashboard', 'My Dashboard')}
                     </LinkNext>
                     {user?.role === "admin" && (
                       <LinkNext
@@ -365,7 +660,7 @@ export const Header: React.FC = () => {
                         className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-gold bg-gold/5 hover:bg-gold/10 transition-all font-bold"
                       >
                         <Sliders className="h-4 w-4" />
-                        Admin Panel
+                        {t('header.admin_panel', 'Admin Panel')}
                       </LinkNext>
                     )}
                     <hr className="border-card-border/40 my-1.5" />
@@ -377,7 +672,7 @@ export const Header: React.FC = () => {
                       className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-destructive hover:bg-destructive/5 transition-all text-left font-medium"
                     >
                       <LogOut className="h-4 w-4" />
-                      Sign Out
+                      {t('header.logout', 'Sign Out')}
                     </button>
                   </div>
                 )}
@@ -387,7 +682,7 @@ export const Header: React.FC = () => {
                 href="/login"
                 className="rounded-full bg-foreground px-5 py-2 text-xs font-bold text-background hover:bg-gold hover:text-white transition-all duration-300 shadow-sm block"
               >
-                Sign In
+                {t('header.login', 'Sign In')}
               </LinkNext>
             )}
           </div>
@@ -412,10 +707,10 @@ export const Header: React.FC = () => {
         <div className="mx-auto flex max-w-9xl w-full items-center justify-between px-8 py-0.5 text-sm">
           <div className="flex items-center gap-6 h-12">
             <LinkNext href="/products" className="text-foreground text-xs hover:text-gold transition-colors font-bold relative h-full flex items-center">
-              All Collections
+              {t('header.all_categories', 'All Collections')}
             </LinkNext>
             <LinkNext href="/stores" className="text-foreground text-xs hover:text-gold transition-colors font-bold relative h-full flex items-center">
-              Flagship Stores
+              {t('nav.stores', 'Flagship Stores')}
             </LinkNext>
             
             {categoriesData?.categories &&
@@ -476,11 +771,11 @@ export const Header: React.FC = () => {
 
                   <div className="col-span-1 bg-gradient-to-br from-gold/10 to-transparent rounded-2xl p-6 flex flex-col justify-between border border-gold/10">
                     <div>
-                      <h4 className="font-serif text-lg font-bold text-gold tracking-wide">Seasonal Drop</h4>
-                      <p className="text-xs text-muted mt-1">Explore carefully tailored artisanal aesthetics.</p>
+                      <h4 className="font-serif text-lg font-bold text-gold tracking-wide">{t('header.seasonal_drop', 'Seasonal Drop')}</h4>
+                      <p className="text-xs text-muted mt-1">{t('header.seasonal_desc', 'Explore carefully tailored artisanal aesthetics.')}</p>
                     </div>
                     <LinkNext href="/products" className="text-xs font-bold underline text-foreground hover:text-gold flex items-center gap-1 mt-4">
-                      Shop New Arrivals <ArrowRight className="h-3 w-3" />
+                      {t('footer.new_arrivals', 'Shop New Arrivals')} <ArrowRight className="h-3 w-3" />
                     </LinkNext>
                   </div>
                 </div>
@@ -498,23 +793,23 @@ export const Header: React.FC = () => {
           <div className="border-b border-card-border/40 pb-4">
             {isAuthenticated ? (
               <div className="bg-card-bg/60 border border-card-border/50 rounded-2xl p-4 space-y-3">
-                <div className="text-[10px] font-black text-gold uppercase tracking-widest">Account Details</div>
-                <div className="text-sm font-bold text-foreground truncate">User: {user?.username}</div>
+                <div className="text-[10px] font-black text-gold uppercase tracking-widest">{t('header.account', 'Account Details')}</div>
+                <div className="text-sm font-bold text-foreground truncate">{t('common.user', 'User')}: {user?.username}</div>
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <LinkNext href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-background border border-card-border text-xs font-semibold hover:text-gold">
-                    <User className="h-4 w-4 text-gold" /> Dashboard
+                    <User className="h-4 w-4 text-gold" /> {t('header.dashboard', 'Dashboard')}
                   </LinkNext>
                   <LinkNext href="/wishlist" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-background border border-card-border text-xs font-semibold hover:text-gold">
-                    <Heart className="h-4 w-4 text-gold" /> Wishlist
+                    <Heart className="h-4 w-4 text-gold" /> {t('header.wishlist', 'Wishlist')}
                   </LinkNext>
                   {user?.role === "admin" && (
                     <LinkNext href="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gold/10 text-xs font-bold text-gold col-span-2">
-                      <Sliders className="h-4 w-4" /> Admin Panel
+                      <Sliders className="h-4 w-4" /> {t('header.admin_panel', 'Admin Panel')}
                     </LinkNext>
                   )}
                 </div>
                 <button onClick={() => { handleLogout(); setMobileMenuOpen(false); }} className="w-full text-center py-2.5 text-xs font-bold text-destructive bg-destructive/5 rounded-xl border border-destructive/10 mt-1">
-                  Sign Out
+                  {t('header.logout', 'Sign Out')}
                 </button>
               </div>
             ) : (
@@ -523,7 +818,7 @@ export const Header: React.FC = () => {
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full text-center rounded-xl bg-foreground py-3.5 text-sm font-bold text-background block shadow-md hover:bg-gold hover:text-white transition-all"
               >
-                Sign In to Account
+                {t('header.login_to_account', 'Sign In to Account')}
               </LinkNext>
             )}
           </div>
@@ -533,7 +828,7 @@ export const Header: React.FC = () => {
             
             {/* MOBILE LANGUAGE SELECTOR */}
             <div className="relative" ref={langDropdownRef}>
-              <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1.5 px-1">Language</div>
+              <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1.5 px-1">{t('header.language', 'Language')}</div>
               <button
                 onClick={() => { setShowLangDropdown(!showLangDropdown); setShowCurrencyDropdown(false); }}
                 className="flex w-full items-center justify-between border border-card-border/60 hover:border-gold rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground bg-card-bg/20 transition-all cursor-pointer"
@@ -571,7 +866,7 @@ export const Header: React.FC = () => {
 
             {/* MOBILE CURRENCY SELECTOR */}
             <div className="relative" ref={currencyDropdownRef}>
-              <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1.5 px-1">Currency</div>
+              <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1.5 px-1">{t('header.currency', 'Currency')}</div>
               <button
                 onClick={() => { setShowCurrencyDropdown(!showCurrencyDropdown); setShowLangDropdown(false); }}
                 className="flex w-full items-center justify-between border border-card-border/60 hover:border-gold rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground bg-card-bg/20 transition-all cursor-pointer"
@@ -602,21 +897,21 @@ export const Header: React.FC = () => {
 
           {/* Shop Categories (Mobile) */}
           <div>
-            <div className="text-xs font-black text-muted uppercase tracking-widest mb-3 px-1">Shop Collections</div>
+            <div className="text-xs font-black text-muted uppercase tracking-widest mb-3 px-1">{t('header.all_categories', 'Shop Collections')}</div>
             <div className="grid grid-cols-2 gap-3">
               <LinkNext 
                 href="/products" 
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-3.5 rounded-xl bg-card-bg/40 border border-card-border text-sm font-bold hover:border-gold transition-all"
               >
-                All Products
+                {t('header.shop_all', 'All Products')}
               </LinkNext>
               <LinkNext 
                 href="/stores" 
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-3.5 rounded-xl bg-card-bg/40 border border-card-border text-sm font-bold hover:border-gold transition-all"
               >
-                Flagship Stores
+                {t('nav.stores', 'Flagship Stores')}
               </LinkNext>
               {categoriesData?.categories &&
                 categoriesData.categories.map((cat: any) => (

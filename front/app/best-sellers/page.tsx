@@ -9,8 +9,11 @@ import { CardSkeleton } from "../components/Skeletons";
 import { useAppSelector } from "../../lib/store";
 import { Star, Award } from "lucide-react";
 import { addGuestCartItem } from "../../lib/cartUtils";
+import { useTranslation } from "react-i18next";
 
 export default function BestSellersPage() {
+  const { t } = useTranslation();
+
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   // Sort products by sold count (best sellers)
   const { data: productsData, isLoading } = useGetProductsQuery({ sort: "sold", limit: 8 });
@@ -24,14 +27,14 @@ export default function BestSellersPage() {
 
     if (!isAuthenticated) {
       addGuestCartItem(product, 1);
-      alert("Product added to cart!");
+      alert(t("addedToCart"));
       return;
     }
     try {
       await addToCart({ productId, quantity: 1 }).unwrap();
-      alert("Product added to cart!");
+      alert(t("addedToCart"));
     } catch (err) {
-      alert("Failed to add to cart.");
+      alert(t("failedToAddToCart"));
     }
   };
 
@@ -40,14 +43,14 @@ export default function BestSellersPage() {
       <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12">
-        <Breadcrumbs items={[{ label: "Best Sellers", url: "/best-sellers" }]} />
+        <Breadcrumbs items={[{ label: t("bestSellers"), url: "/best-sellers" }]} />
 
         <div className="mb-12">
           <span className="text-xs font-bold tracking-widest text-gold uppercase flex items-center gap-1.5">
-            <Award className="h-4 w-4" /> Top Allocation Demand
+            <Award className="h-4 w-4" /> {t("topAllocationDemand")}
           </span>
-          <h1 className="font-serif text-4xl font-extrabold mt-1">Best Sellers</h1>
-          <p className="text-sm text-muted mt-2">Browse the most coveted pieces requested by our premium members</p>
+          <h1 className="font-serif text-4xl font-extrabold mt-1">{t("bestSellers")}</h1>
+          <p className="text-sm text-muted mt-2">{t("browseCovetedPieces")}</p>
         </div>
 
         {isLoading ? (
@@ -59,9 +62,9 @@ export default function BestSellersPage() {
         ) : products.length === 0 ? (
           <div className="text-center py-20 luxury-card max-w-md mx-auto">
             <Award className="h-10 w-10 text-gold/30 mx-auto mb-3" />
-            <h3 className="font-serif text-xl font-bold">No best sellers registered</h3>
+            <h3 className="font-serif text-xl font-bold">{t("noBestSellers")}</h3>
             <p className="text-xs text-muted mt-1.5 font-light leading-relaxed">
-              Logistics allocations are currently balanced. Keep checking as design editions get reserved.
+              {t("logisticsBalanced")}
             </p>
           </div>
         ) : (
@@ -73,7 +76,7 @@ export default function BestSellersPage() {
               >
                 <div className="relative aspect-square overflow-hidden bg-muted-light">
                   <span className="absolute top-3 left-3 bg-gold text-luxury-white font-bold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded z-10">
-                    High Demand
+                    {t("highDemand")}
                   </span>
                   <img
                     src={product.images?.[0]?.url || "https://placehold.co/400x400"}
@@ -84,11 +87,11 @@ export default function BestSellersPage() {
                     onClick={() => handleQuickAdd(product._id)}
                     className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur-sm py-2 rounded text-xs font-semibold tracking-wider uppercase opacity-0 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white transition-all duration-300 border border-card-border"
                   >
-                    Quick Add
+                    {t("quickAdd")}
                   </button>
                 </div>
                 <div className="flex flex-col p-4 flex-grow">
-                  <span className="text-xs text-muted tracking-widest uppercase mb-1">{product.brand || "DESIGNER"}</span>
+                  <span className="text-xs text-muted tracking-widest uppercase mb-1">{product.brand || t("designer")}</span>
                   <a
                     href={`/products/${product._id}`}
                     className="font-serif font-bold text-sm text-foreground hover:text-gold transition-colors line-clamp-1 mb-2"

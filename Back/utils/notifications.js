@@ -9,12 +9,13 @@ const { getIO } = require("./socket");
  * @param {string} param0.message - Notification description/body
  * @returns {Promise<Object>} The created notification document
  */
-const createNotification = async ({ user, title, message }) => {
+const createNotification = async ({ user, title, message, type = "system" }) => {
   const notification = await Notification.create({
     user,
     title,
     message,
-    isread: false
+    isread: false,
+    type
   });
 
   try {

@@ -1,7 +1,14 @@
 import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
 import { setCredentials, logOut } from "./authSlice";
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+// In the browser, use the relative "/api" path so requests go through the
+// Next.js proxy rewrite (same-origin → cookies work everywhere, no CORS).
+// On the server-side (SSR), fall back to the absolute backend URL.
+export const API_BASE_URL =
+  typeof window !== "undefined"
+    ? "/api"
+    : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api");
+
 
 const baseQuery = fetchBaseQuery({
   baseUrl: API_BASE_URL,
@@ -54,7 +61,7 @@ const baseQueryWithReauth: BaseQueryFn<
 export const ecommerceApi = createApi({
   reducerPath: "ecommerceApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["User", "Product", "Category", "Cart", "Checkout", "Order", "Review", "Payment", "Coupon", "Article", "SellerRequest", "Testimonial"], 
+  tagTypes: ["User", "Product", "Category", "Cart", "Checkout", "Order", "Review", "Payment", "Coupon", "Article", "SellerRequest", "Testimonial", "Notification"], 
   endpoints: (builder) => ({
     // --- AUTHENTICATION ---
     login: builder.mutation({
@@ -759,6 +766,50 @@ export const ecommerceApi = createApi({
       // يمكنك جعلها تقوم بعمل invalidate لبيانات المستخدم لتحديث حالته فوراً إذا كان مسجلاً
       invalidatesTags: ["User"], 
     }),
+    // --- NOTIFICATIONS ---
+    getNotifications: builder.query({
+      query: (params = {}) => ({
+        url: "/notifications",
+        params,
+      }),
+      providesTags: ["Notification"],
+    }),
+    markNotificationAsRead: builder.mutation({
+      query: (id) => ({
+        url: `/notifications/${id}/read`,
+        method: "PUT",
+      }),
+      invalidatesTags: ["Notification"],
+    }),
+    markAllNotificationsAsRead: builder.mutation({
+      query: () => ({
+        url: "/notifications/read-all",
+        method: "PUT",
+      }),
+      invalidatesTags: ["Notification"],
+    }),
+    deleteNotification: builder.mutation({
+      query: (id) => ({
+        url: `/notifications/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Notification"],
+    }),
+    clearAllNotifications: builder.mutation({
+      query: () => ({
+        url: "/notifications",
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Notification"],
+    }),
+    broadcastNotification: builder.mutation({
+      query: (body) => ({
+        url: "/notifications/broadcast",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Notification"],
+    }),
   }),
 });
 
@@ -878,6 +929,13 @@ export const {
   useVerifyAccountMutation,
   // --- ADVANCED SEARCH ---
   useGetAdvancedSearchQuery,
+  // --- NOTIFICATIONS ---
+  useGetNotificationsQuery,
+  useMarkNotificationAsReadMutation,
+  useMarkAllNotificationsAsReadMutation,
+  useDeleteNotificationMutation,
+  useClearAllNotificationsMutation,
+  useBroadcastNotificationMutation,
 } = ecommerceApi;
 
 

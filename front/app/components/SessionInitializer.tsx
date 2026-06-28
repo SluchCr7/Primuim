@@ -1,14 +1,19 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { API_BASE_URL, useRefreshTokenMutation } from "../../lib/api";
-import { useAppDispatch } from "../../lib/store";
-import { setCredentials, logOut } from "../../lib/authSlice";
+import { API_BASE_URL, useRefreshTokenMutation, ecommerceApi } from "../../lib/api";
+import { useAppDispatch, useAppSelector } from "../../lib/store";
+import { setCredentials, logOut, setSocketConnected } from "../../lib/authSlice";
+import { getSocket, disconnectSocket } from "../../lib/socket";
+import { playNotificationChime } from "../../lib/sound";
+import { useToast } from "./Toast";
 
 export const SessionInitializer: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const dispatch = useAppDispatch();
+  const { user, isAuthenticated, accessToken } = useAppSelector((state) => state.auth);
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [refreshSession] = useRefreshTokenMutation();
 
@@ -54,6 +59,48 @@ export const SessionInitializer: React.FC<{ children: React.ReactNode }> = ({
 
     restoreSession();
   }, [dispatch, refreshSession]);
+
+  // Manage WebSocket connection for real-time notifications
+  useEffect(() => {
+    if (isAuthenticated && user?.id && accessToken) {
+      const socket = getSocket(user.id, accessToken);
+
+      const handleConnect = () => {
+        console.log("[Socket] Connected to server successfully");
+        dispatch(setSocketConnected(true));
+      };
+
+      const handleDisconnect = () => {
+        console.log("[Socket] Disconnected from server");
+        dispatch(setSocketConnected(false));
+      };
+
+      // Set initial state
+      dispatch(setSocketConnected(socket.connected));
+
+      socket.on("connect", handleConnect);
+      socket.on("disconnect", handleDisconnect);
+
+      socket.on("notification", (notification: any) => {
+        console.log("Real-time notification received:", notification);
+        playNotificationChime();
+        showToast(notification.title ? `${notification.title}: ${notification.message}` : notification.message, "info");
+        dispatch(ecommerceApi.util.invalidateTags(["Notification"]));
+      });
+
+      return () => {
+        socket.off("connect", handleConnect);
+        socket.off("disconnect", handleDisconnect);
+        socket.off("notification");
+        disconnectSocket();
+        dispatch(setSocketConnected(false));
+      };
+    } else {
+      disconnectSocket();
+      dispatch(setSocketConnected(false));
+    }
+  }, [isAuthenticated, user?.id, accessToken, dispatch, showToast]);
+
 
   if (loading) {
     return (

@@ -126,7 +126,8 @@ const validateArticle = (article) => {
         metaTitle: Joi.string().max(255).allow("").optional(),
         metaDescription: Joi.string().max(500).allow("").optional(),
         keywords: Joi.array().items(Joi.string()).optional(),
-        canonicalUrl: Joi.string().uri().allow("").optional()
+        canonicalUrl: Joi.string().uri().allow("").optional(),
+        isPublished: Joi.boolean().optional()
     });
     return schema.validate(article);
 }

@@ -81,7 +81,8 @@ const createReview = asyncHandler(async (req, res) => {
       await createNotification({
         user: prodDoc.seller,
         title: "New Product Review",
-        message: `A client left a ${rating}-star review on "${prodDoc.title}".`
+        message: `A client left a ${rating}-star review on "${prodDoc.title}".`,
+        type: "review"
       });
     }
   } catch (err) {
@@ -201,7 +202,8 @@ const replyToReview = asyncHandler(async (req, res) => {
     await createNotification({
       user: review.user,
       title: "Store Response to Your Review",
-      message: `The seller of "${product.title}" left a response on your review.`
+      message: `The seller of "${product.title}" left a response on your review.`,
+      type: "review"
     });
   } catch (err) {
     console.error("Error sending reply notification:", err.message);

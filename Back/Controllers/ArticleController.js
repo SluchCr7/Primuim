@@ -79,7 +79,8 @@ const createArticle = asyncHandler(async (req, res) => {
       await createNotification({
         user: admin._id,
         title: "New Article Submitted for Review",
-        message: `Seller "${authorName}" submitted a new article "${title}" for review.`
+        message: `Seller "${authorName}" submitted a new article "${title}" for review.`,
+        type: "article"
       });
     }
   }
@@ -268,7 +269,8 @@ const updateArticle = asyncHandler(async (req, res) => {
       await createNotification({
         user: admin._id,
         title: "Article Updated & Resubmitted",
-        message: `Seller "${req.user.username}" resubmitted article "${article.title}" for review.`
+        message: `Seller "${req.user.username}" resubmitted article "${article.title}" for review.`,
+        type: "article"
       });
     }
   }
@@ -540,7 +542,8 @@ const moderateArticle = asyncHandler(async (req, res) => {
   await createNotification({
     user: article.author,
     title: notificationTitle,
-    message: notificationMessage
+    message: notificationMessage,
+    type: "article"
   });
 
   res.status(200).json({

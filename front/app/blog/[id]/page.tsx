@@ -14,8 +14,11 @@ import {
 } from "../../../lib/api";
 import { useToast } from "../../components/Toast";
 import { Calendar, User, ArrowLeft, Heart, Sparkles, Send, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function BlogDetailPage() {
+  const { t } = useTranslation();
+
   const { id } = useParams();
   const router = useRouter();
   const { showToast } = useToast();
@@ -94,12 +97,12 @@ export default function BlogDetailPage() {
       <div className="min-h-screen flex flex-col bg-background text-foreground">
         <Header />
         <div className="flex-grow flex flex-col items-center justify-center gap-4">
-          <h2 className="font-serif text-2xl font-bold">Editorial Not Found</h2>
+          <h2 className="font-serif text-2xl font-bold">{t("editorialNotFound")}</h2>
           <button
             onClick={() => router.push("/blog")}
             className="inline-flex h-11 items-center gap-2 rounded border border-card-border px-5 text-sm font-semibold hover:border-gold"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to Blog
+            <ArrowLeft className="h-4 w-4" /> {t("backToBlog")}
           </button>
         </div>
         <Footer />
@@ -116,7 +119,7 @@ export default function BlogDetailPage() {
       <main className="flex-grow mx-auto max-w-3xl w-full px-6 py-12">
         <Breadcrumbs
           items={[
-            { label: "Blog", url: "/blog" },
+            { label: t("blog"), url: "/blog" },
             { label: article.title.substring(0, 20) + "...", url: `/blog/${id}` },
           ]}
         />
@@ -132,7 +135,7 @@ export default function BlogDetailPage() {
             </span>
             <span className="flex items-center gap-1">
               <User className="h-3.5 w-3.5" /> 
-              By {article.authorName || article.author?.username || "Editorial Staff"}
+              {t("by")} {article.authorName || article.author?.username || t("editorialStaff")}
             </span>
           </div>
           <h1 className="font-serif text-3xl md:text-4xl font-extrabold leading-tight text-foreground">{article.title}</h1>
@@ -160,7 +163,7 @@ export default function BlogDetailPage() {
             onClick={() => router.push("/blog")}
             className="inline-flex h-10 items-center gap-2 rounded border border-card-border px-4 text-xs font-semibold uppercase tracking-wider hover:border-gold transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to Blog
+            <ArrowLeft className="h-4 w-4" /> {t("backToBlog")}
           </button>
 
           <button
@@ -171,13 +174,13 @@ export default function BlogDetailPage() {
             }`}
           >
             <Heart className={`h-4 w-4 ${isLikedByUser ? "fill-current" : ""}`} /> 
-            {isLikedByUser ? "Liked" : "Like Article"} ({article.likes?.length || 0})
+            {isLikedByUser ? t("liked") : t("likeArticle")} ({article.likes?.length || 0})
           </button>
         </div>
 
         {/* Dynamic Comment Section */}
         <div className="mt-16 border-t border-card-border pt-10">
-          <h3 className="font-serif font-bold text-lg mb-6">Thoughts ({article.comments?.length || 0})</h3>
+          <h3 className="font-serif font-bold text-lg mb-6">{t("thoughts")} ({article.comments?.length || 0})</h3>
 
           {/* Add Comment Form */}
           <form onSubmit={handleAddComment} className="flex gap-3 mb-8">
@@ -185,7 +188,7 @@ export default function BlogDetailPage() {
               type="text"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              placeholder={isAuthenticated ? "Share your thoughts on this editorial..." : "Please login to join the discussion."}
+              placeholder={isAuthenticated ? t("commentPlaceholderAuthenticated") : t("commentPlaceholderGuest")}
               disabled={!isAuthenticated || isCommenting}
               className="flex-grow bg-card-bg border border-card-border rounded px-4 py-2.5 text-xs outline-none focus:border-gold"
             />
@@ -201,7 +204,7 @@ export default function BlogDetailPage() {
           {/* Comment list */}
           <div className="flex flex-col gap-6">
             {!article.comments || article.comments.length === 0 ? (
-              <p className="text-xs text-muted font-light italic">No comments posted yet. Start the conversation!</p>
+              <p className="text-xs text-muted font-light italic">{t("noCommentsYet")}</p>
             ) : (
               article.comments.map((comment: any) => {
                 const commentUser = comment.user;
@@ -226,7 +229,7 @@ export default function BlogDetailPage() {
                       <button
                         onClick={() => handleDeleteComment(comment._id)}
                         className="text-muted hover:text-error self-start p-1 transition-colors"
-                        title="Delete comment"
+                        title={t("deleteComment")}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

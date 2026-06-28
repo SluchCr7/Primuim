@@ -100,7 +100,8 @@ const createOrder = asyncHandler(async (req, res) => {
                     await createNotification({
                         user: product.seller,
                         title: "Low Stock Alert",
-                        message: `Product "${product.title}" has reached critical low stock level (${product.stock} left).`
+                        message: `Product "${product.title}" has reached critical low stock level (${product.stock} left).`,
+                        type: "stock"
                     });
                 } catch (err) {
                     console.error("Failed to generate low-stock alert notification:", err.message);
@@ -150,8 +151,46 @@ const createOrder = asyncHandler(async (req, res) => {
         // Send order confirmation email asynchronously
         try {
             const populatedOrder = await Order.findById(order[0]._id).populate("user", "username email");
-            if (populatedOrder && populatedOrder.user && populatedOrder.user.email) {
-                const sendEmail = require("../utils/sendEmail");
+            if (populatedOrder) {
+                // Send notifications
+                try {
+                    const { createNotification } = require("../utils/notifications");
+                    const orderIdShort = populatedOrder._id.toString().substring(18).toUpperCase();
+                    
+                    // 1. Notify Customer
+                    await createNotification({
+                        user: populatedOrder.user._id || populatedOrder.user,
+                        title: "Order Placed Successfully",
+                        message: `Thank you! Your order #${orderIdShort} has been placed. Total: ${populatedOrder.totalPrice.toLocaleString()} EGP.`,
+                        type: "order"
+                    });
+
+                    // 2. Notify Sellers
+                    const sellerProducts = {};
+                    populatedOrder.orderItems.forEach(item => {
+                        if (item.seller) {
+                            const sellerId = item.seller.toString();
+                            if (!sellerProducts[sellerId]) {
+                                sellerProducts[sellerId] = [];
+                            }
+                            sellerProducts[sellerId].push(`"${item.title}" (x${item.quantity})`);
+                        }
+                    });
+
+                    for (const sellerId of Object.keys(sellerProducts)) {
+                        await createNotification({
+                            user: sellerId,
+                            title: "New Order Received",
+                            message: `A new order #${orderIdShort} has been placed for your store containing: ${sellerProducts[sellerId].join(", ")}.`,
+                            type: "order"
+                        });
+                    }
+                } catch (notifErr) {
+                    console.error("Order creation notifications failed:", notifErr.message);
+                }
+
+                if (populatedOrder.user && populatedOrder.user.email) {
+                    const sendEmail = require("../utils/sendEmail");
                 const itemsHtml = populatedOrder.orderItems.map(item => `
                     <tr>
                         <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.title}</td>
@@ -196,6 +235,7 @@ const createOrder = asyncHandler(async (req, res) => {
                     `
                 });
             }
+        }
         } catch (emailErr) {
             console.error("Order confirmation email failed:", emailErr.message);
         }

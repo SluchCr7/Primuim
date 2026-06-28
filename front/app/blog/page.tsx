@@ -7,8 +7,13 @@ import Footer from "../components/Footer";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { useGetArticlesQuery } from "../../lib/api";
 import { Sparkles, Calendar, User, ArrowRight, Search, Filter } from "lucide-react";
+import { useTranslation } from "react-i18next";
+// تأكد من استيراد دالة t من الـ translation hook المستخدم في مشروعك
 
 export default function BlogListingPage() {
+  // إذا كنت تستخدم next-intl أو react-i18next، قم بفك تعليق السطر التالي:
+  const { t } = useTranslation();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -23,23 +28,24 @@ export default function BlogListingPage() {
     setDebouncedSearch(searchTerm);
   };
 
-  const categories = ["Lifestyle", "Collections", "Luxury Watch", "Brand Story"];
+  // مصفوفة الفئات كـ Keys لربطها بملف الـ JSON مباشرة
+  const categories = ["lifestyle", "collections", "luxuryWatch", "brandStory"];
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12">
-        <Breadcrumbs items={[{ label: "Atelier Blog", url: "/blog" }]} />
+        <Breadcrumbs items={[{ label: t("atelierBlog"), url: "/blog" }]} />
 
         {/* Hero Section */}
         <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <span className="text-xs font-bold tracking-widest text-gold uppercase flex items-center gap-1.5">
-              <Sparkles className="h-4 w-4" /> Editorial Reads
+              <Sparkles className="h-4 w-4" /> {t("editorialReads")}
             </span>
-            <h1 className="font-serif text-4xl font-extrabold mt-1">Lifestyle Blog</h1>
-            <p className="text-sm text-muted mt-2 font-light">Bespoke insights, designer conversations, and design histories</p>
+            <h1 className="font-serif text-4xl font-extrabold mt-1">{t("lifestyleBlog")}</h1>
+            <p className="text-sm text-muted mt-2 font-light">{t("blogDescription")}</p>
           </div>
 
           {/* Search and Filter Controls */}
@@ -49,7 +55,7 @@ export default function BlogListingPage() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search articles..."
+                placeholder={t("searchPlaceholder")}
                 className="bg-card-bg border border-card-border rounded px-4 py-2 text-xs w-48 focus:w-64 outline-none focus:border-gold transition-all duration-300 pr-8"
               />
               <button type="submit" className="absolute right-2.5 text-muted hover:text-gold">
@@ -62,9 +68,11 @@ export default function BlogListingPage() {
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="bg-card-bg border border-card-border rounded px-3 py-2 text-xs text-muted outline-none focus:border-gold"
             >
-              <option value="">All Categories</option>
+              <option value="">{t("allCategories")}</option>
               {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
+                <option key={cat} value={cat === "luxuryWatch" ? "Luxury Watch" : cat === "brandStory" ? "Brand Story" : cat.charAt(0).toUpperCase() + cat.slice(1)}>
+                  {t(cat)}
+                </option>
               ))}
             </select>
           </div>
@@ -77,7 +85,7 @@ export default function BlogListingPage() {
           </div>
         ) : !data?.data || data.data.length === 0 ? (
           <div className="text-center py-20 border border-dashed border-card-border rounded-lg text-muted text-sm font-light">
-            No editorial reads matched your search.
+            {t("noArticlesMatched")}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -85,11 +93,12 @@ export default function BlogListingPage() {
               <div key={post._id} className="group flex flex-col luxury-card overflow-hidden hover:scale-[1.01] transition-all duration-300 bg-card-bg border border-card-border rounded-lg">
                 <div className="relative h-[250px] overflow-hidden bg-muted-light">
                   <img
-                    src={post.image?.url || "https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=600&auto=format&fit=crop"}
+                    src={post.image?.url || "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=800&auto=format&fit=crop"}
                     alt={post.title}
                     className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-750 saturate-50 group-hover:saturate-100"
                   />
                   <span className="absolute top-4 left-4 text-[9px] font-bold text-luxury-white bg-luxury-black/70 px-2 py-1 uppercase tracking-wider rounded border border-gold/30">
+                    {/* تحويل التصنيف القادم ديناميكياً ليطابق مفاتيح الترجمة إذا لزم الأمر أو تركه كما هو */}
                     {post.category}
                   </span>
                 </div>
@@ -106,7 +115,7 @@ export default function BlogListingPage() {
                     </span>
                     <span className="flex items-center gap-1">
                       <User className="h-3.5 w-3.5" /> 
-                      By {post.authorName || post.author?.username || "Editorial Staff"}
+                      {t("by")} {post.authorName || post.author?.username || t("editorialStaff")}
                     </span>
                   </div>
                   
@@ -123,9 +132,9 @@ export default function BlogListingPage() {
                       href={`/blog/${post._id}`}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold group-hover:text-gold-hover transition-colors uppercase tracking-widest"
                     >
-                      Read Editorial <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                      {t("readEditorial")} <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
                     </Link>
-                    <span className="text-[10px] text-muted font-light">{post.views || 0} views</span>
+                    <span className="text-[10px] text-muted font-light">{post.views || 0} {t("views")}</span>
                   </div>
                 </div>
               </div>

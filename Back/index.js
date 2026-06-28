@@ -44,6 +44,7 @@ const analyticsRoutes = require("./Routers/analyticsRoutes");
 const currencyRoutes = require("./Routers/currencyRoutes");
 
 const app = express();
+app.set("trust proxy", 1);
 
 // HTTP request logger piped to Winston
 const morganFormat = process.env.NODE_ENV === "production" ? "combined" : "dev";
@@ -104,6 +105,7 @@ app.get("/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/notifications", require("./Routers/notificationRoutes"));
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);

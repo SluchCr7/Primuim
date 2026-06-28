@@ -4,6 +4,8 @@ import React from "react";
 import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
 
+import { useTranslation } from "react-i18next";
+
 interface BreadcrumbItem {
   label: string;
   url?: string;
@@ -14,6 +16,7 @@ interface BreadcrumbsProps {
 }
 
 export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items }) => {
+  const { t } = useTranslation();
   // Generate Breadcrumb Structured Schema
   const schemaData = {
     "@context": "https://schema.org",
@@ -41,7 +44,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items }) => {
             className="hover:text-gold transition-colors flex items-center gap-1 focus-visible:ring-1 focus-visible:ring-gold outline-none rounded p-0.5"
           >
             <Home className="h-3.5 w-3.5" />
-            <span className="sr-only">Home</span>
+            <span className="sr-only">{t('breadcrumb.home', 'Home')}</span>
           </Link>
         </li>
         {items.map((item, idx) => {

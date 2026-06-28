@@ -9,15 +9,18 @@ import { useGetProductsQuery, useAddToCartMutation } from "../../../lib/api";
 import { CardSkeleton } from "../../components/Skeletons";
 import { useAppSelector } from "../../../lib/store";
 import { Star, Award, ShieldCheck } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function BrandDetailPage() {
+  const { t } = useTranslation();
+
   const { slug } = useParams();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
 
   // Normalize brand name from slug (e.g. "atelier-paris" -> "Atelier Paris")
   const brandName = typeof slug === "string"
     ? slug.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")
-    : "Designer Collections";
+    : t("designerCollections");
 
   const { data: productsData, isLoading } = useGetProductsQuery({ search: brandName });
   const [addToCart] = useAddToCartMutation();
@@ -26,14 +29,14 @@ export default function BrandDetailPage() {
 
   const handleQuickAdd = async (productId: string) => {
     if (!isAuthenticated) {
-      alert("Please sign in to add items to your cart.");
+      alert(t("signInRequired"));
       return;
     }
     try {
       await addToCart({ productId, quantity: 1 }).unwrap();
-      alert("Product added to cart!");
+      alert(t("addedToCart"));
     } catch (err) {
-      alert("Could not add item to cart.");
+      alert(t("failedToAddToCart"));
     }
   };
 
@@ -44,7 +47,7 @@ export default function BrandDetailPage() {
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12">
         <Breadcrumbs
           items={[
-            { label: "Designers", url: "/products" },
+            { label: t("designers"), url: "/products" },
             { label: brandName, url: `/brands/${slug}` },
           ]}
         />
@@ -53,21 +56,21 @@ export default function BrandDetailPage() {
         <div className="luxury-card p-8 mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-gold/10 via-card-bg to-card-bg">
           <div>
             <span className="text-[10px] font-bold tracking-widest text-gold uppercase flex items-center gap-1.5 mb-1.5">
-              <Award className="h-4 w-4" /> Certified Design Partner
+              <Award className="h-4 w-4" /> {t("certifiedPartner")}
             </span>
             <h1 className="font-serif text-3xl md:text-4xl font-extrabold">{brandName}</h1>
             <p className="text-xs text-muted mt-2 max-w-xl font-light leading-relaxed">
-              Bespoke collections crafted exclusively by the master artisans of {brandName}. Formed with the finest, audited raw materials and guaranteed authencity.
+              {t("brandDesc").replace("{brandName}", brandName)}
             </p>
           </div>
 
           <div className="flex items-center gap-2 rounded bg-background/50 border border-card-border p-3 text-xs text-muted">
             <ShieldCheck className="h-4 w-4 text-gold" />
-            <span>100% Authentic Allocation</span>
+            <span>{t("authenticAllocation")}</span>
           </div>
         </div>
 
-        <h2 className="font-serif text-2xl font-bold mb-8">Curated Catalog</h2>
+        <h2 className="font-serif text-2xl font-bold mb-8">{t("curatedCatalog")}</h2>
 
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -77,9 +80,9 @@ export default function BrandDetailPage() {
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-20 luxury-card max-w-md mx-auto">
-            <h3 className="font-serif text-xl font-bold">No designs found</h3>
+            <h3 className="font-serif text-xl font-bold">{t("noDesignsFound")}</h3>
             <p className="text-sm text-muted mt-1.5 font-light">
-              No items from {brandName} are currently active. Check back later.
+              {t("noActiveItems").replace("{brandName}", brandName)}
             </p>
           </div>
         ) : (
@@ -99,11 +102,11 @@ export default function BrandDetailPage() {
                     onClick={() => handleQuickAdd(product._id)}
                     className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur-sm py-2 rounded text-xs font-semibold tracking-wider uppercase opacity-0 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white transition-all duration-300 border border-card-border"
                   >
-                    Quick Add
+                    {t("quickAdd")}
                   </button>
                 </div>
                 <div className="flex flex-col p-4 flex-grow">
-                  <span className="text-xs text-muted tracking-widest uppercase mb-1">{product.brand || "DESIGNER"}</span>
+                  <span className="text-xs text-muted tracking-widest uppercase mb-1">{product.brand || t("designer")}</span>
                   <a
                     href={`/products/${product._id}`}
                     className="font-serif font-bold text-sm text-foreground hover:text-gold transition-colors line-clamp-1 mb-2"

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CountUp from "react-countup";
@@ -15,6 +15,8 @@ import {
   useToggleWishlistMutation,
   useGetWishlistQuery,
   useGetAllTestimonialsQuery,
+  useGetSearchSuggestionsQuery,
+  useGetTrendingSearchesQuery,
 } from "../lib/api";
 import { useAppSelector } from "../lib/store";
 import { useToast } from "./components/Toast";
@@ -274,7 +276,36 @@ export default function Home() {
   const { isAuthenticated, currency } = useAppSelector((state) => state.auth);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
   const [email, setEmail] = useState("");
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  const { data: suggestionsData } = useGetSearchSuggestionsQuery(debouncedQuery, {
+    skip: debouncedQuery.trim().length < 2,
+  });
+
+  const { data: trendingSearchesData } = useGetTrendingSearchesQuery(undefined, {
+    skip: !showSuggestions,
+  });
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   
   const [activeSlide, setActiveSlide] = useState(0);
   const [timeLeft, setTimeLeft] = useState({ hours: 4, minutes: 24, seconds: 55 });
@@ -445,30 +476,159 @@ export default function Home() {
               </div>
 
               {/* SEARCH INPUT BAR */}
-              <div className="flex flex-col gap-4 max-w-xl">
+              <div className="flex flex-col gap-4 max-w-xl relative">
                 <form onSubmit={handleSearchSubmit} className="relative w-full">
                   <input
                     type="text"
                     placeholder="Search for premium products, brands, or articles..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
                     className="w-full h-14 rounded-full border border-card-border bg-card-bg/90 pl-12 pr-28 text-sm focus:border-gold/60 focus:outline-none backdrop-blur text-foreground"
                   />
                   <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
                   <button
                     type="submit"
-                    className="absolute right-2 top-1/2 h-10 -translate-y-1/2 rounded-full bg-foreground px-5 text-xs font-semibold text-background hover:bg-gold hover:text-white transition-colors"
+                    className="absolute right-2 top-1/2 h-10 -translate-y-1/2 rounded-full bg-gold/10 px-5 text-xs font-semibold text-gold border border-gold/20 hover:bg-gold hover:text-white transition-colors cursor-pointer"
                   >
                     Search
                   </button>
                 </form>
+
+                {/* SUGGESTIONS DROPDOWN */}
+                {showSuggestions && (
+                  <div
+                    ref={suggestionsRef}
+                    className="absolute left-0 top-full mt-2 w-full rounded-2xl border border-card-border bg-card-bg/95 p-4 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in slide-in-from-top-1 duration-200"
+                  >
+                    {/* Case 1: Empty input -> Show Trending Searches */}
+                    {!searchQuery.trim() && trendingSearchesData?.trending && trendingSearchesData.trending.length > 0 && (
+                      <div>
+                        <div className="px-3 py-1.5 text-xs font-bold text-gold/80 tracking-wider uppercase flex items-center gap-1.5 mb-2">
+                          <Sparkles className="h-3.5 w-3.5" /> Trending Searches
+                        </div>
+                        <div className="flex flex-wrap gap-2 px-3 pb-2">
+                          {trendingSearchesData.trending.map((t: any, idx: number) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                setSearchQuery(t.term);
+                                setShowSuggestions(false);
+                                router.push(`/products?search=${encodeURIComponent(t.term)}`);
+                              }}
+                              className="rounded-full bg-foreground/5 hover:bg-gold/10 hover:text-gold border border-card-border/50 px-3.5 py-1.5 text-xs font-semibold text-foreground transition-all duration-200 cursor-pointer"
+                            >
+                              {t.term}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Case 2: Active input and we have suggestions */}
+                    {searchQuery.trim().length >= 2 && suggestionsData?.suggestions ? (
+                      (() => {
+                        const suggestions = suggestionsData.suggestions || { products: [], keywords: [] };
+                        const hasProducts = Array.isArray(suggestions.products) && suggestions.products.length > 0;
+                        const hasKeywords = Array.isArray(suggestions.keywords) && suggestions.keywords.length > 0;
+
+                        if (!hasProducts && !hasKeywords) {
+                          return (
+                            <div className="text-center py-6 text-xs text-muted">
+                              No matches found for "{searchQuery}"
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* Keywords Column */}
+                            {hasKeywords && (
+                              <div className="md:col-span-1 border-r border-card-border/40 pr-4">
+                                <div className="px-2 py-1 text-xs font-bold text-gold/80 tracking-wider uppercase mb-2">
+                                  Suggested Matches
+                                </div>
+                                <ul className="space-y-1">
+                                  {suggestions.keywords.map((item: any, idx: number) => (
+                                    <li key={idx}>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSearchQuery(item.title);
+                                          setShowSuggestions(false);
+                                          router.push(`/products?search=${encodeURIComponent(item.title)}`);
+                                        }}
+                                        className="w-full text-left rounded-xl px-3 py-2 text-xs font-medium text-foreground hover:bg-foreground/5 hover:text-gold transition-all duration-150 flex items-center gap-2"
+                                      >
+                                        <Search className="h-3 w-3 text-muted/60" />
+                                        {item.title}
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Products Column */}
+                            {hasProducts && (
+                              <div className={`${hasKeywords ? 'md:col-span-2' : 'md:col-span-3'}`}>
+                                <div className="px-2 py-1 text-xs font-bold text-gold/80 tracking-wider uppercase mb-2">
+                                  Matching Products
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  {suggestions.products.map((p: any) => (
+                                    <Link
+                                      key={p.id}
+                                      href={p.url}
+                                      onClick={() => setShowSuggestions(false)}
+                                      className="flex items-center gap-3 p-2 rounded-xl hover:bg-foreground/5 group transition-all duration-200 border border-transparent hover:border-card-border/30"
+                                    >
+                                      <div className="w-12 h-12 rounded-lg bg-card-bg border border-card-border/60 overflow-hidden flex-shrink-0 relative">
+                                        {p.image ? (
+                                          <img src={p.image} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                        ) : (
+                                          <div className="w-full h-full bg-foreground/5 flex items-center justify-center text-[10px] text-muted font-bold">PREMIUM</div>
+                                        )}
+                                      </div>
+                                      <div className="min-w-0 flex-grow">
+                                        <div className="text-xs font-bold text-foreground truncate group-hover:text-gold transition-colors">{p.title}</div>
+                                        {p.brand && <div className="text-[10px] text-muted truncate">{p.brand}</div>}
+                                        <div className="text-xs font-black text-gold mt-1">
+                                          {p.price.toLocaleString()} EGP
+                                          {p.comparePrice && p.comparePrice > p.price && (
+                                            <span className="text-[10px] text-muted line-through font-normal ml-1.5">
+                                              {p.comparePrice.toLocaleString()} EGP
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </Link>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()
+                    ) : searchQuery.trim().length >= 2 ? (
+                      <div className="text-center py-6 text-xs text-muted">
+                        Searching suggestions...
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted pl-4">
                   <span className="font-semibold uppercase tracking-[0.1em] text-gold">Trending:</span>
-                  <Link href="/search?q=Vase" className="hover:underline">Vase</Link>
+                  <Link href="/products?search=Vase" className="hover:underline">Vase</Link>
                   <span>•</span>
-                  <Link href="/search?q=Watch" className="hover:underline">Watch</Link>
+                  <Link href="/products?search=Watch" className="hover:underline">Watch</Link>
                   <span>•</span>
-                  <Link href="/search?q=Ring" className="hover:underline">Ring</Link>
+                  <Link href="/products?search=Ring" className="hover:underline">Ring</Link>
                 </div>
               </div>
 

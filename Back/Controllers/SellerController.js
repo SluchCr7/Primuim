@@ -252,10 +252,12 @@ const updateSellerOrderStatus = asyncHandler(async (req, res) => {
           await sellerUser.save();
 
           // Notification
-          await Notification.create({
+          const { createNotification } = require("../utils/notifications");
+          await createNotification({
             user: sellerUser._id,
             title: "Fulfillment Earning Credited",
-            message: `Order #${order._id.toString().substring(18).toUpperCase()} containing "${item.title}" was marked as delivered. ${creditAmount} EGP credited to your store balance.`
+            message: `Order #${order._id.toString().substring(18).toUpperCase()} containing "${item.title}" was marked as delivered. ${creditAmount} EGP credited to your store balance.`,
+            type: "order"
           });
         }
       }
@@ -263,6 +265,19 @@ const updateSellerOrderStatus = asyncHandler(async (req, res) => {
   }
 
   await order.save();
+
+  // Create real-time notification for the customer
+  try {
+    const { createNotification } = require("../utils/notifications");
+    await createNotification({
+      user: order.user._id || order.user,
+      title: "Order Status Updated",
+      message: `Your order #${order._id.toString().substring(18).toUpperCase()} status has been updated to ${status.toUpperCase()}.`,
+      type: "order"
+    });
+  } catch (notifErr) {
+    console.error("Order update notification failed:", notifErr.message);
+  }
 
   // Send status update email asynchronously
   try {
