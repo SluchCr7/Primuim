@@ -19,6 +19,18 @@ const systemSettingsSchema = new mongoose.Schema(
     allowSellerSelfRegistration: {
       type: Boolean,
       default: true
+    },
+    announcementBanner: {
+      type: String,
+      default: "Welcome to our Luxury Boutique! Free shipping on orders over 1000 EGP."
+    },
+    taxRate: {
+      type: Number,
+      default: 14 // 14% VAT
+    },
+    shippingFee: {
+      type: Number,
+      default: 50 // Standard shipping fee
     }
   },
   {

@@ -1,7 +1,8 @@
 const express    = require("express");
 const router     = express.Router();
-const { uploadImage } = require("../Controllers/UploadController");
+const { uploadImage, getMediaAssets, deleteMediaAsset } = require("../Controllers/UploadController");
 const photoUpload     = require("../Middelwares/UploadPhoto");
+const { verifyAdmin, verifyToken } = require("../Middelwares/verifyToken");
 
 /**
  * @swagger
@@ -52,6 +53,17 @@ const photoUpload     = require("../Middelwares/UploadPhoto");
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post("/image", photoUpload.single("image"), uploadImage);
+// Optional authorization check: If token is present, we decode it
+router.post("/image", (req, res, next) => {
+  if (req.headers.authorization) {
+    verifyToken(req, res, next);
+  } else {
+    next();
+  }
+}, photoUpload.single("image"), uploadImage);
+
+// Admin-only media asset library endpoints
+router.get("/assets", verifyAdmin, getMediaAssets);
+router.delete("/assets/:id", verifyAdmin, deleteMediaAsset);
 
 module.exports = router;

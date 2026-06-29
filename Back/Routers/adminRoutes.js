@@ -15,6 +15,12 @@ const {
   adjustProductInventory,
   getSellerRequests,
   moderateSellerRequest,
+  getAdminOrders,
+  updateAdminOrderStatus,
+  getAdminProducts,
+  toggleAdminProductStatus,
+  getSystemSettings,
+  updateSystemSettings
 } = require("../Controllers/AdminController");
 const { verifyAdmin } = require("../Middelwares/verifyToken");
 
@@ -393,5 +399,17 @@ router.get("/seller-requests", verifyAdmin, getSellerRequests);
  *               $ref: '#/components/schemas/SuccessResponse'
  */
 router.patch("/seller-requests/:id", verifyAdmin, moderateSellerRequest);
+
+// Order Management routes
+router.get("/orders", verifyAdmin, getAdminOrders);
+router.patch("/orders/:id", verifyAdmin, updateAdminOrderStatus);
+
+// Product Management routes
+router.get("/products", verifyAdmin, getAdminProducts);
+router.patch("/products/:id", verifyAdmin, toggleAdminProductStatus);
+
+// System Settings routes
+router.get("/settings", verifyAdmin, getSystemSettings);
+router.put("/settings", verifyAdmin, updateSystemSettings);
 
 module.exports = router;

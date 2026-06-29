@@ -61,7 +61,7 @@ const baseQueryWithReauth: BaseQueryFn<
 export const ecommerceApi = createApi({
   reducerPath: "ecommerceApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["User", "Product", "Category", "Cart", "Checkout", "Order", "Review", "Payment", "Coupon", "Article", "SellerRequest", "Testimonial", "Notification"], 
+  tagTypes: ["User", "Product", "Category", "Cart", "Checkout", "Order", "Review", "Payment", "Coupon", "Article", "SellerRequest", "Testimonial", "Notification", "SystemSettings", "MediaAsset"], 
   endpoints: (builder) => ({
     // --- AUTHENTICATION ---
     login: builder.mutation({
@@ -85,6 +85,7 @@ export const ecommerceApi = createApi({
         method: "POST",
         body: formData,
       }),
+      invalidatesTags: ["MediaAsset"],
     }),
     logout: builder.mutation({
       query: () => ({
@@ -725,14 +726,16 @@ export const ecommerceApi = createApi({
       providesTags: ["Article"],
     }),
     getSystemSettings: builder.query({
-      query: () => "/superadmin/settings",
+      query: () => "/admin/settings",
+      providesTags: ["SystemSettings"],
     }),
     updateSystemSettings: builder.mutation({
       query: (settingsData) => ({
-        url: "/superadmin/settings",
+        url: "/admin/settings",
         method: "PUT",
         body: settingsData,
       }),
+      invalidatesTags: ["SystemSettings"],
     }),
     getAuditLogs: builder.query({
       query: (params = {}) => ({
@@ -809,6 +812,47 @@ export const ecommerceApi = createApi({
         body,
       }),
       invalidatesTags: ["Notification"],
+    }),
+    getAdminOrders: builder.query({
+      query: (params = {}) => ({
+        url: "/admin/orders",
+        params,
+      }),
+      providesTags: ["Order"],
+    }),
+    updateAdminOrderStatus: builder.mutation({
+      query: ({ id, orderStatus, trackingNumber }) => ({
+        url: `/admin/orders/${id}`,
+        method: "PATCH",
+        body: { orderStatus, trackingNumber },
+      }),
+      invalidatesTags: ["Order"],
+    }),
+    getAdminProducts: builder.query({
+      query: (params = {}) => ({
+        url: "/admin/products",
+        params,
+      }),
+      providesTags: ["Product"],
+    }),
+    toggleAdminProductStatus: builder.mutation({
+      query: ({ id, action }) => ({
+        url: `/admin/products/${id}`,
+        method: "PATCH",
+        body: { action },
+      }),
+      invalidatesTags: ["Product"],
+    }),
+    getMediaAssets: builder.query({
+      query: () => "/upload/assets",
+      providesTags: ["MediaAsset"],
+    }),
+    deleteMediaAsset: builder.mutation({
+      query: (id) => ({
+        url: `/upload/assets/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["MediaAsset"],
     }),
   }),
 });
@@ -918,6 +962,12 @@ export const {
   useGetSingleArticleAnalyticsQuery,
   useGetSystemSettingsQuery,
   useUpdateSystemSettingsMutation,
+  useGetAdminOrdersQuery,
+  useUpdateAdminOrderStatusMutation,
+  useGetAdminProductsQuery,
+  useToggleAdminProductStatusMutation,
+  useGetMediaAssetsQuery,
+  useDeleteMediaAssetMutation,
   useGetAuditLogsQuery,
   useGetExchangeRatesQuery,
   // --- TESTIMONIALS ---

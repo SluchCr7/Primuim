@@ -5,6 +5,8 @@ const Order = require("../models/Order");
 const Payment = require("../models/Payment");
 const SellerRequest = require("../models/SellerRequest");
 const Notification = require("../models/Notification");
+const SystemSettings = require("../models/SystemSettings");
+const AnalyticsEvent = require("../models/AnalyticsEvent");
 
 const getAllUsers = asyncHandler(async (req, res) => {
   const page = Number(req.query.page) || 1;
@@ -161,7 +163,7 @@ const getRecentUsers = asyncHandler(async (req, res) => {
 });
 
 const getDashboardAnalytics = asyncHandler(async (req, res) => {
-  const [totalUsers, totalOrders, totalProducts, outOfStockCount, lowStockAgg, paidPaymentAgg] = await Promise.all([
+  const [totalUsers, totalOrders, totalProducts, outOfStockCount, lowStockAgg, paidPaymentAgg, totalViews] = await Promise.all([
     User.countDocuments(),
     Order.countDocuments(),
     Product.countDocuments({ isDeleted: false }),
@@ -178,11 +180,13 @@ const getDashboardAnalytics = asyncHandler(async (req, res) => {
     Payment.aggregate([
       { $match: { status: "paid" } },
       { $group: { _id: null, revenue: { $sum: "$amount" } } }
-    ])
+    ]),
+    AnalyticsEvent.countDocuments({ eventType: "product_view" })
   ]);
 
   const revenue = paidPaymentAgg[0]?.revenue || 0;
   const lowStockCount = lowStockAgg[0]?.count || 0;
+  const conversionRate = totalViews === 0 ? (totalOrders > 0 ? 100 : 0) : Math.round((totalOrders / totalViews) * 10000) / 100;
 
   res.status(200).json({
     success: true,
@@ -192,7 +196,9 @@ const getDashboardAnalytics = asyncHandler(async (req, res) => {
       totalProducts,
       outOfStockCount,
       lowStockCount,
-      revenue
+      revenue,
+      totalRevenue: revenue,
+      conversionRate
     }
   });
 });
@@ -219,10 +225,17 @@ const getSalesAnalytics = asyncHandler(async (req, res) => {
     { $sort: { _id: 1 } }
   ]);
 
+  const salesOverTime = sales.map((item) => ({
+    date: item._id,
+    amount: item.revenue,
+    count: item.orders
+  }));
+
   res.status(200).json({
     success: true,
     days,
-    sales
+    sales,
+    salesOverTime
   });
 });
 
@@ -380,6 +393,160 @@ const moderateSellerRequest = asyncHandler(async (req, res) => {
   });
 });
 
+// ========================================
+// GET ALL ORDERS (Admin only)
+// ========================================
+const getAdminOrders = asyncHandler(async (req, res) => {
+  const { status, page = 1, limit = 20 } = req.query;
+  const filter = {};
+  if (status && status !== "all") {
+    filter.orderStatus = status;
+  }
+
+  const totalOrders = await Order.countDocuments(filter);
+  const orders = await Order.find(filter)
+    .populate("user", "username email phone")
+    .populate("orderItems.product", "title images price")
+    .sort({ createdAt: -1 })
+    .skip((Number(page) - 1) * Number(limit))
+    .limit(Number(limit));
+
+  res.status(200).json({
+    success: true,
+    totalOrders,
+    orders
+  });
+});
+
+// ========================================
+// UPDATE ORDER STATUS (Admin only)
+// ========================================
+const updateAdminOrderStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { orderStatus, trackingNumber } = req.body;
+
+  const allowedStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+  if (!allowedStatuses.includes(orderStatus)) {
+    return res.status(400).json({ success: false, message: "Invalid order status" });
+  }
+
+  const order = await Order.findById(id);
+  if (!order) {
+    return res.status(404).json({ success: false, message: "Order not found" });
+  }
+
+  order.orderStatus = orderStatus;
+  if (trackingNumber) {
+    order.trackingNumber = trackingNumber;
+  }
+
+  if (orderStatus === "delivered") {
+    order.isDelivered = true;
+    order.deliveredAt = new Date();
+  }
+
+  await order.save();
+
+  // Notify customer
+  await Notification.create({
+    user: order.user,
+    title: `Order #${order._id.toString().slice(-6).toUpperCase()} Updated`,
+    message: `Your order status is now ${orderStatus.toUpperCase()}.${trackingNumber ? ` Tracking: ${trackingNumber}` : ""}`
+  });
+
+  res.status(200).json({
+    success: true,
+    message: `Order status updated to ${orderStatus}`,
+    order
+  });
+});
+
+// ========================================
+// GET ALL PRODUCTS (Admin only)
+// ========================================
+const getAdminProducts = asyncHandler(async (req, res) => {
+  const { search, category, page = 1, limit = 20 } = req.query;
+  const filter = { isDeleted: false };
+
+  if (search) {
+    filter.title = { $regex: search, $options: "i" };
+  }
+  if (category && category !== "all") {
+    filter.category = category;
+  }
+
+  const totalProducts = await Product.countDocuments(filter);
+  const products = await Product.find(filter)
+    .populate("seller", "username storeName email")
+    .populate("category", "name")
+    .sort({ createdAt: -1 })
+    .skip((Number(page) - 1) * Number(limit))
+    .limit(Number(limit));
+
+  res.status(200).json({
+    success: true,
+    totalProducts,
+    products
+  });
+});
+
+// ========================================
+// TOGGLE PRODUCT STATUS (Admin only)
+// ========================================
+const toggleAdminProductStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { action } = req.body; // "toggleFeatured" | "toggleDelete"
+
+  const product = await Product.findById(id);
+  if (!product) {
+    return res.status(404).json({ success: false, message: "Product not found" });
+  }
+
+  if (action === "toggleFeatured") {
+    product.isFeatured = !product.isFeatured;
+  } else if (action === "toggleDelete") {
+    product.isDeleted = !product.isDeleted;
+  }
+
+  await product.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Product status updated",
+    product
+  });
+});
+
+// ========================================
+// SYSTEM SETTINGS CONTROLLERS
+// ========================================
+const getSystemSettings = asyncHandler(async (req, res) => {
+  let settings = await SystemSettings.findOne();
+  if (!settings) {
+    settings = await SystemSettings.create({});
+  }
+  res.status(200).json({
+    success: true,
+    settings
+  });
+});
+
+const updateSystemSettings = asyncHandler(async (req, res) => {
+  let settings = await SystemSettings.findOne();
+  if (!settings) {
+    settings = new SystemSettings(req.body);
+  } else {
+    Object.assign(settings, req.body);
+  }
+  await settings.save();
+
+  res.status(200).json({
+    success: true,
+    message: "System settings updated successfully",
+    settings
+  });
+});
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -393,5 +560,11 @@ module.exports = {
   getInventoryAnalytics,
   adjustProductInventory,
   getSellerRequests,
-  moderateSellerRequest
+  moderateSellerRequest,
+  getAdminOrders,
+  updateAdminOrderStatus,
+  getAdminProducts,
+  toggleAdminProductStatus,
+  getSystemSettings,
+  updateSystemSettings
 };
