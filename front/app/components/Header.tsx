@@ -712,10 +712,10 @@ export const Header: React.FC = () => {
         <div className="mx-auto flex max-w-9xl w-full items-center justify-between px-8 py-0.5 text-sm">
           <div className="flex items-center gap-6 h-12">
             <LinkNext href="/products" className="text-foreground text-xs hover:text-gold transition-colors font-bold relative h-full flex items-center">
-              {t('header.all_categories', 'All Collections')}
+              {t('All Collections')}
             </LinkNext>
             <LinkNext href="/stores" className="text-foreground text-xs hover:text-gold transition-colors font-bold relative h-full flex items-center">
-              {t('nav.stores', 'Flagship Stores')}
+              {t('Stores')}
             </LinkNext>
             
             {categoriesData?.categories &&
@@ -914,14 +914,14 @@ export const Header: React.FC = () => {
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-3.5 rounded-xl bg-card-bg/40 border border-card-border text-sm font-bold hover:border-gold transition-all"
               >
-                {t('header.shop_all', 'All Products')}
+                {t('All Products')}
               </LinkNext>
               <LinkNext 
                 href="/stores" 
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-3.5 rounded-xl bg-card-bg/40 border border-card-border text-sm font-bold hover:border-gold transition-all"
               >
-                {t('nav.stores', 'Flagship Stores')}
+                {t('Stores')}
               </LinkNext>
               {categoriesData?.categories &&
                 categoriesData.categories.map((cat: any) => (

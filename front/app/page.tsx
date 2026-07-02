@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { useTranslation } from "react-i18next";
 
 type StoreProduct = {
   _id: string;
@@ -280,7 +281,7 @@ export default function Home() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const [email, setEmail] = useState("");
-
+  const {t} = useTranslation();
   // Debounce search query
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -462,16 +463,16 @@ export default function Home() {
           <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-24">
             <div className="relative z-10 flex flex-col gap-8">
               <div className="inline-flex w-fit items-center gap-2 rounded-full border border-card-border bg-card-bg/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-gold shadow-sm backdrop-blur">
-                <Sparkles className="h-3.5 w-3.5" /> Premium storefront, rebuilt as a brand experience
+                <Sparkles className="h-3.5 w-3.5" />{t(" Premium storefront, rebuilt as a brand experience")}
               </div>
 
               <div className="flex flex-col gap-5">
-                <p className="text-sm font-semibold uppercase tracking-[0.32em] text-muted">Shop Premium Collective</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.32em] text-muted">{t("Shop Premium Collective")}</p>
                 <h1 className="max-w-3xl font-serif text-5xl font-semibold leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">
-                  A commerce homepage designed to feel like a flagship launch.
+                  {t("A commerce homepage designed to feel like a flagship launch.")}
                 </h1>
                 <p className="max-w-2xl text-lg leading-8 text-muted sm:text-xl">
-                  Editorial storytelling, premium visual hierarchy, trust-led messaging, and real commerce actions in one polished landing page. Built to convert, not just decorate.
+                  {t("Editorial storytelling, premium visual hierarchy, trust-led messaging, and real commerce actions in one polished landing page. Built to convert, not just decorate.")}
                 </p>
               </div>
 
@@ -480,7 +481,7 @@ export default function Home() {
                 <form onSubmit={handleSearchSubmit} className="relative w-full">
                   <input
                     type="text"
-                    placeholder="Search for premium products, brands, or articles..."
+                    placeholder={t("Search for premium products, brands, or articles...")}
                     value={searchQuery}
                     onChange={(e) => {
                       setSearchQuery(e.target.value);
@@ -494,7 +495,7 @@ export default function Home() {
                     type="submit"
                     className="absolute right-2 top-1/2 h-10 -translate-y-1/2 rounded-full bg-gold/10 px-5 text-xs font-semibold text-gold border border-gold/20 hover:bg-gold hover:text-white transition-colors cursor-pointer"
                   >
-                    Search
+                    {t("Search")}
                   </button>
                 </form>
 
@@ -508,7 +509,7 @@ export default function Home() {
                     {!searchQuery.trim() && trendingSearchesData?.trending && trendingSearchesData.trending.length > 0 && (
                       <div>
                         <div className="px-3 py-1.5 text-xs font-bold text-gold/80 tracking-wider uppercase flex items-center gap-1.5 mb-2">
-                          <Sparkles className="h-3.5 w-3.5" /> Trending Searches
+                          <Sparkles className="h-3.5 w-3.5" /> {t("Trending Searches")}
                         </div>
                         <div className="flex flex-wrap gap-2 px-3 pb-2">
                           {trendingSearchesData.trending.map((t: any, idx: number) => (
@@ -539,7 +540,7 @@ export default function Home() {
                         if (!hasProducts && !hasKeywords) {
                           return (
                             <div className="text-center py-6 text-xs text-muted">
-                              No matches found for "{searchQuery}"
+                              {t("No matches found for")} "{searchQuery}"
                             </div>
                           );
                         }
@@ -550,7 +551,7 @@ export default function Home() {
                             {hasKeywords && (
                               <div className="md:col-span-1 border-r border-card-border/40 pr-4">
                                 <div className="px-2 py-1 text-xs font-bold text-gold/80 tracking-wider uppercase mb-2">
-                                  Suggested Matches
+                                  {t("Suggested Matches")}
                                 </div>
                                 <ul className="space-y-1">
                                   {suggestions.keywords.map((item: any, idx: number) => (
@@ -577,7 +578,7 @@ export default function Home() {
                             {hasProducts && (
                               <div className={`${hasKeywords ? 'md:col-span-2' : 'md:col-span-3'}`}>
                                 <div className="px-2 py-1 text-xs font-bold text-gold/80 tracking-wider uppercase mb-2">
-                                  Matching Products
+                                  {t("Matching Products")}
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                   {suggestions.products.map((p: any) => (
@@ -591,7 +592,7 @@ export default function Home() {
                                         {p.image ? (
                                           <img src={p.image} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                         ) : (
-                                          <div className="w-full h-full bg-foreground/5 flex items-center justify-center text-[10px] text-muted font-bold">PREMIUM</div>
+                                          <div className="w-full h-full bg-foreground/5 flex items-center justify-center text-[10px] text-muted font-bold">{t("PREMIUM")}</div>
                                         )}
                                       </div>
                                       <div className="min-w-0 flex-grow">
@@ -616,28 +617,28 @@ export default function Home() {
                       })()
                     ) : searchQuery.trim().length >= 2 ? (
                       <div className="text-center py-6 text-xs text-muted">
-                        Searching suggestions...
+                        {t("Searching suggestions...")}
                       </div>
                     ) : null}
                   </div>
                 )}
 
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted pl-4">
-                  <span className="font-semibold uppercase tracking-[0.1em] text-gold">Trending:</span>
-                  <Link href="/products?search=Vase" className="hover:underline">Vase</Link>
+                  <span className="font-semibold uppercase tracking-[0.1em] text-gold">{t("Trending:")}</span>
+                  <Link href="/products?search=Vase" className="hover:underline">{t("Vase")}</Link>
                   <span>•</span>
-                  <Link href="/products?search=Watch" className="hover:underline">Watch</Link>
+                  <Link href="/products?search=Watch" className="hover:underline">{t("Watch")}</Link>
                   <span>•</span>
-                  <Link href="/products?search=Ring" className="hover:underline">Ring</Link>
+                  <Link href="/products?search=Ring" className="hover:underline">{t("Ring")}</Link>
                 </div>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row mt-2">
                 <Link href="/products" className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-foreground px-7 text-sm font-semibold text-background shadow-lg shadow-black/10 transition-all hover:-translate-y-0.5 hover:bg-gold hover:text-luxury-white">
-                  Explore the catalog <ArrowRight className="h-4 w-4" />
+                  {t("Explore the catalog")} <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link href="/categories" className="inline-flex h-14 items-center justify-center gap-2 rounded-full border border-card-border bg-card-bg/90 px-7 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:border-gold/40 hover:bg-muted-light">
-                  Browse collections
+                  {t("Browse collections")}
                 </Link>
               </div>
             </div>
@@ -671,11 +672,11 @@ export default function Home() {
 
                       <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-black/65 p-5 text-white backdrop-blur-md z-10">
                         <div className="flex flex-col gap-2">
-                          <div className="text-xs uppercase tracking-[0.28em] text-white/60">Featured collection</div>
+                          <div className="text-xs uppercase tracking-[0.28em] text-white/60">{t("Featured collection")}</div>
                           <h2 className="font-serif text-2xl">{heroSlides[activeSlide].title}</h2>
                           <p className="text-xs text-white/80 font-light leading-relaxed">{heroSlides[activeSlide].description}</p>
                           <Link href={heroSlides[activeSlide].link} className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.25em] text-gold hover:text-gold-hover transition-colors">
-                            View Collection <ArrowRight className="h-3.5 w-3.5" />
+                            {t("View Collection")} <ArrowRight className="h-3.5 w-3.5" />
                           </Link>
                         </div>
                       </div>
@@ -704,11 +705,11 @@ export default function Home() {
         <section className="border-b border-card-border bg-card-bg/60">
           <div className="mx-auto max-w-7xl px-6 py-8">
             <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted">
-              <span className="uppercase tracking-[0.3em] text-gold">Trusted by premium shoppers</span>
+              <span className="uppercase tracking-[0.3em] text-gold">{t("Trusted by premium shoppers")}</span>
               <div className="flex flex-wrap items-center gap-4">
-                <span className="inline-flex items-center gap-2"><Globe2 className="h-4 w-4 text-gold" /> Worldwide shipping</span>
-                <span className="inline-flex items-center gap-2"><Clock3 className="h-4 w-4 text-gold" /> 24/7 support desk</span>
-                <span className="inline-flex items-center gap-2"><Banknote className="h-4 w-4 text-gold" /> Secure online payments</span>
+                <span className="inline-flex items-center gap-2"><Globe2 className="h-4 w-4 text-gold" /> {t("Worldwide shipping")}</span>
+                <span className="inline-flex items-center gap-2"><Clock3 className="h-4 w-4 text-gold" /> {t("24/7 support desk")}</span>
+                <span className="inline-flex items-center gap-2"><Banknote className="h-4 w-4 text-gold" /> {t("Secure online payments")}</span>
               </div>
             </div>
           </div>
@@ -718,14 +719,14 @@ export default function Home() {
         <section className="mx-auto max-w-7xl px-6 py-20">
           <div className="mb-12 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">Collections</p>
-              <h2 className="mt-2 font-serif text-4xl font-semibold">Editorial categories with a real sense of place.</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">{t("Collections")}</p>
+              <h2 className="mt-2 font-serif text-4xl font-semibold">{t("Editorial categories with a real sense of place.")}</h2>
               <p className="mt-3 text-base leading-7 text-muted">
-                Each collection card is designed like a magazine cover, giving the store a distinct visual rhythm instead of a generic catalog grid.
+                {t("Each collection card is designed like a magazine cover, giving the store a distinct visual rhythm instead of a generic catalog grid.")}
               </p>
             </div>
             <Link href="/categories" className="group inline-flex items-center gap-2 text-sm font-semibold text-gold transition-colors hover:text-gold-hover">
-              See all categories <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              {t("See all categories")} <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
 
@@ -740,12 +741,12 @@ export default function Home() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
                 <div className="absolute inset-x-0 bottom-0 p-6 text-white">
                   <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/75 backdrop-blur-md">
-                    <Camera className="h-3.5 w-3.5 text-gold" /> Featured collection
+                    <Camera className="h-3.5 w-3.5 text-gold" /> {t("Featured collection")}
                   </div>
                   <h3 className="font-serif text-xl font-semibold">{category.name}</h3>
-                  <p className="mt-2 line-clamp-1 text-xs leading-6 text-white/75">{category.description || "A curated edit built to feel premium, tactile, and easy to browse."}</p>
+                  <p className="mt-2 line-clamp-1 text-xs leading-6 text-white/75">{category.description || t("A curated edit built to feel premium, tactile, and easy to browse.")}</p>
                   <div className="mt-5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-gold transition-colors group-hover:text-gold-hover">
-                    Open collection <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                    {t("Open collection")} <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                   </div>
                 </div>
               </Link>
@@ -757,8 +758,8 @@ export default function Home() {
         <section className="border-y border-card-border bg-[linear-gradient(180deg,rgba(230,210,184,0.16),transparent)]">
           <div className="mx-auto max-w-7xl px-6 py-20">
             <div className="mb-12 max-w-2xl">
-              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">Why it feels premium</p>
-              <h2 className="mt-2 font-serif text-4xl font-semibold">A storefront that explains itself without forcing the user to hunt.</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">{t("Why it feels premium")}</p>
+              <h2 className="mt-2 font-serif text-4xl font-semibold">{t("A storefront that explains itself without forcing the user to hunt.")}</h2>
             </div>
 
             <div className="grid gap-6 lg:grid-cols-3">
@@ -783,31 +784,31 @@ export default function Home() {
           <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="max-w-xl">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-error/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-error border border-error/10">
-                <Zap className="h-3 w-3 fill-error" /> Limited Time Event
+                <Zap className="h-3 w-3 fill-error" /> {t("Limited Time Event")}
               </span>
-              <h2 className="mt-4 font-serif text-4xl font-semibold">Flash Sales & Exquisite Offers</h2>
+              <h2 className="mt-4 font-serif text-4xl font-semibold">{t("Flash Sales & Exquisite Offers")}</h2>
               <p className="mt-3 text-sm leading-relaxed text-muted font-light">
-                High-end creations, allocated with temporary private discounts. Price adjustments expire when the timer hits zero.
+                {t("High-end creations, allocated with temporary private discounts. Price adjustments expire when the timer hits zero.")}
               </p>
             </div>
 
             {/* Countdown timer */}
             <div className="flex items-center gap-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-muted mr-2">Time Remaining:</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-muted mr-2">{t("Time Remaining:")}</span>
               <div className="flex items-center gap-2">
                 <div className="flex flex-col items-center justify-center h-12 w-12 rounded-xl bg-luxury-black border border-white/10 text-white shadow-lg">
                   <span className="text-sm font-bold font-serif">{String(timeLeft.hours).padStart(2, '0')}</span>
-                  <span className="text-[8px] uppercase tracking-wider text-muted">Hrs</span>
+                  <span className="text-[8px] uppercase tracking-wider text-muted">{t("Hrs")}</span>
                 </div>
                 <span className="font-bold text-gold">:</span>
                 <div className="flex flex-col items-center justify-center h-12 w-12 rounded-xl bg-luxury-black border border-white/10 text-white shadow-lg">
                   <span className="text-sm font-bold font-serif">{String(timeLeft.minutes).padStart(2, '0')}</span>
-                  <span className="text-[8px] uppercase tracking-wider text-muted">Min</span>
+                  <span className="text-[8px] uppercase tracking-wider text-muted">{t("Min")}</span>
                 </div>
                 <span className="font-bold text-gold">:</span>
                 <div className="flex flex-col items-center justify-center h-12 w-12 rounded-xl bg-luxury-black border border-white/10 text-white shadow-lg">
                   <span className="text-sm font-bold text-gold animate-pulse font-serif">{String(timeLeft.seconds).padStart(2, '0')}</span>
-                  <span className="text-[8px] uppercase tracking-wider text-muted">Sec</span>
+                  <span className="text-[8px] uppercase tracking-wider text-muted">{t("Sec")}</span>
                 </div>
               </div>
             </div>
@@ -826,7 +827,7 @@ export default function Home() {
                       className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                     />
                     <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4 text-white z-10">
-                      <span className="rounded-full bg-error px-3 py-1 text-[9px] font-bold uppercase tracking-widest shadow">SAVE {discountPercent}%</span>
+                      <span className="rounded-full bg-error px-3 py-1 text-[9px] font-bold uppercase tracking-widest shadow">{t("SAVE")} {discountPercent}%</span>
                       
                       {/* Heart Toggle Overlay */}
                       <button
@@ -853,7 +854,7 @@ export default function Home() {
                       if (isProductOwner) {
                         return (
                           <div className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider text-gold bg-background/95 shadow-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-full border border-gold/25 select-none z-10">
-                            <Lock className="h-3 w-3" /> Owner Account
+                            <Lock className="h-3 w-3" /> {t("Owner Account")}
                           </div>
                         );
                       }
@@ -864,7 +865,7 @@ export default function Home() {
                           disabled={addingId === product._id}
                           className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white/92 text-xs font-semibold uppercase tracking-[0.24em] text-luxury-black opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white disabled:opacity-70 cursor-pointer z-10"
                         >
-                          {addingId === product._id ? "Adding..." : <><PackageCheck className="h-3.5 w-3.5" /> Claim Offer</>}
+                          {addingId === product._id ? t("Adding...") : <><PackageCheck className="h-3.5 w-3.5" /> {t("Claim Offer")}</>}
                         </button>
                       );
                     })()}
@@ -872,7 +873,7 @@ export default function Home() {
 
                   <div className="flex flex-col gap-4 p-5 flex-grow justify-between">
                     <div>
-                      <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-gold">{product.brand || "Atelier Paris"}</div>
+                      <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-gold">{product.brand || t("Atelier Paris")}</div>
                       <Link href={product.slug ? `/product/${product.slug}` : `/products/${product._id}`} className="mt-1 block font-serif text-lg font-semibold leading-snug text-foreground transition-colors hover:text-gold line-clamp-1">
                         {product.title}
                       </Link>
@@ -890,8 +891,8 @@ export default function Home() {
                       {/* Stock availability indicator */}
                       <div className="flex flex-col gap-1.5 mt-1">
                         <div className="flex justify-between text-[10px] font-semibold uppercase tracking-wider text-muted">
-                          <span>Stock Remaining</span>
-                          <span className="text-error font-bold">{product.stock || 3} left</span>
+                          <span>{t("Stock Remaining")}</span>
+                          <span className="text-error font-bold">{product.stock || 3} {t("left")}</span>
                         </div>
                         <div className="w-full h-1 bg-card-border rounded-full overflow-hidden">
                           <div className="h-full bg-error rounded-full" style={{ width: `${stockPercentage}%` }} />
@@ -909,14 +910,14 @@ export default function Home() {
         <section className="mx-auto max-w-7xl px-6 py-20">
           <div className="mb-12 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">Trending Products</p>
-              <h2 className="mt-2 font-serif text-4xl font-semibold">The pieces in highest demand.</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">{t("Trending Products")}</p>
+              <h2 className="mt-2 font-serif text-4xl font-semibold">{t("The pieces in highest demand.")}</h2>
               <p className="mt-3 text-base leading-7 text-muted">
-                Explore items currently trending among our boutique shoppers.
+                {t("Explore items currently trending among our boutique shoppers.")}
               </p>
             </div>
             <Link href="/products" className="group inline-flex items-center gap-2 text-sm font-semibold text-gold transition-colors hover:text-gold-hover">
-              Browse everything <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              {t("Browse everything")} <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
 
@@ -944,7 +945,7 @@ export default function Home() {
                       className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                     />
                     <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4 text-white z-10">
-                      <span className="rounded-full bg-black/45 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] backdrop-blur-md">{product.brand || "Designer edit"}</span>
+                      <span className="rounded-full bg-black/45 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] backdrop-blur-md">{product.brand || t("Designer edit")}</span>
                       
                       {/* Heart Toggle Overlay */}
                       <button
@@ -971,7 +972,7 @@ export default function Home() {
                       if (isProductOwner) {
                         return (
                           <div className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider text-gold bg-background/95 shadow-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-full border border-gold/25 select-none z-10">
-                            <Lock className="h-3 w-3" /> Owner Account
+                            <Lock className="h-3 w-3" /> {t("Owner Account")}
                           </div>
                         );
                       }
@@ -982,7 +983,7 @@ export default function Home() {
                           disabled={addingId === product._id}
                           className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white/92 text-xs font-semibold uppercase tracking-[0.24em] text-luxury-black opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white disabled:opacity-70 cursor-pointer z-10"
                         >
-                          {addingId === product._id ? "Adding..." : <><PackageCheck className="h-3.5 w-3.5" /> Quick add</>}
+                          {addingId === product._id ? t("Adding...") : <><PackageCheck className="h-3.5 w-3.5" /> {t("Quick add")}</>}
                         </button>
                       );
                     })()}
@@ -990,7 +991,7 @@ export default function Home() {
 
                   <div className="flex flex-col gap-4 p-4">
                     <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">{product.brand || "Premium collection"}</div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">{product.brand || t("Premium collection")}</div>
                       <Link href={product.slug ? `/product/${product.slug}` : `/products/${product._id}`} className="mt-1 block font-serif text-lg font-semibold leading-snug text-foreground transition-colors hover:text-gold">
                         {product.title}
                       </Link>
@@ -1006,7 +1007,7 @@ export default function Home() {
 
                     <div className="flex items-center gap-3 text-xs uppercase tracking-[0.22em] text-muted">
                       <Zap className="h-3.5 w-3.5 text-gold" />
-                      Ready for immediate checkout
+                      {t("Ready for immediate checkout")}
                     </div>
                   </div>
                 </article>
@@ -1019,14 +1020,14 @@ export default function Home() {
         <section className="mx-auto max-w-7xl px-6 py-20 border-t border-card-border/50">
           <div className="mb-12 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">New Arrivals</p>
-              <h2 className="mt-2 font-serif text-4xl font-semibold">Fresh curation, just listed.</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">{t("New Arrivals")}</p>
+              <h2 className="mt-2 font-serif text-4xl font-semibold">{t("Fresh curation, just listed.")}</h2>
               <p className="mt-3 text-base leading-7 text-muted">
-                Be the first to secure our newest design entries and limited boutique drops.
+                {t("Be the first to secure our newest design entries and limited boutique drops.")}
               </p>
             </div>
             <Link href="/products?sort=newest" className="group inline-flex items-center gap-2 text-sm font-semibold text-gold transition-colors hover:text-gold-hover">
-              Browse new arrivals <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              {t("Browse new arrivals")} <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
 
@@ -1054,7 +1055,7 @@ export default function Home() {
                       className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                     />
                     <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4 text-white z-10">
-                      <span className="rounded-full bg-black/45 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] backdrop-blur-md">{product.brand || "Designer edit"}</span>
+                      <span className="rounded-full bg-black/45 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] backdrop-blur-md">{product.brand || t("Designer edit")}</span>
                       
                       {/* Heart Toggle Overlay */}
                       <button
@@ -1081,7 +1082,7 @@ export default function Home() {
                       if (isProductOwner) {
                         return (
                           <div className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider text-gold bg-background/95 shadow-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-full border border-gold/25 select-none z-10">
-                            <Lock className="h-3 w-3" /> Owner Account
+                            <Lock className="h-3 w-3" /> {t("Owner Account")}
                           </div>
                         );
                       }
@@ -1092,7 +1093,7 @@ export default function Home() {
                           disabled={addingId === product._id}
                           className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white/92 text-xs font-semibold uppercase tracking-[0.24em] text-luxury-black opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white disabled:opacity-70 cursor-pointer z-10"
                         >
-                          {addingId === product._id ? "Adding..." : <><PackageCheck className="h-3.5 w-3.5" /> Quick add</>}
+                          {addingId === product._id ? t("Adding...") : <><PackageCheck className="h-3.5 w-3.5" /> {t("Quick add")}</>}
                         </button>
                       );
                     })()}
@@ -1116,7 +1117,7 @@ export default function Home() {
 
                     <div className="flex items-center gap-3 text-xs uppercase tracking-[0.22em] text-muted">
                       <Zap className="h-3.5 w-3.5 text-gold" />
-                      Ready for immediate checkout
+                      {t("Ready for immediate checkout")}
                     </div>
                   </div>
                 </article>
@@ -1130,14 +1131,14 @@ export default function Home() {
           <section className="mx-auto max-w-7xl px-6 py-20 border-t border-card-border/50 bg-[radial-gradient(circle_at_top_left,_rgba(197,168,128,0.03),_transparent_35%)]">
             <div className="mb-12 flex justify-between items-end">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">Tailored For You</p>
-                <h2 className="mt-2 font-serif text-4xl font-semibold">Based on Your Recent Browsing</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">{t("Tailored For You")}</p>
+                <h2 className="mt-2 font-serif text-4xl font-semibold">{t("Based on Your Recent Browsing")}</h2>
                 <p className="mt-3 text-sm text-muted font-light">
-                  Pick up right where you left off with these premium selections.
+                  {t("Pick up right where you left off with these premium selections.")}
                 </p>
               </div>
               <Link href="/products" className="group inline-flex items-center gap-2 text-sm font-semibold text-gold transition-colors hover:text-gold-hover">
-                Explore Full Catalog <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+               {t("Explore Full Catalog")} <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </div>
 
@@ -1151,7 +1152,7 @@ export default function Home() {
                       className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                     />
                     <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4 text-white z-10">
-                      <span className="rounded-full bg-black/45 px-3 py-1 text-[9px] font-semibold uppercase tracking-widest backdrop-blur-md">{product.brand || "Designer edit"}</span>
+                      <span className="rounded-full bg-black/45 px-3 py-1 text-[9px] font-semibold uppercase tracking-widest backdrop-blur-md">{product.brand || t("Designer edit")}</span>
                       
                       {/* Heart Toggle Overlay */}
                       <button
@@ -1178,7 +1179,7 @@ export default function Home() {
                       if (isProductOwner) {
                         return (
                           <div className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider text-gold bg-background/95 shadow-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-full border border-gold/25 select-none z-10">
-                            <Lock className="h-3 w-3" /> Owner Account
+                            <Lock className="h-3 w-3" /> {t("Owner Account")}
                           </div>
                         );
                       }
@@ -1189,7 +1190,7 @@ export default function Home() {
                           disabled={addingId === product._id}
                           className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white/92 text-xs font-semibold uppercase tracking-[0.24em] text-luxury-black opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white disabled:opacity-70 cursor-pointer z-10"
                         >
-                          {addingId === product._id ? "Adding..." : <><PackageCheck className="h-3.5 w-3.5" /> Quick Add</>}
+                          {addingId === product._id ? t("Adding...") : <><PackageCheck className="h-3.5 w-3.5" /> {t("Quick Add")}</>}
                         </button>
                       );
                     })()}
@@ -1221,10 +1222,10 @@ export default function Home() {
         <section className="mx-auto max-w-7xl px-6 py-20 border-t border-card-border/50">
           <div className="mb-12 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">Verified Partners</p>
-              <h2 className="mt-2 font-serif text-4xl font-semibold">Flagship Design Houses & Sellers</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">{t("Verified Partners")}</p>
+              <h2 className="mt-2 font-serif text-4xl font-semibold">{t("Flagship Design Houses & Sellers")}</h2>
               <p className="mt-3 text-base leading-7 text-muted">
-                Shop directly from verified independent creators, local designers, and premium boutiques.
+                {t("Shop directly from verified independent creators, local designers, and premium boutiques.")}
               </p>
             </div>
           </div>
@@ -1249,7 +1250,7 @@ export default function Home() {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-gold">{seller.brandName || "Designer Boutique"}</div>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-gold">{seller.brandName || t("Designer Boutique")}</div>
                         <h3 className="font-serif text-lg font-semibold text-foreground truncate mt-0.5">{seller.storeName}</h3>
                         <div className="flex items-center gap-2 mt-1.5">
                           <div className="flex items-center gap-1 text-xs font-medium">
@@ -1266,13 +1267,13 @@ export default function Home() {
                   
                   <div className="flex items-center justify-between border-t border-card-border/50 pt-4 mt-auto">
                     <span className="text-xs text-muted inline-flex items-center gap-1.5">
-                      <Clock3 className="h-3.5 w-3.5 text-gold" /> {seller.responseTime || "Within 24 hours"}
+                      <Clock3 className="h-3.5 w-3.5 text-gold" /> {seller.responseTime || t("Within 24 hours")}
                     </span>
                     <Link
                       href={`/store/${seller.storeSlug}`}
                       className="inline-flex h-9 items-center justify-center rounded-full bg-foreground/5 hover:bg-gold hover:text-white px-4 text-xs font-semibold uppercase tracking-[0.15em] text-foreground transition-all"
                     >
-                      Visit Store
+                      {t("Visit Store")}
                     </Link>
                   </div>
                 </div>
@@ -1285,14 +1286,14 @@ export default function Home() {
         <section className="mx-auto max-w-7xl px-6 py-20 border-t border-card-border/50">
           <div className="mb-12 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">The Editorial</p>
-              <h2 className="mt-2 font-serif text-4xl font-semibold">Insights, curation & designer stories.</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">{t("The Editorial")}</p>
+              <h2 className="mt-2 font-serif text-4xl font-semibold">{t("Insights, curation & designer stories.")}</h2>
               <p className="mt-3 text-base leading-7 text-muted">
-                Read articles, trend reports, and deep-dives written by our verified design partners.
+                {t("Read articles, trend reports, and deep-dives written by our verified design partners.")}
               </p>
             </div>
             <Link href="/blog" className="group inline-flex items-center gap-2 text-sm font-semibold text-gold transition-colors hover:text-gold-hover">
-              Read all articles <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              {t("Read all articles")} <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
 
@@ -1328,7 +1329,7 @@ export default function Home() {
                     </div>
                     <div className="border-t border-card-border/50 pt-4 mt-5">
                       <Link href={`/article/${article._id}`} className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-gold transition-colors hover:text-gold-hover">
-                        Read Story <ArrowRight className="h-3.5 w-3.5" />
+                        {t("Read Story")} <ArrowRight className="h-3.5 w-3.5" />
                       </Link>
                     </div>
                   </div>
@@ -1343,10 +1344,10 @@ export default function Home() {
           <div className="mx-auto max-w-7xl px-6 py-20">
             <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
               <div className="max-w-xl">
-                <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">How it works</p>
-                <h2 className="mt-2 font-serif text-4xl font-semibold">A clean user journey from discovery to delivery.</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">{t("How it works")}</p>
+                <h2 className="mt-2 font-serif text-4xl font-semibold">{t("A clean user journey from discovery to delivery.")}</h2>
                 <p className="mt-4 text-base leading-7 text-muted">
-                  The structure gives visitors enough information to trust the brand, while keeping the path to shopping obvious and fast.
+                  {t("The structure gives visitors enough information to trust the brand, while keeping the path to shopping obvious and fast.")}
                 </p>
               </div>
 
@@ -1388,8 +1389,8 @@ export default function Home() {
         <section className="mx-auto max-w-7xl px-6 py-20">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-start">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">Client voice</p>
-              <h2 className="mt-2 font-serif text-4xl font-semibold">Proof the experience feels premium in the real world.</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">{t("Client voice")}</p>
+              <h2 className="mt-2 font-serif text-4xl font-semibold">{t("Proof the experience feels premium in the real world.")}</h2>
               <div className="mt-8 grid gap-5">
                 {displayTestimonials.map((item: any) => (
                   <figure key={item.name} className="luxury-card p-6 shadow-sm">
@@ -1411,9 +1412,9 @@ export default function Home() {
 
             <div className="luxury-card overflow-hidden p-8 shadow-sm">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-gold">
-                <Users className="h-4 w-4" /> Help & clarity
+                <Users className="h-4 w-4" /> {t("Help & clarity")}
               </div>
-              <h3 className="mt-4 font-serif text-3xl font-semibold">Questions answered before they become friction.</h3>
+              <h3 className="mt-4 font-serif text-3xl font-semibold">{t("Questions answered before they become friction.")}</h3>
               <div className="mt-8 space-y-5">
                 {faqs.map((faq) => (
                   <div key={faq.question} className="rounded-2xl border border-card-border bg-card-bg/80 p-5">
@@ -1425,10 +1426,10 @@ export default function Home() {
 
               <div className="mt-8 grid gap-3 rounded-[24px] bg-[linear-gradient(135deg,rgba(197,168,128,0.14),rgba(230,210,184,0.08))] p-6">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-gold">
-                  <Search className="h-4 w-4" /> Stay discoverable
+                  <Search className="h-4 w-4" /> {t("Stay discoverable")}
                 </div>
                 <p className="text-sm leading-7 text-muted">
-                  Strong search, editorial story blocks, and direct links to categories make the homepage feel built for browsing as much as buying.
+                  {t("Strong search, editorial story blocks, and direct links to categories make the homepage feel built for browsing as much as buying.")}
                 </p>
               </div>
             </div>
@@ -1442,17 +1443,17 @@ export default function Home() {
             <div className="absolute -left-32 -bottom-32 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
             
             <div className="relative z-10 max-w-2xl mx-auto text-center flex flex-col items-center gap-6">
-              <span className="text-xs font-bold uppercase tracking-[0.32em] text-gold">The Inner Circle</span>
-              <h2 className="font-serif text-3xl md:text-4xl font-semibold">Subscribe for private collections and luxury editorials</h2>
+              <span className="text-xs font-bold uppercase tracking-[0.32em] text-gold">{t("The Inner Circle")}</span>
+              <h2 className="font-serif text-3xl md:text-4xl font-semibold">{t("Subscribe for private collections and luxury editorials")}</h2>
               <p className="text-sm md:text-base leading-relaxed text-muted">
-                Receive invitation-only product drops, designer capsules, and editorial articles directly in your inbox. No spam, just pure curation.
+                {t("Receive invitation-only product drops, designer capsules, and editorial articles directly in your inbox. No spam, just pure curation.")}
               </p>
               
               <form onSubmit={handleNewsletterSubmit} className="w-full max-w-md flex flex-col sm:flex-row gap-3 mt-4">
                 <input
                   type="email"
                   required
-                  placeholder="Enter your email address..."
+                  placeholder={t("Enter your email address...")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="flex-1 h-12 rounded-full border border-card-border bg-card-bg/85 px-6 text-sm focus:border-gold/60 focus:outline-none bg-background text-foreground"
@@ -1461,7 +1462,7 @@ export default function Home() {
                   type="submit"
                   className="h-12 rounded-full bg-foreground hover:bg-gold px-8 text-xs font-semibold uppercase tracking-[0.2em] text-background hover:text-white transition-all whitespace-nowrap"
                 >
-                  Join Now
+                  {t("Join Now")}
                 </button>
               </form>
             </div>
@@ -1474,19 +1475,19 @@ export default function Home() {
             <div className="rounded-[31px] bg-luxury-black px-6 py-10 text-luxury-white sm:px-10">
               <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.32em] text-white/60">Make the first impression count</p>
-                  <h2 className="mt-3 font-serif text-4xl font-semibold sm:text-5xl">A homepage that looks like the brand can compete with major e-commerce players.</h2>
+                  <p className="text-xs font-bold uppercase tracking-[0.32em] text-white/60">{t("Make the first impression count")}</p>
+                  <h2 className="mt-3 font-serif text-4xl font-semibold sm:text-5xl">{t("A homepage that looks like the brand can compete with major e-commerce players.")}</h2>
                   <p className="mt-4 max-w-2xl text-base leading-7 text-white/75">
-                    The new homepage combines a premium visual system with actual shopping behavior: collections, products, trust messages, support, and session persistence.
+                    {t("The new homepage combines a premium visual system with actual shopping behavior: collections, products, trust messages, support, and session persistence.")}
                   </p>
                 </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
                   <Link href="/register" className="inline-flex h-14 items-center justify-center rounded-full bg-white px-7 text-sm font-semibold text-luxury-black transition-all hover:-translate-y-0.5 hover:bg-gold hover:text-luxury-white">
-                    Create an account
+                    {t("Create an account")}
                   </Link>
                   <Link href="/products" className="inline-flex h-14 items-center justify-center rounded-full border border-white/15 bg-white/5 px-7 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-white/10">
-                    Start shopping
+                    {t("Start shopping")}
                   </Link>
                 </div>
               </div>
