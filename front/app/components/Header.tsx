@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "../context/ThemeContext";
 import { useAppDispatch, useAppSelector } from "../../lib/store";
 import { logOut, setCurrency } from "../../lib/authSlice";
+// استيراد هوك الـ Local Storage المخصص
+import useLocalStorage from "../../Custome/LocalStorgeHook"; 
 import {
   useGetCartQuery,
   useGetCategoriesQuery,
@@ -50,16 +52,17 @@ import { languages } from "@/lib/data";
 export const Header: React.FC = () => {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { t, i18n } = useTranslation(); // <-- أضف هذا السطر هنا
+  const { t, i18n } = useTranslation(); 
 
-  
   const { theme, setTheme, resolvedTheme } = useTheme();
-  
   const { user, isAuthenticated, currency } = useAppSelector((state) => state.auth);
+
+  // استخدام الهوك لحفظ العملة وتعيين "EGP" كقيمة افتراضية
+  const { value: storedCurrency, setValue: setStoredCurrency } = useLocalStorage("user_currency", "EGP");
+
   const { data: cartData } = useGetCartQuery(undefined, { skip: !isAuthenticated });
   const { data: wishlistData } = useGetWishlistQuery(undefined, { skip: !isAuthenticated });
   
-  // لغة افتراضية من المصفوفة
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
 
@@ -79,6 +82,13 @@ export const Header: React.FC = () => {
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const notificationsDropdownRef = useRef<HTMLDivElement>(null);
 
+  // عمل مزامنة (Sync) للعملة المحفوظة مع Redux عند تحميل الصفحة لأول مرة
+  useEffect(() => {
+    if (storedCurrency && storedCurrency !== currency) {
+      dispatch(setCurrency(storedCurrency as any));
+    }
+  }, [storedCurrency, currency, dispatch]);
+
   // Debounce search query
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -88,22 +98,20 @@ export const Header: React.FC = () => {
   }, [searchQuery]);
   
   const [logoutCall] = useLogoutMutation();
-  // تحديث الـ State لتقرأ اللغة الحالية المخزنة أو الافتراضية بالـ UpperCase
+  
   const [currentLangCode, setCurrentLangCode] = useState(
     i18n.language ? i18n.language.toUpperCase() : "EN"
   );
   
-  // لضمان تزامن الـ State لو تم تغيير اللغة من أي مكان آخر أو عند أول تحميل
   useEffect(() => {
     if (i18n.language) {
       setCurrentLangCode(i18n.language.toUpperCase());
-      
-      // كود إضافي اختياري: لقلب اتجاه الصفحة تلقائياً RTL / LTR بناءً على اللغة
       const dir = i18n.language === "ar" ? "rtl" : "ltr";
       document.documentElement.dir = dir;
       document.documentElement.lang = i18n.language;
     }
   }, [i18n.language]);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -205,8 +213,6 @@ export const Header: React.FC = () => {
   };
 
   const cartItemsCount = isAuthenticated ? (cartData?.cart?.totalItems ?? 0) : guestCartCount;
-
-  // إيجاد بيانات اللغة الحالية المختارة لعرض علمها واسمها في الهيدر
   const activeLanguage = languages.find(l => l.value === currentLangCode) || languages[0];
 
   return (
@@ -248,7 +254,6 @@ export const Header: React.FC = () => {
               ref={suggestionsRef}
               className="absolute left-0 mt-2 w-full rounded-2xl border border-card-border bg-card-bg/95 p-4 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in slide-in-from-top-1 duration-200"
             >
-              {/* Case 1: Empty input -> Show Trending Searches */}
               {!searchQuery.trim() && trendingSearchesData?.trending && trendingSearchesData.trending.length > 0 && (
                 <div>
                   <div className="px-3 py-1.5 text-xs font-bold text-gold/80 tracking-wider uppercase flex items-center gap-1.5 mb-2">
@@ -273,7 +278,6 @@ export const Header: React.FC = () => {
                 </div>
               )}
 
-              {/* Case 2: Active input and we have suggestions */}
               {searchQuery.trim().length >= 2 && suggestionsData?.suggestions ? (
                 (() => {
                   const suggestions = suggestionsData.suggestions || { products: [], keywords: [] };
@@ -290,7 +294,6 @@ export const Header: React.FC = () => {
 
                   return (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {/* Keywords Column */}
                       {hasKeywords && (
                         <div className="md:col-span-1 border-r border-card-border/40 pr-4">
                           <div className="px-2 py-1 text-xs font-bold text-gold/80 tracking-wider uppercase mb-2">
@@ -317,7 +320,6 @@ export const Header: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Products Column */}
                       {hasProducts && (
                         <div className={`${hasKeywords ? 'md:col-span-2' : 'md:col-span-3'}`}>
                           <div className="px-2 py-1 text-xs font-bold text-gold/80 tracking-wider uppercase mb-2">
@@ -379,7 +381,7 @@ export const Header: React.FC = () => {
             <Search className="h-5 w-5" />
           </button>
 
-          {/* CUSTOM LANGUAGE SELECTOR (احترافي ومطابق للعملة) */}
+          {/* CUSTOM LANGUAGE SELECTOR */}
           <div className="relative hidden md:flex" ref={langDropdownRef}>
             <button
               onClick={() => { setShowLangDropdown(!showLangDropdown); setShowCurrencyDropdown(false); }}
@@ -398,7 +400,7 @@ export const Header: React.FC = () => {
                   <button
                     key={lang.value}
                     onClick={() => {
-                      i18n.changeLanguage(lang.value.toLowerCase()); // <-- سطر التغيير الفعلي
+                      i18n.changeLanguage(lang.value.toLowerCase()); 
                       setCurrentLangCode(lang.value);
                       setShowLangDropdown(false);
                     }}
@@ -414,13 +416,14 @@ export const Header: React.FC = () => {
             )}
           </div>
 
-          {/* CUSTOM CURRENCY SELECTOR */}
+          {/* CUSTOM CURRENCY SELECTOR (تم تحديثه ليدعم التخزين) */}
           <div className="relative hidden md:flex" ref={currencyDropdownRef}>
             <button
               onClick={() => { setShowCurrencyDropdown(!showCurrencyDropdown); setShowLangDropdown(false); }}
               className="flex items-center gap-1 border border-card-border/50 hover:border-gold rounded-full px-3 py-1.5 text-xs font-bold text-foreground bg-card-bg/10 hover:bg-card-bg/30 transition-all cursor-pointer"
             >
-              <span className="tracking-wider">{currency}</span>
+              {/* استخدام حماية mounted لتفادي اختلاف الـ UI بين السيرفر والمتصفح */}
+              <span className="tracking-wider">{mounted ? currency : "EGP"}</span>
               <ChevronDown className={`h-3 w-3 text-muted transition-transform duration-200 ${showCurrencyDropdown ? 'rotate-180' : ''}`} />
             </button>
 
@@ -430,7 +433,8 @@ export const Header: React.FC = () => {
                   <button
                     key={cur}
                     onClick={() => {
-                      dispatch(setCurrency(cur as any));
+                      dispatch(setCurrency(cur as any)); // تحديث Redux
+                      setStoredCurrency(cur);           // تحديث Local Storage يدوياً عبر الهوك
                       setShowCurrencyDropdown(false);
                     }}
                     className={`flex w-full items-center px-3 py-2 text-xs font-semibold rounded-lg text-left transition-all hover:bg-foreground/5 ${currency === cur ? 'text-gold bg-gold/5' : 'text-foreground'}`}
@@ -505,7 +509,6 @@ export const Header: React.FC = () => {
                     {unreadNotificationsCount}
                   </span>
                 )}
-                {/* Socket Connection Status Dot */}
                 <span 
                   className={`absolute bottom-0.5 left-0.5 block h-2 w-2 rounded-full ring-1 ring-background ${
                     socketConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
@@ -633,7 +636,7 @@ export const Header: React.FC = () => {
             {isAuthenticated ? (
               <>
                 <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  onClick={() => { setShowUserMenu(!showUserMenu); setShowNotificationsDropdown(false); }}
                   className="flex items-center gap-2 rounded-full border border-card-border bg-card-bg/20 px-4 py-2 hover:border-gold hover:bg-card-bg transition-all duration-300"
                 >
                   <User className="h-4 w-4 text-gold" />
@@ -734,7 +737,6 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Dynamic Mega Menu Dropdown */}
         {activeMegaMenu && categoriesData?.categories && (
           (() => {
             const currentCat = categoriesData.categories.find((c: any) => c._id === activeMegaMenu);
@@ -789,7 +791,6 @@ export const Header: React.FC = () => {
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-x-0 top-[80px] bg-background/95 backdrop-blur-2xl border-b border-card-border shadow-2xl z-40 p-5 space-y-6 animate-in slide-in-from-top duration-300 max-h-[calc(100vh-6rem)] overflow-y-auto">
           
-          {/* Mobile Auth & Account links */}
           <div className="border-b border-card-border/40 pb-4">
             {isAuthenticated ? (
               <div className="bg-card-bg/60 border border-card-border/50 rounded-2xl p-4 space-y-3">
@@ -848,7 +849,7 @@ export const Header: React.FC = () => {
                     <button
                       key={lang.value}
                       onClick={() => {
-                        i18n.changeLanguage(lang.value.toLowerCase()); // <-- سطر التغيير الفعلي
+                        i18n.changeLanguage(lang.value.toLowerCase()); 
                         setCurrentLangCode(lang.value);
                         setShowLangDropdown(false);
                       }}
@@ -864,14 +865,14 @@ export const Header: React.FC = () => {
               )}
             </div>
 
-            {/* MOBILE CURRENCY SELECTOR */}
+            {/* MOBILE CURRENCY SELECTOR (تم تحديثه ليدعم التخزين) */}
             <div className="relative" ref={currencyDropdownRef}>
               <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1.5 px-1">{t('header.currency', 'Currency')}</div>
               <button
                 onClick={() => { setShowCurrencyDropdown(!showCurrencyDropdown); setShowLangDropdown(false); }}
                 className="flex w-full items-center justify-between border border-card-border/60 hover:border-gold rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground bg-card-bg/20 transition-all cursor-pointer"
               >
-                <span className="tracking-wider uppercase">{currency}</span>
+                <span className="tracking-wider uppercase">{mounted ? currency : "EGP"}</span>
                 <ChevronDown className={`h-3 w-3 text-muted transition-transform duration-200 ${showCurrencyDropdown ? 'rotate-180' : ''}`} />
               </button>
 
@@ -881,7 +882,8 @@ export const Header: React.FC = () => {
                     <button
                       key={cur}
                       onClick={() => {
-                        dispatch(setCurrency(cur as any));
+                        dispatch(setCurrency(cur as any)); // تحديث Redux
+                        setStoredCurrency(cur);           // تحديث Local Storage
                         setShowCurrencyDropdown(false);
                       }}
                       className={`flex w-full items-center px-3 py-2.5 text-xs font-semibold rounded-lg text-left transition-all ${currency === cur ? 'text-gold bg-gold/5 font-bold' : 'text-foreground hover:bg-foreground/5'}`}
