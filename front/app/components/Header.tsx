@@ -99,18 +99,13 @@ export const Header: React.FC = () => {
   
   const [logoutCall] = useLogoutMutation();
   
-  const [currentLangCode, setCurrentLangCode] = useState(
-    i18n.language ? i18n.language.toUpperCase() : "EN"
-  );
-  
   useEffect(() => {
-    if (i18n.language) {
-      setCurrentLangCode(i18n.language.toUpperCase());
-      const dir = i18n.language === "ar" ? "rtl" : "ltr";
+    if (mounted && i18n.language) {
+      const dir = i18n.language.toLowerCase() === "ar" ? "rtl" : "ltr";
       document.documentElement.dir = dir;
-      document.documentElement.lang = i18n.language;
+      document.documentElement.lang = i18n.language.toLowerCase();
     }
-  }, [i18n.language]);
+  }, [i18n.language, mounted]);
 
   useEffect(() => {
     setMounted(true);
@@ -213,8 +208,12 @@ export const Header: React.FC = () => {
   };
 
   const cartItemsCount = isAuthenticated ? (cartData?.cart?.totalItems ?? 0) : guestCartCount;
-  const activeLanguage = languages.find(l => l.value === currentLangCode) || languages[0];
+  // القراءة مباشرة من i18n مع حماية الـ mounted لتجنب اختلاف سيرفر/عميل
+  const currentLangNormalized = mounted ? (i18n.language?.toLowerCase() || "en") : "en";
 
+  const activeLanguage = languages.find(
+    (l) => l.value.toLowerCase() === currentLangNormalized
+  ) || languages[0];
   return (
     <header className="sticky top-0 z-50 w-full border-b border-card-border/50 bg-background/70 backdrop-blur-md transition-all duration-300">
       
@@ -396,15 +395,18 @@ export const Header: React.FC = () => {
 
             {showLangDropdown && (
               <div className="absolute right-0 mt-2 w-36 rounded-xl border border-card-border bg-card-bg p-1 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                {/* CUSTOM LANGUAGE SELECTOR (Desktop) */}
                 {languages.map((lang) => (
                   <button
                     key={lang.value}
                     onClick={() => {
                       i18n.changeLanguage(lang.value.toLowerCase()); 
-                      setCurrentLangCode(lang.value);
+                      // حذقنا سطر setCurrentLangCode
                       setShowLangDropdown(false);
                     }}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-left transition-all hover:bg-foreground/5 ${currentLangCode === lang.value ? 'text-gold bg-gold/5' : 'text-foreground'}`}
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg text-left transition-all hover:bg-foreground/5 ${
+                      currentLangNormalized === lang.value.toLowerCase() ? 'text-gold bg-gold/5' : 'text-foreground'
+                    }`}
                   >
                     <div className="w-4 h-3 overflow-hidden rounded-[2px] flex items-center shrink-0 shadow-sm">
                       <Flag code={lang.flag} className="w-full h-full object-cover" />
@@ -845,22 +847,28 @@ export const Header: React.FC = () => {
 
               {showLangDropdown && (
                 <div className="absolute left-0 mt-2 w-full rounded-xl border border-card-border bg-card-bg p-1 shadow-xl z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-                  {languages.map((lang) => (
-                    <button
-                      key={lang.value}
-                      onClick={() => {
-                        i18n.changeLanguage(lang.value.toLowerCase()); 
-                        setCurrentLangCode(lang.value);
-                        setShowLangDropdown(false);
-                      }}
-                      className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-xs font-semibold rounded-lg text-left transition-all ${currentLangCode === lang.value ? 'text-gold bg-gold/5 font-bold' : 'text-foreground hover:bg-foreground/5'}`}
-                    >
-                      <div className="w-4 h-3 overflow-hidden rounded-[2px] flex items-center shrink-0 shadow-sm">
-                        <Flag code={lang.flag} className="w-full h-full object-cover" />
-                      </div>
-                      <span>{lang.label}</span>
-                    </button>
-                  ))}
+                  {/* MOBILE LANGUAGE SELECTOR */}
+                  {showLangDropdown && (
+                    <div className="absolute left-0 mt-2 w-full rounded-xl border border-card-border bg-card-bg p-1 shadow-xl z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                      {languages.map((lang) => (
+                        <button
+                          key={lang.value}
+                          onClick={() => {
+                            i18n.changeLanguage(lang.value.toLowerCase()); 
+                            setShowLangDropdown(false);
+                          }}
+                          className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-xs font-semibold rounded-lg text-left transition-all ${
+                            currentLangNormalized === lang.value.toLowerCase() ? 'text-gold bg-gold/5 font-bold' : 'text-foreground hover:bg-foreground/5'
+                          }`}
+                        >
+                          <div className="w-4 h-3 overflow-hidden rounded-[2px] flex items-center shrink-0 shadow-sm">
+                            <Flag code={lang.flag} className="w-full h-full object-cover" />
+                          </div>
+                          <span>{lang.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
