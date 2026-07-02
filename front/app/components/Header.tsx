@@ -729,7 +729,7 @@ export const Header: React.FC = () => {
                     href={`/products?category=${cat._id}`}
                     className={`text-foreground/90 text-xs hover:text-gold transition-colors h-full flex items-center font-semibold relative ${activeMegaMenu === cat._id ? 'text-gold' : ''}`}
                   >
-                    {cat.name}
+                    {t(cat.name)}
                     {activeMegaMenu === cat._id && (
                       <span className="absolute bottom-0 left-0 w-full h-[3px] bg-gold rounded-full animate-in fade-in duration-200"></span>
                     )}
@@ -931,7 +931,7 @@ export const Header: React.FC = () => {
                     onClick={() => setMobileMenuOpen(false)}
                     className="p-3.5 rounded-xl bg-card-bg/40 border border-card-border text-sm font-semibold hover:border-gold transition-all truncate"
                   >
-                    {cat.name}
+                    (t{cat.name})
                   </LinkNext>
                 ))}
             </div>
