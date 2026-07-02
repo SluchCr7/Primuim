@@ -38,6 +38,7 @@ import {
   GitCompare,  // Compare feature
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 export default function ProductDetailsBySlugPage() {
   const { slug } = useParams();
@@ -373,7 +374,7 @@ export default function ProductDetailsBySlugPage() {
   const displayPrice = activeVariant ? activeVariant.price : product.price;
   const comparePriceVal = product.comparePrice;
   const discountPercent = comparePriceVal ? Math.round(((comparePriceVal - displayPrice) / comparePriceVal) * 100) : 0;
-
+  const { t } = useTranslation()
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
       <Header />
@@ -381,9 +382,9 @@ export default function ProductDetailsBySlugPage() {
       {/* BREADCRUMB NAVIGATION */}
       <div className="border-b border-card-border bg-card-bg/40 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-6 py-4 flex items-center gap-2 text-xs font-medium text-muted">
-          <Link href="/" className="hover:text-gold transition-colors">Home</Link>
+          <Link href="/" className="hover:text-gold transition-colors">{t("Home")}</Link>
           <ChevronRight className="h-3.5 w-3.5 text-card-border" />
-          <Link href="/products" className="hover:text-gold transition-colors">Collections</Link>
+          <Link href="/products" className="hover:text-gold transition-colors">{t("Collections")}</Link>
           <ChevronRight className="h-3.5 w-3.5 text-card-border" />
           <Link href={`/products?category=${product.category?._id}`} className="hover:text-gold transition-colors truncate max-w-[120px]">{product.category?.name || "Category"}</Link>
           {product.subcategory && (
@@ -411,7 +412,7 @@ export default function ProductDetailsBySlugPage() {
             >
               {discountPercent > 0 && (
                 <div className="absolute left-6 top-6 z-10 rounded-full bg-error px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg">
-                  Save {discountPercent}%
+                  {t("Save")} {discountPercent}%
                 </div>
               )}
               
@@ -454,7 +455,7 @@ export default function ProductDetailsBySlugPage() {
               {/* Brand, Title & Ratings */}
               <div>
                 <span className="text-[10px] font-bold tracking-[0.28em] text-gold uppercase flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5" /> {product.brand || "Atelier Paris"}
+                  <Sparkles className="h-3.5 w-3.5" /> {product.brand || t("Atelier Paris")}
                 </span>
                 <h1 className="font-serif text-3xl sm:text-4xl font-semibold mt-2 leading-tight">
                   {product.title}
@@ -466,11 +467,11 @@ export default function ProductDetailsBySlugPage() {
                   </div>
                   <span className="text-muted">|</span>
                   <a href="#reviews" className="text-muted hover:text-gold transition-colors font-medium underline underline-offset-4">
-                    {reviewsCount} Customer Reviews
+                    {reviewsCount} {t("Customer Reviews")}
                   </a>
                   <span className="text-muted">|</span>
-                  <span className={`font-semibold ${product.stock > 0 ? "text-success" : "text-error"}`}>
-                    {product.stock > 0 ? "In Stock" : "Temporarily Archived"}
+                  <span className={`font-semibold ${product.stock > 0 ? t("text-success") : t("text-error")}`}>
+                    {product.stock > 0 ? t("In Stock") : t("Temporarily Archived")}
                   </span>
                 </div>
               </div>
@@ -489,7 +490,7 @@ export default function ProductDetailsBySlugPage() {
 
               {/* Description */}
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted block mb-2">Heritage & Design</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted block mb-2">{t("Heritage & Design")}</span>
                 <p className="text-sm text-muted leading-relaxed font-light">
                   {product.description}
                 </p>
@@ -498,7 +499,7 @@ export default function ProductDetailsBySlugPage() {
               {/* ── NEW: Dynamic Attribute Selector (Color, Size, etc.) ── */}
               {product.attributes && product.attributes.length > 0 && (
                 <div className="flex flex-col gap-3">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Options</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">{t("Options")}</span>
                   <AttributeSelector
                     attributes={product.attributes}
                     variants={product.variants || []}
@@ -519,9 +520,9 @@ export default function ProductDetailsBySlugPage() {
                         >
                           <Sparkles className="h-3.5 w-3.5 text-gold shrink-0" />
                           <span className="text-[10px] font-semibold text-gold">
-                            Recommended size{" "}
+                            {t("Recommended size")}{" "}
                             <strong className="font-bold">{recommendedSize}</strong>{" "}
-                            based on your Fit Profile
+                            {t("based on your Fit Profile")}
                           </span>
                         </motion.div>
                       ) : isAuthenticated ? (
@@ -535,7 +536,7 @@ export default function ProductDetailsBySlugPage() {
                               ? <Footprints className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
                               : <Ruler className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
                             }
-                            Unsure about your size? Use our AI Fitting Guide
+                            {t("Unsure about your size? Use our AI Fitting Guide")}
                             <ArrowRight className="h-3 w-3 shrink-0" />
                           </Link>
                         </motion.div>
@@ -547,7 +548,7 @@ export default function ProductDetailsBySlugPage() {
                             className="inline-flex items-center gap-2 mt-1 px-3.5 py-2 rounded-xl border border-dashed border-gold/40 hover:border-gold hover:bg-gold/5 transition-all text-[10px] font-semibold text-muted hover:text-gold group"
                           >
                             <Ruler className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
-                            Log in to use our AI Fitting Guide
+                            {t("Log in to use our AI Fitting Guide")}
                             <ArrowRight className="h-3 w-3 shrink-0" />
                           </Link>
                         </motion.div>
@@ -560,7 +561,7 @@ export default function ProductDetailsBySlugPage() {
               {/* ── LEGACY: Old variant selector (for products without attributes array) ── */}
               {product.variants && product.variants.length > 0 && (!product.attributes || product.attributes.length === 0) && (
                 <div className="flex flex-col gap-3">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Aesthetic Variant</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">{t("Aesthetic Variant")}</span>
                   <div className="flex flex-wrap gap-2.5">
                     {product.variants.map((v: any) => {
                       const variantLabel = Object.values(v.attributes || {}).join(" / ");
@@ -606,9 +607,9 @@ export default function ProductDetailsBySlugPage() {
                         >
                           <Sparkles className="h-3.5 w-3.5 text-gold shrink-0" />
                           <span className="text-[10px] font-semibold text-gold">
-                            Recommended size{" "}
+                            {t("Recommended size")}{" "}
                             <strong className="font-bold">{recommendedSize}</strong>{" "}
-                            based on your Fit Profile
+                            {t("based on your Fit Profile")}
                           </span>
                         </motion.div>
                       ) : isAuthenticated ? (
@@ -618,7 +619,7 @@ export default function ProductDetailsBySlugPage() {
                             {isSizeableCategory === "shoes"
                               ? <Footprints className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
                               : <Ruler className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />}
-                            Unsure about your size? Use our AI Fitting Guide
+                            {t("Unsure about your size? Use our AI Fitting Guide")}
                             <ArrowRight className="h-3 w-3 shrink-0" />
                           </Link>
                         </motion.div>
@@ -627,7 +628,7 @@ export default function ProductDetailsBySlugPage() {
                           <Link href="/login" id="fitting-guide-cta-guest"
                             className="inline-flex items-center gap-2 mt-1 px-3.5 py-2 rounded-xl border border-dashed border-gold/40 hover:border-gold hover:bg-gold/5 transition-all text-[10px] font-semibold text-muted hover:text-gold group">
                             <Ruler className="h-3.5 w-3.5 shrink-0 text-gold/70 group-hover:text-gold" />
-                            Log in to use our AI Fitting Guide
+                            {t("Log in to use our AI Fitting Guide")}
                             <ArrowRight className="h-3 w-3 shrink-0" />
                           </Link>
                         </motion.div>
@@ -642,8 +643,8 @@ export default function ProductDetailsBySlugPage() {
                 <div className="flex items-start gap-3 rounded-2xl bg-gold/5 border border-gold/15 p-4 text-xs text-gold/90">
                   <FileText className="h-4.5 w-4.5 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold block uppercase tracking-wider text-[9px] mb-1">Instant digital delivery</span>
-                    This is a digital masterwork. High-fidelity files and authorization license codes will be made available in your account cabinet immediately after purchase.
+                    <span className="font-bold block uppercase tracking-wider text-[9px] mb-1">{t("Instant digital delivery")}</span>
+                    {t("This is a digital masterwork. High-fidelity files and authorization license codes will be made available in your account cabinet immediately after purchase.")}
                   </div>
                 </div>
               )}
@@ -655,8 +656,8 @@ export default function ProductDetailsBySlugPage() {
                 <div className="flex items-start gap-3 rounded-2xl bg-gold/5 border border-gold/15 p-4 text-xs text-gold/90 mb-2">
                   <Lock className="h-4.5 w-4.5 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold block uppercase tracking-wider text-[9px] mb-1">Owner Account</span>
-                    This is your product. Cart and checkout purchase operations are restricted for self-owned inventory.
+                    <span className="font-bold block uppercase tracking-wider text-[9px] mb-1">{t("Owner Account")}</span>
+                    {t("This is your product. Cart and checkout purchase operations are restricted for self-owned inventory.")}
                   </div>
                 </div>
               )}
@@ -675,18 +676,18 @@ export default function ProductDetailsBySlugPage() {
                   className="flex-grow h-14 rounded-full bg-foreground text-background hover:bg-gold hover:text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-black/5 uppercase tracking-widest text-xs font-semibold disabled:opacity-50 cursor-pointer hover:-translate-y-0.5"
                 >
                   {addingToCart ? (
-                    "Reserving Allocation…"
+                    t("Reserving Allocation…")
                   ) : product.stock === 0 ? (
-                    "Allocation Closed"
+                    t("Allocation Closed")
                   ) : isOwner ? (
-                    "Self-Owned Product"
+                    t("Self-Owned Product")
                   ) : !allAttributesSelected ? (
-                    "Select All Options"
+                    t("Select All Options")
                   ) : allAttributesSelected && activeVariant !== undefined && activeVariant !== null && activeVariant.stock <= 0 ? (
-                    "Combination Out of Stock"
+                    t("Combination Out of Stock")
                   ) : (
                     <>
-                      <ShoppingBag className="h-4 w-4" /> Add To Shopping Bag
+                      <ShoppingBag className="h-4 w-4" /> {t("Add To Shopping Bag")}
                     </>
                   )}
                 </button>
@@ -698,9 +699,9 @@ export default function ProductDetailsBySlugPage() {
                       ? "border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10" 
                       : "border-card-border hover:border-gold/60 text-muted hover:text-gold"
                   }`}
-                  title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+                  title={isWishlisted ? t("Remove from Wishlist") : t("Add to Wishlist")}
                 >
-                  <Heart className={`h-5 w-5 ${isWishlisted ? "fill-destructive" : ""}`} />
+                  <Heart className={`h-5 w-5 ${isWishlisted ? t("fill-destructive") : ""}`} />
                 </button>
               </div>
 
@@ -716,7 +717,7 @@ export default function ProductDetailsBySlugPage() {
                   }`}
                 >
                   <GitCompare className="h-4 w-4" />
-                  {compareIds.includes(product._id) ? "In Comparison — View Compare" : "Add to Comparison"}
+                  {compareIds.includes(product._id) ? t("In Comparison — View Compare") : t("Add to Comparison")}
                 </button>
               )}
               {compareIds.includes(product?._id) && (
@@ -729,9 +730,9 @@ export default function ProductDetailsBySlugPage() {
               )}
               
               <div className="flex items-center justify-center gap-6 text-[10px] text-muted uppercase tracking-wider font-semibold mt-2">
-                <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-gold" /> Encrypted Checkout</span>
+                <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-gold" /> {t("Encrypted Checkout")}</span>
                 <span className="text-card-border">|</span>
-                <span className="flex items-center gap-1.5"><Award className="h-4 w-4 text-gold" /> Atelier Authenticated</span>
+                <span className="flex items-center gap-1.5"><Award className="h-4 w-4 text-gold" /> {t("Atelier Authenticated")}</span>
               </div>
             </div>
 
@@ -742,8 +743,8 @@ export default function ProductDetailsBySlugPage() {
         {product.specifications && product.specifications.length > 0 && (
           <section className="mb-20 border-t border-card-border pt-12">
             <div className="max-w-2xl">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold block mb-2">Details</span>
-              <h3 className="font-serif text-2xl font-semibold mb-6">Product Specifications</h3>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold block mb-2">{t("Details")}</span>
+              <h3 className="font-serif text-2xl font-semibold mb-6">{t("Product Specifications")}</h3>
               <div className="luxury-card overflow-hidden">
                 <table className="w-full text-xs text-left">
                   <tbody>
@@ -763,19 +764,19 @@ export default function ProductDetailsBySlugPage() {
         {/* REVIEWS & VERIFIED CUSTOMERS FEEDBACK */}
         <section id="reviews" className="border-t border-card-border pt-12 scroll-mt-20">
           <div className="mb-8">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold block mb-2">Feedback</span>
-            <h3 className="font-serif text-2xl sm:text-3xl font-semibold">Verified Client Ledger</h3>
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold block mb-2">{t("Feedback")}</span>
+            <h3 className="font-serif text-2xl sm:text-3xl font-semibold">{t("Verified Client Ledger")}</h3>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-16 items-start">
             
             {/* Review Analytics Summary */}
             <div className="luxury-card p-6 flex flex-col gap-5">
-              <h4 className="font-serif font-bold text-lg">Rating Distribution</h4>
+              <h4 className="font-serif font-bold text-lg">{t("Rating Distribution")}</h4>
               
               <div className="flex items-baseline gap-2">
                 <span className="text-4xl font-bold font-serif">{ratingAvg.toFixed(1)}</span>
-                <span className="text-xs text-muted">out of 5.0</span>
+                <span className="text-xs text-muted">{t("out of 5.0")}</span>
               </div>
 
               <div className="flex gap-0.5">
@@ -786,7 +787,7 @@ export default function ProductDetailsBySlugPage() {
                   />
                 ))}
               </div>
-              <span className="text-xs text-muted block -mt-2">{reviewsCount} ratings submitted</span>
+              <span className="text-xs text-muted block -mt-2">{reviewsCount} {t("ratings submitted")}</span>
 
               {/* Progress bars */}
               <div className="space-y-3 mt-2">
@@ -810,7 +811,7 @@ export default function ProductDetailsBySlugPage() {
             <div className="lg:col-span-2 flex flex-col gap-8">
               {reviewsList.length === 0 ? (
                 <div className="luxury-card p-8 text-center text-sm text-muted font-light italic bg-card-bg/40">
-                  No verified client feedback has been recorded for this item yet.
+                  {t("No verified client feedback has been recorded for this item yet.")}
                 </div>
               ) : (
                 <div className="flex flex-col gap-6">
@@ -821,7 +822,7 @@ export default function ProductDetailsBySlugPage() {
                           <span className="text-sm font-semibold text-foreground">{rev.user?.username || "Client"}</span>
                           {rev.isVerifiedPurchase && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-success/10 text-[9px] font-bold text-success px-2.5 py-0.5 uppercase tracking-widest border border-success/10">
-                              <CheckCircle2 className="h-3 w-3" /> Verified Purchase
+                              <CheckCircle2 className="h-3 w-3" /> {t("Verified Purchase")}
                             </span>
                           )}
                         </div>
@@ -840,12 +841,12 @@ export default function ProductDetailsBySlugPage() {
                       <p className="text-sm text-muted leading-relaxed font-light">{rev.comment}</p>
 
                       <div className="flex items-center gap-3.5 mt-4 text-xs">
-                        <span className="text-muted font-light">Was this perspective helpful?</span>
+                        <span className="text-muted font-light">{t("Was this perspective helpful?")}</span>
                         <button
                           onClick={() => handleHelpfulVote(rev._id)}
                           className="rounded-full border border-card-border hover:border-gold hover:text-gold px-4 py-1 transition-all font-semibold uppercase tracking-wider text-[9px] cursor-pointer"
                         >
-                          Helpful ({rev.helpfulVotes || 0})
+                          {t("Helpful")} ({rev.helpfulVotes || 0})
                         </button>
                       </div>
                     </div>
@@ -857,9 +858,9 @@ export default function ProductDetailsBySlugPage() {
               <div className="border-t border-card-border pt-8 mt-4">
                 {isAuthenticated ? (
                   <div className="luxury-card p-6 bg-card-bg/60">
-                    <h4 className="font-serif font-bold text-lg mb-1">Submit Your Perspective</h4>
-                    <p className="text-xs text-muted mb-5 font-light">Your review must be grounded in actual design interactions.</p>
-                    
+                    <h4 className="font-serif font-bold text-lg mb-1">{t("Submit Your Perspective")}</h4>
+                    <p className="text-xs text-muted mb-5 font-light">{t("Your review must be grounded in actual design interactions.")}</p>
+
                     <form onSubmit={handleReviewSubmit} className="flex flex-col gap-4 text-xs">
                       <div>
                         <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-2">Rating</label>
@@ -884,7 +885,7 @@ export default function ProductDetailsBySlugPage() {
                           value={reviewComment}
                           onChange={(e) => setReviewComment(e.target.value)}
                           required
-                          placeholder="Provide details about the fit, texture, aesthetic fidelity, or delivery logistics..."
+                          placeholder={t("Provide details about the fit, texture, aesthetic fidelity, or delivery logistics...")}
                           className="w-full rounded-2xl border border-card-border bg-background p-3.5 text-xs outline-none focus:border-gold transition-colors leading-relaxed"
                         />
                       </div>
@@ -894,13 +895,13 @@ export default function ProductDetailsBySlugPage() {
                         disabled={reviewLoading}
                         className="h-11 rounded-full bg-foreground text-background hover:bg-gold hover:text-white transition-all font-semibold uppercase tracking-widest text-[10px] cursor-pointer self-start px-6 shadow-md"
                       >
-                        Submit Perspective
+                        {t("Submit Perspective")}
                       </button>
                     </form>
                   </div>
                 ) : (
                   <div className="luxury-card p-6 text-center text-xs text-muted font-light">
-                    Please <Link href="/login" className="text-gold font-semibold hover:underline">Sign In</Link> with your profile to write a ledger review.
+                    {t("Please")} <Link href="/login" className="text-gold font-semibold hover:underline">Sign In</Link> with your profile to write a ledger review.
                   </div>
                 )}
               </div>
@@ -915,10 +916,10 @@ export default function ProductDetailsBySlugPage() {
             <div className="mb-10 flex justify-between items-end">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold block mb-2">Selected Edits</span>
-                <h3 className="font-serif text-3xl font-semibold">Related Pieces</h3>
+                <h3 className="font-serif text-3xl font-semibold">{t("Related Pieces")}</h3>
               </div>
               <Link href="/products" className="text-xs font-semibold text-gold hover:underline uppercase tracking-wider flex items-center gap-1">
-                See Catalog <ArrowRight className="h-4.5 w-4.5" />
+                {t("See Catalog")} <ArrowRight className="h-4.5 w-4.5" />
               </Link>
             </div>
 

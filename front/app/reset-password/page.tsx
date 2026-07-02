@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useResetPasswordMutation } from "../../lib/api";
+import { useTranslation } from "react-i18next";
 import { KeyRound, ShieldCheck, ArrowRight, Loader2 } from "lucide-react";
 
 const resetPasswordSchema = z
@@ -24,6 +25,7 @@ const resetPasswordSchema = z
 type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 export default function ResetPasswordPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") || "";
@@ -35,7 +37,7 @@ export default function ResetPasswordPage() {
     if (!token) {
       setStatusMsg({
         type: "error",
-        text: "Invalid request. Missing security reset token. Please request another password reset link.",
+        text: t("Invalid request. Missing security reset token. Please request another password reset link.", "Invalid request. Missing security reset token. Please request another password reset link."),
       });
     }
   }, [token]);
@@ -55,7 +57,7 @@ export default function ResetPasswordPage() {
       const response = await resetPasswordCall({ token, newPassword: data.password }).unwrap();
       setStatusMsg({
         type: "success",
-        text: response.message || "Password reset successful! Redirecting to sign in...",
+        text: response.message || t("Password reset successful! Redirecting to sign in...", "Password reset successful! Redirecting to sign in..."),
       });
       setTimeout(() => {
         router.push("/login");
@@ -63,7 +65,7 @@ export default function ResetPasswordPage() {
     } catch (err: any) {
       setStatusMsg({
         type: "error",
-        text: err.data?.message || "Failed to reset password. The link might have expired.",
+        text: err.data?.message || t("Failed to reset password. The link might have expired.", "Failed to reset password. The link might have expired."),
       });
     }
   };
@@ -79,9 +81,9 @@ export default function ResetPasswordPage() {
         <div className="w-full max-w-md backdrop-blur-md bg-card-bg/80 border border-card-border/80 p-8 shadow-2xl rounded-[32px] luxury-shadow">
           
           <div className="text-center mb-8">
-            <span className="text-xs font-bold tracking-widest text-gold uppercase">Credentials Recovery</span>
-            <h1 className="font-serif text-3xl font-bold mt-1 text-foreground">Reset Password</h1>
-            <p className="text-sm text-muted mt-2">Enter your new premium security credentials below</p>
+            <span className="text-xs font-bold tracking-widest text-gold uppercase">{t("Credentials Recovery", "Credentials Recovery")}</span>
+            <h1 className="font-serif text-3xl font-bold mt-1 text-foreground">{t("Reset Password", "Reset Password")}</h1>
+            <p className="text-sm text-muted mt-2">{t("Enter your new premium security credentials below", "Enter your new premium security credentials below")}</p>
           </div>
 
           {statusMsg && (
@@ -98,7 +100,7 @@ export default function ResetPasswordPage() {
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">
-                  New Password
+                  {t("New Password", "New Password")}
                 </label>
                 <div className="relative">
                   <input
@@ -116,7 +118,7 @@ export default function ResetPasswordPage() {
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">
-                  Confirm Password
+                  {t("Confirm Password", "Confirm Password")}
                 </label>
                 <div className="relative">
                   <input
@@ -139,11 +141,11 @@ export default function ResetPasswordPage() {
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Updating Credentials...
+                    <Loader2 className="h-4 w-4 animate-spin" /> {t("Updating Credentials...", "Updating Credentials...")}
                   </>
                 ) : (
                   <>
-                    <ShieldCheck className="h-4 w-4" /> Reset Password
+                    <ShieldCheck className="h-4 w-4" /> {t("Reset Password", "Reset Password")}
                   </>
                 )}
               </button>
@@ -152,7 +154,7 @@ export default function ResetPasswordPage() {
 
           <div className="text-center mt-8 pt-6 border-t border-card-border text-sm text-muted">
             <Link href="/login" className="inline-flex items-center gap-2 text-gold font-medium hover:underline text-xs uppercase tracking-wider">
-              Return to login page <ArrowRight className="h-3.5 w-3.5" />
+              {t("Return to login page", "Return to login page")} <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
 

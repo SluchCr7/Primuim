@@ -197,12 +197,12 @@
 //     </div>
 //   );
 // }
-
 "use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next"; // استدعاء hook الترجمة
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useForm } from "react-hook-form";
@@ -211,9 +211,10 @@ import * as z from "zod";
 import { useLoginMutation, useSocialLoginMutation, useMergeCartMutation } from "../../lib/api";
 import { useAppDispatch } from "../../lib/store";
 import { setCredentials } from "../../lib/authSlice";
-import { LogIn, Mail, AlertTriangle } from "lucide-react"; // ضفنا أيقونة تنبيه شيك
+import { LogIn, Mail, AlertTriangle } from "lucide-react"; 
 import { getGuestCartTotals, clearGuestCart } from "../../lib/cartUtils";
 
+// تم ترك رسائل الخطأ هنا كـ مفاتيح ثابتة لتمريرها داخل دالة t() عند العرض
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
@@ -222,10 +223,10 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  const { t } = useTranslation(); // تفعيل دالة الترجمة
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  // State جديدة عشان نعرف لو الحساب مش متفعل فنغير ستايل التنبيه
   const [isNotVerified, setIsNotVerified] = useState<boolean>(false);
 
   const [loginCall, { isLoading }] = useLoginMutation();
@@ -267,12 +268,11 @@ export default function LoginPage() {
         router.push("/dashboard");
       }
     } catch (err: any) {
-      // هنا بنمسك الـ 403 اللي راجعة من السيرفر للحسابات غير المفعلة
       if (err.status === 403 && err.data?.isVerified === false) {
         setIsNotVerified(true);
-        setErrorMsg(err.data?.message || "Your account is not verified. Check your email.");
+        setErrorMsg(err.data?.message || t("Your account is not verified. Check your email."));
       } else {
-        setErrorMsg(err.data?.message || "Invalid credentials. Please try again.");
+        setErrorMsg(err.data?.message || t("Invalid credentials. Please try again."));
       }
     }
   };
@@ -294,7 +294,7 @@ export default function LoginPage() {
         router.push("/dashboard");
       }
     } catch (err: any) {
-      setErrorMsg("Social authentication failed.");
+      setErrorMsg(t("Social authentication failed."));
     }
   };
 
@@ -308,24 +308,21 @@ export default function LoginPage() {
         <div className="w-full max-w-md backdrop-blur-md bg-card-bg/80 border border-card-border/80 p-8 shadow-2xl rounded-[32px] luxury-shadow">
           
           <div className="text-center mb-8">
-            <span className="text-xs font-bold tracking-widest text-gold uppercase">Session Init</span>
-            <h1 className="font-serif text-3xl font-bold mt-1 text-foreground">Sign In</h1>
-            <p className="text-sm text-muted mt-2">Enter your credential details to log into your portal</p>
+            <span className="text-xs font-bold tracking-widest text-gold uppercase">{t("Session Init")}</span>
+            <h1 className="font-serif text-3xl font-bold mt-1 text-foreground">{t("Sign In")}</h1>
+            <p className="text-sm text-muted mt-2">{t("Enter your credential details to log into your portal")}</p>
           </div>
 
-          {/* التحكم في شكل الـ Alert بناءً على نوع الخطأ */}
           {errorMsg && (
             isNotVerified ? (
-              // تصميم ذهبي/برتقالي فاخر ومودرن يتناسب مع الـ VIP Theme للحسابات غير المفعلة
               <div className="mb-6 rounded-xl border border-gold/30 bg-gold/5 px-4 py-3 text-sm text-gold flex items-start gap-2.5 animate-fadeIn">
                 <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold block mb-0.5">Verification Required</span>
+                  <span className="font-bold block mb-0.5">{t("Verification Required")}</span>
                   {errorMsg}
                 </div>
               </div>
             ) : (
-              // التنبيه الأحمر العادي للباسورد الغلط أو أي خطأ آخر
               <div className="mb-6 rounded-xl border border-error/20 bg-error/5 px-4 py-3 text-sm text-error animate-fadeIn">
                 {errorMsg}
               </div>
@@ -335,7 +332,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">
-                Email Address
+                {t("Email Address")}
               </label>
               <input
                 type="email"
@@ -344,17 +341,17 @@ export default function LoginPage() {
                 placeholder="vip.client@example.com"
               />
               {errors.email && (
-                <p className="text-xs text-error mt-1">{errors.email.message}</p>
+                <p className="text-xs text-error mt-1">{t(errors.email.message || "")}</p>
               )}
             </div>
 
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
-                  Password
+                  {t("Password")}
                 </label>
                 <Link href="/forgot-password" className="text-xs text-gold hover:underline">
-                  Forgot Password?
+                  {t("Forgot Password?")}
                 </Link>
               </div>
               <input
@@ -364,7 +361,7 @@ export default function LoginPage() {
                 placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
               />
               {errors.password && (
-                <p className="text-xs text-error mt-1">{errors.password.message}</p>
+                <p className="text-xs text-error mt-1">{t(errors.password.message || "")}</p>
               )}
             </div>
 
@@ -373,7 +370,7 @@ export default function LoginPage() {
               disabled={isLoading}
               className="w-full rounded-xl bg-foreground py-3 font-semibold text-background hover:bg-gold-hover hover:shadow-lg hover:shadow-gold/10 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              {isLoading ? "Authenticating..." : <><LogIn className="h-4 w-4" /> Authenticate</>}
+              {isLoading ? t("Authenticating...") : <><LogIn className="h-4 w-4" /> {t("Authenticate")}</>}
             </button>
           </form>
 
@@ -381,7 +378,7 @@ export default function LoginPage() {
             <div className="relative flex items-center justify-center mb-6">
               <hr className="w-full border-card-border" />
               <span className="absolute bg-card-bg px-4 text-xs font-semibold text-muted uppercase tracking-widest">
-                or sign in with
+                {t("or sign in with")}
               </span>
             </div>
 
@@ -406,9 +403,9 @@ export default function LoginPage() {
           </div>
 
           <div className="text-center mt-8 pt-6 border-t border-card-border text-sm text-muted">
-            Don't have a VIP profile?{" "}
+            {t("Don't have a VIP profile?")}{" "}
             <Link href="/register" className="text-gold font-medium hover:underline">
-              Create account
+              {t("Create account")}
             </Link>
           </div>
 

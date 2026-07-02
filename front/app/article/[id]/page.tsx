@@ -115,12 +115,12 @@ export default function ArticleDetailPage() {
       <div className="min-h-screen flex flex-col bg-background text-foreground">
         <Header />
         <div className="flex-grow flex flex-col items-center justify-center gap-4">
-          <h2 className="font-serif text-2xl font-bold">{t("editorialNotFound")}</h2>
+          <h2 className="font-serif text-2xl font-bold">{t("Editorial Not Found")}</h2>
           <button
             onClick={() => router.push("/blog")}
             className="inline-flex h-11 items-center gap-2 rounded border border-card-border px-5 text-sm font-semibold hover:border-gold cursor-pointer"
           >
-            <ArrowLeft className="h-4 w-4" /> {t("backToBlog")}
+            <ArrowLeft className="h-4 w-4" /> {t("Back to Blog")}
           </button>
         </div>
         <Footer />
@@ -137,7 +137,7 @@ export default function ArticleDetailPage() {
       <main className="flex-grow mx-auto max-w-3xl w-full px-6 py-12">
         <Breadcrumbs
           items={[
-            { label: t("blog"), url: "/blog" },
+            { label: t("Blog"), url: "/blog" },
             { label: article.title.substring(0, 25) + "...", url: `/article/${id}` },
           ]}
         />
@@ -153,11 +153,11 @@ export default function ArticleDetailPage() {
             </span>
             <span className="flex items-center gap-1">
               <User className="h-3.5 w-3.5 text-gold" /> 
-              {t("by")} {article.author?.storeName || article.authorName || t("editorialStaff")}
+              {t("By")} {article.author?.storeName || article.authorName || t("Editorial Staff")}
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5 text-gold" /> 
-              {article.readTime || 1} {t("minRead")}
+              {article.readTime || 1} {t("Min Read")}
             </span>
             <span className="rounded-full bg-gold/10 text-gold px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-widest border border-gold/10">
               {article.category}
@@ -191,7 +191,7 @@ export default function ArticleDetailPage() {
             onClick={() => router.push("/blog")}
             className="inline-flex h-10 items-center gap-2 rounded-full border border-card-border px-5 text-xs font-semibold uppercase tracking-wider hover:border-gold transition-colors cursor-pointer"
           >
-            <ArrowLeft className="h-4 w-4" /> {t("backToBlog")}
+            <ArrowLeft className="h-4 w-4" /> {t("Back to Blog")}
           </button>
 
           <div className="flex items-center gap-4">
@@ -199,7 +199,7 @@ export default function ArticleDetailPage() {
               onClick={handleShare}
               className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted hover:text-gold transition-colors cursor-pointer"
             >
-              <Share2 className="h-4 w-4" /> {t("share")}
+              <Share2 className="h-4 w-4" /> {t("Share")}
             </button>
             <button
               onClick={handleLike}
@@ -209,14 +209,14 @@ export default function ArticleDetailPage() {
               }`}
             >
               <Heart className={`h-4 w-4 ${isLikedByUser ? "fill-current" : ""}`} /> 
-              {isLikedByUser ? t("liked") : t("like")} ({article.likes?.length || 0})
+              {isLikedByUser ? t("Liked") : t("Like")} ({article.likes?.length || 0})
             </button>
           </div>
         </div>
 
         {/* Dynamic Comment Section */}
         <div className="mt-16 border-t border-card-border pt-10">
-          <h3 className="font-serif font-bold text-lg mb-6">{t("thoughts")} ({article.comments?.length || 0})</h3>
+          <h3 className="font-serif font-bold text-lg mb-6">{t("Thoughts")} ({article.comments?.length || 0})</h3>
 
           {/* Add Comment Form */}
           <form onSubmit={handleAddComment} className="flex gap-3 mb-8">
@@ -224,7 +224,7 @@ export default function ArticleDetailPage() {
               type="text"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              placeholder={isAuthenticated ? t("commentPlaceholderAuthenticated") : t("commentPlaceholderGuest")}
+              placeholder={isAuthenticated ? t("Write a comment...") : t("Log in to comment...")}
               disabled={!isAuthenticated || isCommenting}
               className="flex-grow bg-card-bg border border-card-border rounded-xl px-4 py-2.5 text-xs outline-none focus:border-gold"
             />
@@ -240,7 +240,7 @@ export default function ArticleDetailPage() {
           {/* Comment list */}
           <div className="flex flex-col gap-6">
             {!article.comments || article.comments.length === 0 ? (
-              <p className="text-xs text-muted font-light italic">{t("noCommentsYet")}</p>
+              <p className="text-xs text-muted font-light italic">{t("No comments yet")}</p>
             ) : (
               article.comments.map((comment: any) => {
                 const commentUser = comment.user;
@@ -265,7 +265,7 @@ export default function ArticleDetailPage() {
                       <button
                         onClick={() => handleDeleteComment(comment._id)}
                         className="text-muted hover:text-error self-start p-1 transition-colors cursor-pointer"
-                        title={t("deleteComment")}
+                        title={t("Delete Comment")}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

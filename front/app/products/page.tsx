@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslation } from "react-i18next"; // استدعاء مكتبة الترجمة
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useGetProductsQuery, useGetCategoriesQuery, useAddToCartMutation } from "../../lib/api";
@@ -13,6 +14,7 @@ import Image from "next/image";
 import { useToast } from "../components/Toast";
 
 export default function ProductsPage() {
+  const { t } = useTranslation(); // تفعيل دالة الترجمة
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, currency } = useAppSelector((state) => state.auth);
@@ -28,14 +30,14 @@ export default function ProductsPage() {
       let next: string[];
       if (prev.includes(productId)) {
         next = prev.filter(id => id !== productId);
-        showToast("Removed from comparison.", "info");
+        showToast(t("Removed from comparison."), "info");
       } else {
         if (prev.length >= 4) {
-          showToast("You can compare up to 4 products at once.", "error");
+          showToast(t("You can compare up to 4 products at once."), "error");
           return prev;
         }
         next = [...prev, productId];
-        showToast("Added to comparison! View at /compare.", "success");
+        showToast(t("Added to comparison! View at /compare."), "success");
       }
       localStorage.setItem("compare_list", JSON.stringify(next));
       return next;
@@ -110,14 +112,14 @@ export default function ProductsPage() {
 
   const handleQuickAdd = async (productId: string) => {
     if (!isAuthenticated) {
-      showToast("Please sign in to add items to your cart.", "error");
+      showToast(t("Please sign in to add items to your cart."), "error");
       return;
     }
     try {
       await addToCart({ productId, quantity: 1 }).unwrap();
-      showToast("Product added to your bag!", "success");
+      showToast(t("Product added to your bag!"), "success");
     } catch (err) {
-      showToast("Could not add item to cart.", "error");
+      showToast(t("Could not add item to cart."), "error");
     }
   };
 
@@ -130,12 +132,12 @@ export default function ProductsPage() {
         {/* PAGE HEADER */}
         <div className="mb-8 border-b border-slate-100 pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="font-serif text-3xl font-extrabold tracking-tight text-slate-900">Our Collection</h1>
-            <p className="text-sm text-slate-500 mt-1">Discover premium products curated just for you.</p>
+            <h1 className="font-serif text-3xl font-extrabold tracking-tight text-slate-900">{t("Our Collection")}</h1>
+            <p className="text-sm text-slate-500 mt-1">{t("Discover premium products curated just for you.")}</p>
           </div>
           <div className="text-sm text-slate-500 font-medium">
             {!isLoading && productsData?.products && (
-              <span>Showing {productsData.products.length} exquisite items</span>
+              <span>{t("Showing {{count}} exquisite items", { count: productsData.products.length })}</span>
             )}
           </div>
         </div>
@@ -147,13 +149,13 @@ export default function ProductsPage() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="h-4 w-4 text-amber-600" />
-                <h2 className="font-serif text-md font-bold text-slate-800">Filter & Refine</h2>
+                <h2 className="font-serif text-md font-bold text-slate-800">{t("Filter & Refine")}</h2>
               </div>
               <button 
                 onClick={handleClearFilters}
                 className="text-xs flex items-center gap-1 text-slate-400 hover:text-amber-600 transition-colors"
               >
-                <RotateCcw className="h-3 w-3" /> Reset
+                <RotateCcw className="h-3 w-3" /> {t("Reset")}
               </button>
             </div>
 
@@ -161,12 +163,12 @@ export default function ProductsPage() {
               {/* Keyword Search */}
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                  Keywords
+                  {t("Keywords")}
                 </label>
                 <div className="relative flex items-center">
                   <input
                     type="text"
-                    placeholder="Search brand, tags..."
+                    placeholder={t("Search brand, tags...")}
                     value={localSearch}
                     onChange={(e) => setLocalSearch(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pl-3 pr-10 text-sm outline-none focus:border-amber-500 focus:bg-white transition-all shadow-inner"
@@ -178,7 +180,7 @@ export default function ProductsPage() {
               {/* Categories list */}
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                  Category
+                  {t("Category")}
                 </label>
                 <ul className="flex flex-col gap-1 text-sm max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
                   <li>
@@ -192,7 +194,7 @@ export default function ProductsPage() {
                       }}
                       className={`text-left w-full rounded-lg px-3 py-2 transition-all cursor-pointer ${!category ? "bg-gold/10 text-gold font-bold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
                     >
-                      All Categories
+                      {t("All Categories")}
                     </button>
                   </li>
                   {categoriesData?.categories &&
@@ -245,12 +247,12 @@ export default function ProductsPage() {
               {/* Price limits */}
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                  Price Range (EGP)
+                  {t("Price Range (EGP)")}
                 </label>
                 <div className="flex gap-2 items-center">
                   <input
                     type="number"
-                    placeholder="Min"
+                    placeholder={t("Min")}
                     value={localMinPrice}
                     onChange={(e) => setLocalMinPrice(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 px-3 text-sm outline-none focus:border-amber-500 focus:bg-white transition-all"
@@ -258,7 +260,7 @@ export default function ProductsPage() {
                   <span className="text-slate-300 font-light">—</span>
                   <input
                     type="number"
-                    placeholder="Max"
+                    placeholder={t("Max")}
                     value={localMaxPrice}
                     onChange={(e) => setLocalMaxPrice(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 px-3 text-sm outline-none focus:border-amber-500 focus:bg-white transition-all"
@@ -269,18 +271,18 @@ export default function ProductsPage() {
               {/* Sort order */}
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                  Sort By
+                  {t("Sort By")}
                 </label>
                 <select
                   value={localSort}
                   onChange={(e) => setLocalSort(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 px-3 text-sm outline-none focus:border-amber-500 focus:bg-white transition-all cursor-pointer"
                 >
-                  <option value="newest">Newest Arrivals</option>
-                  <option value="price-asc">Price: Low to High</option>
-                  <option value="price-desc">Price: High to Low</option>
-                  <option value="rating">Top Rated</option>
-                  <option value="sold">Best Sellers</option>
+                  <option value="newest">{t("Newest Arrivals")}</option>
+                  <option value="price-asc">{t("Price: Low to High")}</option>
+                  <option value="price-desc">{t("Price: High to Low")}</option>
+                  <option value="rating">{t("Top Rated")}</option>
+                  <option value="sold">{t("Best Sellers")}</option>
                 </select>
               </div>
 
@@ -288,7 +290,7 @@ export default function ProductsPage() {
                 onClick={handleApplyFilters}
                 className="w-full rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white hover:bg-amber-600 shadow-md hover:shadow-amber-600/10 transition-all duration-300 mt-4"
               >
-                Apply Filters
+                {t("Apply Filters")}
               </button>
             </div>
           </aside>
@@ -317,13 +319,13 @@ export default function ProductsPage() {
                 <div className="p-4 bg-slate-50 rounded-full mb-4">
                   <Search className="h-8 w-8 text-slate-400" />
                 </div>
-                <h3 className="font-serif text-xl font-bold text-slate-800">No items found</h3>
-                <p className="text-slate-500 text-sm mt-2 max-w-xs mx-auto">We couldn't find any matches for your current filters. Try refining your keywords.</p>
+                <h3 className="font-serif text-xl font-bold text-slate-800">{t("No items found")}</h3>
+                <p className="text-slate-500 text-sm mt-2 max-w-xs mx-auto">{t("We couldn't find any matches for your current filters. Try refining your keywords.")}</p>
                 <button
                   onClick={handleClearFilters}
                   className="mt-6 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 transition-all shadow-sm"
                 >
-                  Clear Filters
+                  {t("Clear Filters")}
                 </button>
               </div>
             ) : (
@@ -349,14 +351,14 @@ export default function ProductsPage() {
                             onClick={() => handleQuickAdd(product._id)}
                             className="w-full flex items-center justify-center gap-2 bg-white hover:bg-amber-600 hover:text-white text-slate-900 py-2.5 rounded-xl text-xs font-bold tracking-wider uppercase transition-all shadow-lg"
                           >
-                            <ShoppingBag className="h-3.5 w-3.5" /> Quick Add
+                            <ShoppingBag className="h-3.5 w-3.5" /> {t("Quick Add")}
                           </button>
                         </div>
 
                         {/* Compare toggle badge — top-right */}
                         <button
                           onClick={(e) => { e.preventDefault(); toggleCompare(product._id); }}
-                          title={compareIds.includes(product._id) ? "Remove from Compare" : "Add to Compare"}
+                          title={compareIds.includes(product._id) ? t("Remove from Compare") : t("Add to Compare")}
                           className={`absolute top-3 right-3 h-7 w-7 rounded-full flex items-center justify-center shadow-md transition-all z-10 cursor-pointer ${
                             compareIds.includes(product._id)
                               ? "bg-gold text-white scale-110"
@@ -371,7 +373,7 @@ export default function ProductsPage() {
                       <div className="flex flex-col p-5 flex-grow">
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">
-                            {product.brand || "DESIGNER"}
+                            {product.brand || t("DESIGNER")}
                           </span>
                           
                           {/* SELLER NAME */}
@@ -396,7 +398,7 @@ export default function ProductsPage() {
                         {/* Price & Rating */}
                         <div className="flex items-center justify-between mt-3">
                           <div className="flex flex-col">
-                            <span className="text-xs text-slate-400 font-medium">Price</span>
+                            <span className="text-xs text-slate-400 font-medium">{t("Price")}</span>
                             <span className="text-base font-black text-slate-900">
                               {formatCurrencyPrice(product.price, currency)}
                             </span>
@@ -424,7 +426,7 @@ export default function ProductsPage() {
                     </button>
                     
                     <div className="bg-slate-100 px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 shadow-inner">
-                      Page {page} of {productsData.totalPages}
+                      {t("Page {{page}} of {{totalPages}}", { page, totalPages: productsData.totalPages })}
                     </div>
 
                     <button

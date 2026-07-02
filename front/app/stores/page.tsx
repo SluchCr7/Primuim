@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next"; // أو من الإطار المعتمد لديك مثل next-i18next
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useGetApprovedSellersQuery, useFollowSellerMutation, useGetMeQuery, useGetCategoriesQuery } from "../../lib/api";
@@ -28,6 +29,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function StoresDirectoryPage() {
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
 
@@ -75,7 +77,7 @@ export default function StoresDirectoryPage() {
   // Follow/Unfollow toggle
   const handleFollowToggle = async (sellerId: string, sellerName: string) => {
     if (!isAuthenticated) {
-      showToast("Please log in to follow store channels.", "error");
+      showToast(t("Please log in to follow store channels."), "error");
       return;
     }
 
@@ -85,7 +87,7 @@ export default function StoresDirectoryPage() {
       refetchMe();
       refetchSellers();
     } catch (err: any) {
-      showToast(err.data?.message || "Failed to update follow status.", "error");
+      showToast(err.data?.message || t("Failed to update follow status."), "error");
     }
   };
 
@@ -98,14 +100,13 @@ export default function StoresDirectoryPage() {
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
         <div className="mx-auto max-w-7xl text-center relative z-10">
           <span className="inline-flex items-center gap-1 text-[10px] font-bold tracking-[0.3em] text-gold uppercase px-3 py-1 rounded-full border border-gold/20 bg-gold/5 mb-4">
-            <Award className="h-3 w-3" /> Verified Marketplace Partners
+            <Award className="h-3 w-3" /> {t("Verified Marketplace Partners")}
           </span>
           <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-wide mb-4 leading-tight">
-            Flagship Design Houses & Sellers
+            {t("Flagship Design Houses & Sellers")}
           </h1>
           <p className="text-muted text-sm md:text-base max-w-2xl mx-auto font-light leading-relaxed">
-            Shop directly from verified independent creators, local designers, and premium boutiques. 
-            Enjoy bespoke service and curated excellence directly from the source.
+            {t("Shop directly from verified independent creators, local designers, and premium boutiques. Enjoy bespoke service and curated excellence directly from the source.")}
           </p>
         </div>
       </div>
@@ -116,7 +117,7 @@ export default function StoresDirectoryPage() {
           <form onSubmit={handleSearchSubmit} className="w-full md:max-w-md relative flex items-center">
             <input
               type="text"
-              placeholder="Search boutique or design house..."
+              placeholder={t("Search boutique or design house...")}
               value={searchVal}
               onChange={(e) => setSearchVal(e.target.value)}
               className="w-full rounded-full border border-card-border/80 bg-background/50 py-2.5 pl-6 pr-12 text-xs text-foreground outline-none focus:border-gold focus:ring-4 focus:ring-gold/5 transition-all duration-300"
@@ -128,7 +129,7 @@ export default function StoresDirectoryPage() {
 
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
             <span className="text-xs text-muted flex items-center gap-1.5 font-medium">
-              <SlidersHorizontal className="h-3.5 w-3.5 text-gold" /> Sort by:
+              <SlidersHorizontal className="h-3.5 w-3.5 text-gold" /> {t("Sort by:")}
             </span>
             <select
               value={sortOption}
@@ -138,9 +139,9 @@ export default function StoresDirectoryPage() {
               }}
               className="bg-background/50 border border-card-border rounded-full px-4 py-2 text-xs font-semibold outline-none focus:border-gold transition-colors cursor-pointer"
             >
-              <option value="rating">Highest Rated</option>
-              <option value="sales">Most Sales Completed</option>
-              <option value="newest">Newest Partners</option>
+              <option value="rating">{t("Highest Rated")}</option>
+              <option value="sales">{t("Most Sales Completed")}</option>
+              <option value="newest">{t("Newest Partners")}</option>
             </select>
           </div>
         </div>
@@ -158,7 +159,7 @@ export default function StoresDirectoryPage() {
                 : "border-card-border hover:border-gold/50 bg-card-bg text-muted hover:text-foreground"
             }`}
           >
-            All Categories
+            {t("All Categories")}
           </button>
           {categories.map((cat: any) => (
             <button
@@ -203,15 +204,15 @@ export default function StoresDirectoryPage() {
             {sellers.length === 0 ? (
               <div className="text-center py-24 border border-dashed border-card-border rounded-3xl p-8 bg-card-bg/10 max-w-md mx-auto">
                 <Store className="h-12 w-12 text-gold/30 mx-auto mb-4" />
-                <h3 className="font-serif text-xl font-bold">No Stores Found</h3>
+                <h3 className="font-serif text-xl font-bold">{t("No Stores Found")}</h3>
                 <p className="text-xs text-muted mt-2 mb-6 font-light leading-relaxed">
-                  No partners matched your search term. Try adjusting your spelling or searching for another keyword.
+                  {t("No partners matched your search term. Try adjusting your spelling or searching for another keyword.")}
                 </p>
                 <button
                   onClick={handleClearFilters}
                   className="inline-flex h-10 items-center justify-center rounded-full bg-gold px-6 text-[10px] font-bold uppercase tracking-widest text-white transition-all cursor-pointer"
                 >
-                  Clear Search
+                  {t("Clear Search")}
                 </button>
               </div>
             ) : (
@@ -256,7 +257,7 @@ export default function StoresDirectoryPage() {
                               {/* Title */}
                               <div>
                                 <span className="text-[9px] font-bold tracking-[0.2em] text-gold uppercase">
-                                  {seller.brandName || "Exclusive Partner"}
+                                  {seller.brandName || t("Exclusive Partner")}
                                 </span>
                                 <h3 className="font-serif text-xl font-bold leading-tight mt-0.5 group-hover:text-gold transition-colors duration-200 truncate">
                                   {seller.storeName}
@@ -265,7 +266,7 @@ export default function StoresDirectoryPage() {
 
                               {/* Description */}
                               <p className="text-xs text-muted font-light leading-relaxed line-clamp-2 mt-3 italic">
-                                {seller.storeDescription || "Verified luxury independent store on our premium marketplace."}
+                                {seller.storeDescription || t("Verified luxury independent store on our premium marketplace.")}
                               </p>
 
                               {/* Badges / Metrics Row */}
@@ -276,11 +277,11 @@ export default function StoresDirectoryPage() {
                                 </span>
                                 <span className="flex items-center gap-1.5">
                                   <Users className="h-3.5 w-3.5 text-gold" />
-                                  <span>{seller.followersCount || 0} followers</span>
+                                  <span>{seller.followersCount || 0} {t("followers")}</span>
                                 </span>
                                 <span className="flex items-center gap-1.5">
                                   <TrendingUp className="h-3.5 w-3.5 text-gold" />
-                                  <span>{seller.totalSales || 0} sales</span>
+                                  <span>{seller.totalSales || 0} {t("sales")}</span>
                                 </span>
                               </div>
                             </div>
@@ -297,11 +298,11 @@ export default function StoresDirectoryPage() {
                               >
                                 {isFollowing ? (
                                   <>
-                                    <UserMinus className="h-3 w-3" /> Unfollow
+                                    <UserMinus className="h-3 w-3" /> {t("Unfollow")}
                                   </>
                                 ) : (
                                   <>
-                                    <UserPlus className="h-3 w-3" /> Follow
+                                    <UserPlus className="h-3 w-3" /> {t("Follow")}
                                   </>
                                 )}
                               </button>
@@ -310,7 +311,7 @@ export default function StoresDirectoryPage() {
                                 href={`/store/${seller.storeSlug}`}
                                 className="flex-1 h-9 rounded-full bg-foreground text-background hover:bg-gold hover:text-white px-4 flex items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-all shadow-md hover:-translate-y-0.5"
                               >
-                                Visit Store <ArrowRight className="h-3 w-3" />
+                                {t("Visit Store")} <ArrowRight className="h-3 w-3" />
                               </Link>
                             </div>
 
@@ -332,7 +333,7 @@ export default function StoresDirectoryPage() {
                       <ChevronLeft className="h-5 w-5" />
                     </button>
                     <span className="text-xs font-bold uppercase tracking-wider mx-2">
-                      Page {currentPage} of {totalPages}
+                      {t("Page")} {currentPage} {t("of")} {totalPages}
                     </span>
                     <button
                       onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}

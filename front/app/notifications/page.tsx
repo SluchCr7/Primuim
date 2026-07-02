@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next"; // استدعاء hook الترجمة
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import {
@@ -32,6 +33,7 @@ import {
 import Link from "next/link";
 
 export default function NotificationsPage() {
+  const { t } = useTranslation(); // تفعيل دالة الترجمة
   const { isAuthenticated, user, socketConnected } = useAppSelector((state) => state.auth);
   const { showToast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,7 +63,7 @@ export default function NotificationsPage() {
   const handleBroadcast = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!broadcastTitle.trim() || !broadcastMessage.trim()) {
-      showToast("Please fill in both title and message", "error");
+      showToast(t("Please fill in both title and message"), "error");
       return;
     }
 
@@ -72,11 +74,11 @@ export default function NotificationsPage() {
         type: broadcastType,
         targetGroup: broadcastTargetGroup
       }).unwrap();
-      showToast("Announcement broadcasted successfully!", "success");
+      showToast(t("Announcement broadcasted successfully!"), "success");
       setBroadcastTitle("");
       setBroadcastMessage("");
     } catch (err) {
-      showToast("Failed to send broadcast", "error");
+      showToast(t("Failed to send broadcast"), "error");
     }
   };
   const totalPages = notificationsData?.pages || 1;
@@ -91,16 +93,16 @@ export default function NotificationsPage() {
     try {
       await markAsRead(id).unwrap();
     } catch (err) {
-      showToast("Failed to mark notification as read", "error");
+      showToast(t("Failed to mark notification as read"), "error");
     }
   };
 
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsRead(undefined).unwrap();
-      showToast("All notifications marked as read", "success");
+      showToast(t("All notifications marked as read"), "success");
     } catch (err) {
-      showToast("Failed to update notifications", "error");
+      showToast(t("Failed to update notifications"), "error");
     }
   };
 
@@ -108,19 +110,19 @@ export default function NotificationsPage() {
     e.stopPropagation(); // prevent triggering mark-as-read click handler
     try {
       await deleteNotification(id).unwrap();
-      showToast("Notification deleted", "success");
+      showToast(t("Notification deleted"), "success");
     } catch (err) {
-      showToast("Failed to delete notification", "error");
+      showToast(t("Failed to delete notification"), "error");
     }
   };
 
   const handleClearAll = async () => {
-    if (window.confirm("Are you sure you want to clear all notifications? This cannot be undone.")) {
+    if (window.confirm(t("Are you sure you want to clear all notifications? This cannot be undone."))) {
       try {
         await clearAllNotifications(undefined).unwrap();
-        showToast("All notifications cleared", "success");
+        showToast(t("All notifications cleared"), "success");
       } catch (err) {
-        showToast("Failed to clear notifications", "error");
+        showToast(t("Failed to clear notifications"), "error");
       }
     }
   };
@@ -135,20 +137,20 @@ export default function NotificationsPage() {
     const diffHour = Math.floor(diffMin / 60);
     const diffDay = Math.floor(diffHour / 24);
 
-    if (diffSec < 60) return "Just now";
-    if (diffMin < 60) return `${diffMin}m ago`;
-    if (diffHour < 24) return `${diffHour}h ago`;
-    if (diffDay < 7) return `${diffDay}d ago`;
+    if (diffSec < 60) return t("Just now");
+    if (diffMin < 60) return t("{{count}}m ago", { count: diffMin });
+    if (diffHour < 24) return t("{{count}}h ago", { count: diffHour });
+    if (diffDay < 7) return t("{{count}}d ago", { count: diffDay });
     return date.toLocaleDateString();
   };
 
   const filterTabs = [
-    { id: "all", label: "All" },
-    { id: "order", label: "Orders" },
-    { id: "review", label: "Reviews" },
-    { id: "stock", label: "Stock" },
-    { id: "article", label: "Articles" },
-    { id: "system", label: "System" },
+    { id: "all", label: t("All") },
+    { id: "order", label: t("Orders") },
+    { id: "review", label: t("Reviews") },
+    { id: "stock", label: t("Stock") },
+    { id: "article", label: t("Articles") },
+    { id: "system", label: t("System") },
   ];
 
   return (
@@ -161,7 +163,7 @@ export default function NotificationsPage() {
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="font-serif text-3xl sm:text-4xl font-bold tracking-wide">
-                Notification Center
+                {t("Notification Center")}
               </h1>
               {isAuthenticated && (
                 <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold border transition-colors duration-300 ${
@@ -170,12 +172,12 @@ export default function NotificationsPage() {
                     : "bg-amber-500/10 text-amber-500 border-amber-500/25 animate-pulse"
                 }`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${socketConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
-                  {socketConnected ? "Live" : "Connecting"}
+                  {socketConnected ? t("Live") : t("Connecting")}
                 </div>
               )}
             </div>
             <p className="text-sm text-muted mt-2">
-              Stay updated with your orders, reviews, inventory alerts, and system activities.
+              {t("Stay updated with your orders, reviews, inventory alerts, and system activities.")}
             </p>
           </div>
 
@@ -186,14 +188,14 @@ export default function NotificationsPage() {
                   onClick={handleMarkAllAsRead}
                   className="flex items-center gap-2 rounded-full border border-gold/30 bg-gold/5 px-4 py-2 text-xs font-bold text-gold hover:bg-gold/10 hover:border-gold transition-all duration-300 cursor-pointer"
                 >
-                  <CheckCheck className="h-4 w-4" /> Mark All as Read
+                  <CheckCheck className="h-4 w-4" /> {t("Mark All as Read")}
                 </button>
               )}
               <button
                 onClick={handleClearAll}
                 className="flex items-center gap-2 rounded-full border border-destructive/20 bg-destructive/5 px-4 py-2 text-xs font-bold text-destructive hover:bg-destructive/10 hover:border-destructive transition-all duration-300 cursor-pointer"
               >
-                <Trash2 className="h-4 w-4" /> Clear All
+                <Trash2 className="h-4 w-4" /> {t("Clear All")}
               </button>
             </div>
           )}
@@ -203,15 +205,15 @@ export default function NotificationsPage() {
         {!isAuthenticated ? (
           <div className="text-center py-20 bg-card-bg/20 border border-card-border/60 rounded-3xl p-8 backdrop-blur">
             <BellOff className="h-16 w-16 text-muted mx-auto mb-4" />
-            <h2 className="text-xl font-bold font-serif mb-2">Access Denied</h2>
+            <h2 className="text-xl font-bold font-serif mb-2">{t("Access Denied")}</h2>
             <p className="text-sm text-muted max-w-sm mx-auto mb-6">
-              Please sign in to your premium cabinet account to view your notifications inbox.
+              {t("Please sign in to your premium cabinet account to view your notifications inbox.")}
             </p>
             <Link
               href="/login"
               className="inline-flex h-11 items-center justify-center rounded-full bg-foreground px-6 text-xs font-bold text-background hover:bg-gold hover:text-white transition-all"
             >
-              Sign In Now
+              {t("Sign In Now")}
             </Link>
           </div>
         ) : (
@@ -222,20 +224,20 @@ export default function NotificationsPage() {
                 <div className="flex items-center gap-2.5 mb-4">
                   <Megaphone className="h-5 w-5 text-gold animate-bounce" />
                   <h2 className="font-serif text-lg font-bold text-foreground">
-                    Admin Announcement Broadcast
+                    {t("Admin Announcement Broadcast")}
                   </h2>
                 </div>
                 <form onSubmit={handleBroadcast} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                        Announcement Title
+                        {t("Announcement Title")}
                       </label>
                       <input
                         type="text"
                         value={broadcastTitle}
                         onChange={(e) => setBroadcastTitle(e.target.value)}
-                        placeholder="e.g. System Upgrade Scheduled"
+                        placeholder={t("e.g. System Upgrade Scheduled")}
                         className="w-full h-11 px-4 rounded-xl border border-card-border bg-card-bg/40 text-xs focus:border-gold focus:outline-none transition-all"
                         required
                       />
@@ -243,44 +245,44 @@ export default function NotificationsPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                          Target Audience
+                          {t("Target Audience")}
                         </label>
                         <select
                           value={broadcastTargetGroup}
                           onChange={(e) => setBroadcastTargetGroup(e.target.value)}
                           className="w-full h-11 px-3 rounded-xl border border-card-border bg-card-bg/40 text-xs focus:border-gold focus:outline-none transition-all cursor-pointer"
                         >
-                          <option value="all">All Users</option>
-                          <option value="sellers">Sellers Only</option>
-                          <option value="buyers">Buyers/Customers Only</option>
-                          <option value="admins">Admins Only</option>
+                          <option value="all">{t("All Users")}</option>
+                          <option value="sellers">{t("Sellers Only")}</option>
+                          <option value="buyers">{t("Buyers/Customers Only")}</option>
+                          <option value="admins">{t("Admins Only")}</option>
                         </select>
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                          Alert Category
+                          {t("Alert Category")}
                         </label>
                         <select
                           value={broadcastType}
                           onChange={(e) => setBroadcastType(e.target.value)}
                           className="w-full h-11 px-3 rounded-xl border border-card-border bg-card-bg/40 text-xs focus:border-gold focus:outline-none transition-all cursor-pointer"
                         >
-                          <option value="system">System</option>
-                          <option value="stock">Stock Alert</option>
-                          <option value="order">Order Update</option>
-                          <option value="article">Article Alert</option>
+                          <option value="system">{t("System")}</option>
+                          <option value="stock">{t("Stock Alert")}</option>
+                          <option value="order">{t("Order Update")}</option>
+                          <option value="article">{t("Article Alert")}</option>
                         </select>
                       </div>
                     </div>
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-                      Announcement Message
+                      {t("Announcement Message")}
                     </label>
                     <textarea
                       value={broadcastMessage}
                       onChange={(e) => setBroadcastMessage(e.target.value)}
-                      placeholder="Type the notification description details here..."
+                      placeholder={t("Type the notification description details here...")}
                       rows={3}
                       className="w-full p-4 rounded-xl border border-card-border bg-card-bg/40 text-xs focus:border-gold focus:outline-none transition-all resize-none"
                       required
@@ -295,11 +297,11 @@ export default function NotificationsPage() {
                       {isBroadcasting ? (
                         <>
                           <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          Broadcasting...
+                          {t("Broadcasting...")}
                         </>
                       ) : (
                         <>
-                          <Send className="h-3.5 w-3.5" /> Broadcast Announcement
+                          <Send className="h-3.5 w-3.5" /> {t("Broadcast Announcement")}
                         </>
                       )}
                     </button>
@@ -341,9 +343,11 @@ export default function NotificationsPage() {
             ) : filteredNotifications.length === 0 ? (
               <div className="text-center py-16 bg-card-bg/10 border border-card-border/40 rounded-3xl p-6">
                 <BellOff className="h-12 w-12 text-muted/60 mx-auto mb-3" />
-                <h3 className="text-base font-bold font-serif text-foreground">No Notifications</h3>
+                <h3 className="text-base font-bold font-serif text-foreground">{t("No Notifications")}</h3>
                 <p className="text-xs text-muted max-w-xs mx-auto mt-1">
-                  You don't have any notifications under the "{filterTabs.find(t => t.id === activeFilter)?.label}" filter.
+                  {t("You don't have any notifications under the \"{{filterName}}\" filter.", {
+                    filterName: filterTabs.find(t => t.id === activeFilter)?.label
+                  })}
                 </p>
               </div>
             ) : (
@@ -409,7 +413,7 @@ export default function NotificationsPage() {
                       <button
                         onClick={(e) => handleDelete(notif._id, e)}
                         className="p-2 rounded-xl text-muted hover:text-destructive hover:bg-destructive/10 transition-all cursor-pointer"
-                        title="Delete notification"
+                        title={t("Delete notification")}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -427,17 +431,17 @@ export default function NotificationsPage() {
                   disabled={currentPage === 1}
                   className="flex items-center gap-1 px-4 py-2 rounded-full border border-card-border bg-card-bg/20 text-xs font-bold text-foreground hover:bg-card-bg disabled:opacity-40 disabled:pointer-events-none transition-all duration-200 cursor-pointer"
                 >
-                  <ChevronLeft className="h-4 w-4" /> Previous
+                  <ChevronLeft className="h-4 w-4" /> {t("Previous")}
                 </button>
                 <span className="text-xs text-muted">
-                  Page <strong className="text-foreground">{currentPage}</strong> of <strong className="text-foreground">{totalPages}</strong>
+                  {t("Page")} <strong className="text-foreground">{currentPage}</strong> {t("of")} <strong className="text-foreground">{totalPages}</strong>
                 </span>
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                   disabled={currentPage === totalPages}
                   className="flex items-center gap-1 px-4 py-2 rounded-full border border-card-border bg-card-bg/20 text-xs font-bold text-foreground hover:bg-card-bg disabled:opacity-40 disabled:pointer-events-none transition-all duration-200 cursor-pointer"
                 >
-                  Next <ChevronRight className="h-4 w-4" />
+                  {t("Next")} <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
             )}

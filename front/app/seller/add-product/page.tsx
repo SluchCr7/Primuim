@@ -18,6 +18,7 @@ import {
 } from "../../../lib/api";
 import { useAppSelector } from "../../../lib/store";
 import { useToast } from "../../components/Toast";
+import { useTranslation } from "react-i18next";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -104,12 +105,12 @@ const ELECTRONICS_SPECS: SpecRow[] = [
 // Step indicator
 // ─────────────────────────────────────────────────────────────────────────────
 
-const STEPS = ["Basic Info", "Attributes & Variants", "Images & Publish"];
+const DEFAULT_STEPS = ["Basic Info", "Attributes & Variants", "Images & Publish"];
 
-function StepIndicator({ current }: { current: number }) {
+function StepIndicator({ current, labels }: { current: number; labels: string[] }) {
   return (
     <div className="flex items-center justify-center gap-3 mb-10">
-      {STEPS.map((label, i) => (
+      {labels.map((label, i) => (
         <React.Fragment key={i}>
           <div className="flex flex-col items-center gap-1.5">
             <div
@@ -128,7 +129,7 @@ function StepIndicator({ current }: { current: number }) {
               {label}
             </span>
           </div>
-          {i < STEPS.length - 1 && (
+          {i < labels.length - 1 && (
             <div className={`h-px flex-1 max-w-[60px] transition-all duration-500 ${i < current ? "bg-gold" : "bg-card-border"}`} />
           )}
         </React.Fragment>
@@ -159,7 +160,7 @@ function ChipInput({ label, placeholder, values, inputValue, onInputChange, onAd
       onAdd();
     }
   };
-
+  const { t: translate } = useTranslation();
   return (
     <div className="flex flex-col gap-2">
       <label className="text-[10px] font-bold uppercase tracking-widest text-muted">{label}</label>
@@ -168,7 +169,7 @@ function ChipInput({ label, placeholder, values, inputValue, onInputChange, onAd
           value={inputValue}
           onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={handleKey}
-          placeholder={placeholder ?? `Add ${label.toLowerCase()}…`}
+          placeholder={placeholder ?? translate("Add {{label}}…", { label: label.toLowerCase() })}
           className="flex-1 h-10 rounded-xl bg-card-bg border border-card-border px-3.5 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:border-gold transition-colors"
         />
         <button
@@ -177,7 +178,7 @@ function ChipInput({ label, placeholder, values, inputValue, onInputChange, onAd
           disabled={!inputValue.trim()}
           className="h-10 px-4 rounded-xl bg-gold/10 border border-gold/30 text-gold text-xs font-semibold hover:bg-gold hover:text-background transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Add
+          {translate("Add", "Add")}
         </button>
       </div>
 
@@ -229,6 +230,7 @@ export default function AddProductPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAppSelector((s) => s.auth);
   const { showToast } = useToast();
+  const { t: translate } = useTranslation();
 
   // ── Auth guard ────────────────────────────────────────────────────────────
   React.useEffect(() => {
@@ -269,6 +271,11 @@ export default function AddProductPage() {
   const categories = categoriesData?.categories || [];
   const selectedCategory = categories.find((c: any) => c._id === categoryId);
   const categoryType = selectedCategory ? detectCategoryType(selectedCategory.name) : "generic";
+  const stepLabels = [
+    translate("Basic Info", "Basic Info"),
+    translate("Attributes & Variants", "Attributes & Variants"),
+    translate("Images & Publish", "Images & Publish"),
+  ];
 
   // When category changes, reset and pre-populate attribute templates
   const handleCategoryChange = useCallback((id: string) => {
@@ -304,7 +311,7 @@ export default function AddProductPage() {
   // ── Auto-generate variants from attributes ────────────────────────────────
   const generateVariants = useCallback(() => {
     const validAxes = attributes.filter((a) => a.name && a.values.length > 0);
-    if (validAxes.length === 0) { showToast("Add at least one attribute with values first.", "error"); return; }
+    if (validAxes.length === 0) { showToast(translate("Add at least one attribute with values first.", "Add at least one attribute with values first."), "error"); return; }
     const combos = cartesianProduct(validAxes);
     const skuBase = toSkuBase(title || "PROD");
     const generated: VariantRow[] = combos.map((combo, i) => ({
@@ -314,7 +321,7 @@ export default function AddProductPage() {
       price: parseFloat(price) || 0,
     }));
     setVariants(generated);
-    showToast(`Generated ${generated.length} variants.`, "success");
+    showToast(translate("Generated {{count}} variants.", { count: generated.length }), "success");
   }, [attributes, title, price, showToast]);
 
   const updateVariantField = (idx: number, field: "stock" | "price", value: number) => {
@@ -339,7 +346,7 @@ export default function AddProductPage() {
         const res = await uploadImage(fd).unwrap();
         setUploadedImages((prev) => [...prev, { publicId: res.publicId || res.public_id, url: res.url || res.secure_url }]);
       } catch {
-        showToast(`Failed to upload ${file.name}`, "error");
+        showToast(translate("Failed to upload {{name}}", { name: file.name }), "error");
       }
     }
   };
@@ -358,8 +365,8 @@ export default function AddProductPage() {
 
   // ── Tags ──────────────────────────────────────────────────────────────────
   const addTag = () => {
-    const t = tagInput.trim();
-    if (t && !tags.includes(t)) { setTags((prev) => [...prev, t]); setTagInput(""); }
+    const tagValue = tagInput.trim();
+    if (tagValue && !tags.includes(tagValue)) { setTags((prev) => [...prev, tagValue]); setTagInput(""); }
   };
 
   // ── Submit ────────────────────────────────────────────────────────────────
@@ -401,10 +408,10 @@ export default function AddProductPage() {
 
     try {
       await createProduct(formData).unwrap();
-      showToast("Product created successfully! 🎉", "success");
+      showToast(translate("Product created successfully! 🎉", "Product created successfully! 🎉"), "success");
       router.push("/seller");
     } catch (err: any) {
-      const msg = err?.data?.errors?.[0] || err?.data?.message || "Failed to create product.";
+      const msg = err?.data?.errors?.[0] || err?.data?.message || translate("Failed to create product.", "Failed to create product.");
       showToast(msg, "error");
     }
   };
@@ -429,32 +436,32 @@ export default function AddProductPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Title */}
         <div className={`${fieldCls} md:col-span-2`}>
-          <label className={labelCls}>Product Title *</label>
+          <label className={labelCls}>{translate("Product Title *", "Product Title *")}</label>
           <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Premium Slim-Fit Oxford Shirt" />
+            placeholder={translate("e.g. Premium Slim-Fit Oxford Shirt", "e.g. Premium Slim-Fit Oxford Shirt")} />
         </div>
 
         {/* Description */}
         <div className={`${fieldCls} md:col-span-2`}>
-          <label className={labelCls}>Description *</label>
+          <label className={labelCls}>{translate("Description *", "Description *")}</label>
           <textarea
             rows={4}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe the product — materials, design, use-case…"
+            placeholder={translate("Describe the product — materials, design, use-case…", "Describe the product — materials, design, use-case…")}
             className="w-full rounded-xl bg-card-bg border border-card-border px-4 py-3 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:border-gold transition-colors resize-none"
           />
         </div>
 
         {/* Category */}
         <div className={fieldCls}>
-          <label className={labelCls}>Category *</label>
+          <label className={labelCls}>{translate("Category *", "Category *")}</label>
           <select
             value={categoryId}
             onChange={(e) => handleCategoryChange(e.target.value)}
             className={`${inputCls} cursor-pointer`}
           >
-            <option value="">Select category…</option>
+            <option value="">{translate("Select category…", "Select category…")}</option>
             {categories.map((c: any) => (
               <option key={c._id} value={c._id}>{c.name}</option>
             ))}
@@ -463,21 +470,21 @@ export default function AddProductPage() {
 
         {/* Brand */}
         <div className={fieldCls}>
-          <label className={labelCls}>Brand</label>
+          <label className={labelCls}>{translate("Brand", "Brand")}</label>
           <input className={inputCls} value={brand} onChange={(e) => setBrand(e.target.value)}
-            placeholder="e.g. Nike, Apple, IKEA" />
+            placeholder={translate("e.g. Nike, Apple, IKEA", "e.g. Nike, Apple, IKEA")} />
         </div>
 
         {/* Price */}
         <div className={fieldCls}>
-          <label className={labelCls}>Price (USD) *</label>
+          <label className={labelCls}>{translate("Price (USD) *", "Price (USD) *")}</label>
           <input type="number" min="0" step="0.01" className={inputCls} value={price}
             onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
         </div>
 
         {/* Compare Price */}
         <div className={fieldCls}>
-          <label className={labelCls}>Compare Price (optional)</label>
+          <label className={labelCls}>{translate("Compare Price (optional)", "Compare Price (optional)")}</label>
           <input type="number" min="0" step="0.01" className={inputCls} value={comparePrice}
             onChange={(e) => setComparePrice(e.target.value)} placeholder="Original price before discount" />
         </div>
@@ -485,7 +492,7 @@ export default function AddProductPage() {
         {/* Stock — only shown when no variants will be used */}
         {categoryType !== "clothing" && categoryType !== "shoes" && (
           <div className={fieldCls}>
-            <label className={labelCls}>Stock Quantity</label>
+            <label className={labelCls}>{translate("Stock Quantity", "Stock Quantity")}</label>
             <input type="number" min="0" className={inputCls} value={stock}
               onChange={(e) => setStock(e.target.value)} placeholder="0" />
           </div>
@@ -493,16 +500,16 @@ export default function AddProductPage() {
 
         {/* SKU */}
         <div className={fieldCls}>
-          <label className={labelCls}>SKU (optional)</label>
+          <label className={labelCls}>{translate("SKU (optional)", "SKU (optional)")}</label>
           <input className={inputCls} value={sku} onChange={(e) => setSku(e.target.value)}
-            placeholder="e.g. PROD-001 (auto-generated if blank)" />
+            placeholder={translate("e.g. PROD-001 (auto-generated if blank)", "e.g. PROD-001 (auto-generated if blank)")} />
         </div>
 
         {/* Tags */}
         <div className={`${fieldCls} md:col-span-2`}>
           <ChipInput
-            label="Tags"
-            placeholder="Type a tag and press Enter…"
+            label={translate("Tags", "Tags")}
+            placeholder={translate("Type a tag and press Enter…", "Type a tag and press Enter…")}
             values={tags}
             inputValue={tagInput}
             onInputChange={setTagInput}
@@ -529,7 +536,7 @@ export default function AddProductPage() {
           className="inline-flex items-center gap-2 self-start px-3.5 py-1.5 rounded-full border border-gold/30 bg-gold/5 text-[10px] font-bold uppercase tracking-widest text-gold"
         >
           {categoryType === "electronics" ? <Cpu className="h-3 w-3" /> : <Palette className="h-3 w-3" />}
-          {categoryType} mode active
+          {translate("{{type}} mode active", { type: categoryType })}
         </motion.div>
       )}
 
@@ -538,12 +545,12 @@ export default function AddProductPage() {
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Technical Specifications</h3>
-              <p className="text-[11px] text-muted mt-0.5">Key-value pairs shown on the product detail page.</p>
+              <h3 className="text-sm font-semibold text-foreground">{translate("Technical Specifications", "Technical Specifications")}</h3>
+              <p className="text-[11px] text-muted mt-0.5">{translate("Key-value pairs shown on the product detail page.", "Key-value pairs shown on the product detail page.")}</p>
             </div>
             <button type="button" onClick={addSpecRow}
               className="flex items-center gap-1.5 h-9 px-4 rounded-xl border border-gold/30 bg-gold/5 text-gold text-xs font-semibold hover:bg-gold hover:text-background transition-all">
-              <Plus className="h-3.5 w-3.5" /> Add Spec
+              <Plus className="h-3.5 w-3.5" /> {translate("Add Spec", "Add Spec")}
             </button>
           </div>
           <div className="flex flex-col gap-3">
@@ -552,13 +559,13 @@ export default function AddProductPage() {
                 <input
                   value={spec.name}
                   onChange={(e) => updateSpec(spec.id, "name", e.target.value)}
-                  placeholder="Spec name (e.g. RAM)"
+                  placeholder={translate("Spec name (e.g. RAM)", "Spec name (e.g. RAM)")}
                   className="flex-1 h-10 rounded-xl bg-card-bg border border-card-border px-3.5 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:border-gold transition-colors"
                 />
                 <input
                   value={spec.value}
                   onChange={(e) => updateSpec(spec.id, "value", e.target.value)}
-                  placeholder="Value (e.g. 16GB)"
+                  placeholder={translate("Value (e.g. 16GB)", "Value (e.g. 16GB)")}
                   className="flex-1 h-10 rounded-xl bg-card-bg border border-card-border px-3.5 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:border-gold transition-colors"
                 />
                 <button type="button" onClick={() => removeSpecRow(spec.id)}
@@ -569,7 +576,7 @@ export default function AddProductPage() {
             ))}
             {specs.length === 0 && (
               <p className="text-[11px] text-muted py-4 text-center border border-dashed border-card-border rounded-xl">
-                No specifications yet. Click "Add Spec" to start.
+                {translate("No specifications yet. Click \"Add Spec\" to start.", "No specifications yet. Click \"Add Spec\" to start.")}
               </p>
             )}
           </div>
@@ -583,14 +590,14 @@ export default function AddProductPage() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Product Attributes</h3>
+                <h3 className="text-sm font-semibold text-foreground">{translate("Product Attributes", "Product Attributes")}</h3>
                 <p className="text-[11px] text-muted mt-0.5">
-                  Define the options customers will choose from (Color, Size, Material, etc.)
+                  {translate("Define the options customers will choose from (Color, Size, Material, etc.)", "Define the options customers will choose from (Color, Size, Material, etc.)")}
                 </p>
               </div>
               <button type="button" onClick={addAttributeRow}
                 className="flex items-center gap-1.5 h-9 px-4 rounded-xl border border-gold/30 bg-gold/5 text-gold text-xs font-semibold hover:bg-gold hover:text-background transition-all">
-                <Plus className="h-3.5 w-3.5" /> Add Attribute
+                <Plus className="h-3.5 w-3.5" /> {translate("Add Attribute", "Add Attribute")}
               </button>
             </div>
 
@@ -631,7 +638,7 @@ export default function AddProductPage() {
                 <div className="border border-dashed border-card-border rounded-2xl py-10 flex flex-col items-center gap-3 text-center">
                   <Layers className="h-8 w-8 text-muted/40" />
                   <p className="text-[11px] text-muted max-w-xs">
-                    No attributes yet. Add Color, Size, or any custom axis. Then generate variants below.
+                    {translate("No attributes yet. Add Color, Size, or any custom axis. Then generate variants below.", "No attributes yet. Add Color, Size, or any custom axis. Then generate variants below.")}
                   </p>
                 </div>
               )}
@@ -642,10 +649,10 @@ export default function AddProductPage() {
           {attributes.length > 0 && (
             <div className="flex items-center justify-between py-4 border-y border-card-border">
               <div>
-                <p className="text-sm font-semibold text-foreground">Variant Matrix</p>
+                <p className="text-sm font-semibold text-foreground">{translate("Variant Matrix", "Variant Matrix")}</p>
                 <p className="text-[11px] text-muted mt-0.5">
-                  Auto-generate all combinations from the attributes above.
-                  {variants.length > 0 && ` (${variants.length} variants, ${totalVariantStock} total stock)`}
+                  {translate("Auto-generate all combinations from the attributes above.", "Auto-generate all combinations from the attributes above.")}
+                  {variants.length > 0 && ` (${variants.length} ${translate("variants", "variants")}, ${totalVariantStock} ${translate("total stock", "total stock")})`}
                 </p>
               </div>
               <button
@@ -654,7 +661,7 @@ export default function AddProductPage() {
                 className="flex items-center gap-2 h-10 px-5 rounded-xl bg-gold text-background text-xs font-bold hover:bg-gold/90 transition-all shadow-lg shadow-gold/20"
               >
                 <Sparkles className="h-3.5 w-3.5" />
-                {variants.length > 0 ? "Re-generate" : "Generate Variants"}
+                {variants.length > 0 ? translate("Re-generate", "Re-generate") : translate("Generate Variants", "Generate Variants")}
               </button>
             </div>
           )}
@@ -670,10 +677,10 @@ export default function AddProductPage() {
                 {/* Table header */}
                 <div className="grid bg-card-bg/80 border-b border-card-border px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-muted"
                   style={{ gridTemplateColumns: `1fr repeat(${Object.keys(variants[0].combination).length}, 80px) 100px 110px` }}>
-                  <span>SKU</span>
+                  <span>{translate("SKU", "SKU")}</span>
                   {Object.keys(variants[0].combination).map((k) => <span key={k}>{k}</span>)}
-                  <span>Stock</span>
-                  <span>Price (USD)</span>
+                  <span>{translate("Stock", "Stock")}</span>
+                  <span>{translate("Price (USD)", "Price (USD)")}</span>
                 </div>
 
                 {/* Table rows */}
@@ -709,7 +716,7 @@ export default function AddProductPage() {
               </div>
 
               <p className="text-[10px] text-muted text-right">
-                {variants.length} variants · Total stock: <strong className="text-foreground">{totalVariantStock}</strong>
+                {variants.length} {translate("variants", "variants")} · {translate("Total stock:", "Total stock:")} <strong className="text-foreground">{totalVariantStock}</strong>
               </p>
             </motion.div>
           )}
@@ -727,8 +734,8 @@ export default function AddProductPage() {
       {/* Image upload */}
       <div className="flex flex-col gap-4">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Product Images</h3>
-          <p className="text-[11px] text-muted mt-0.5">Upload up to 6 images (JPG, PNG, WEBP). First image = cover.</p>
+          <h3 className="text-sm font-semibold text-foreground">{translate("Product Images", "Product Images")}</h3>
+          <p className="text-[11px] text-muted mt-0.5">{translate("Upload up to 6 images (JPG, PNG, WEBP). First image = cover.", "Upload up to 6 images (JPG, PNG, WEBP). First image = cover.")}</p>
         </div>
 
         {/* Upload zone */}
@@ -738,8 +745,8 @@ export default function AddProductPage() {
               {isUploading ? <Loader2 className="h-5 w-5 animate-spin text-gold" /> : <Upload className="h-5 w-5 text-muted" />}
             </div>
             <div className="text-center">
-              <p className="text-sm font-semibold text-foreground">{isUploading ? "Uploading…" : "Click to upload images"}</p>
-              <p className="text-[11px] text-muted mt-0.5">{uploadedImages.length}/6 uploaded</p>
+              <p className="text-sm font-semibold text-foreground">{isUploading ? translate("Uploading…", "Uploading…") : translate("Click to upload images", "Click to upload images")}</p>
+              <p className="text-[11px] text-muted mt-0.5">{uploadedImages.length}/6 {translate("uploaded", "uploaded")}</p>
             </div>
             <input type="file" accept="image/*" multiple className="hidden"
               onChange={handleImageUpload} disabled={isUploading} />
@@ -754,7 +761,7 @@ export default function AddProductPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={img.url} alt={`Product ${i + 1}`} className="h-full w-full object-cover" />
                 {i === 0 && (
-                  <span className="absolute bottom-1 left-1 text-[8px] font-bold uppercase tracking-wider bg-gold text-background px-1.5 py-0.5 rounded-md">Cover</span>
+                  <span className="absolute bottom-1 left-1 text-[8px] font-bold uppercase tracking-wider bg-gold text-background px-1.5 py-0.5 rounded-md">{translate("Cover", "Cover")}</span>
                 )}
                 <button
                   type="button"
@@ -772,9 +779,9 @@ export default function AddProductPage() {
       {/* Publish toggle */}
       <div className="flex items-center justify-between p-5 rounded-2xl border border-card-border bg-card-bg/50">
         <div>
-          <p className="text-sm font-semibold text-foreground">Publish immediately</p>
+          <p className="text-sm font-semibold text-foreground">{translate("Publish immediately", "Publish immediately")}</p>
           <p className="text-[11px] text-muted mt-0.5">
-            {isPublished ? "Product will be live and visible to customers." : "Save as draft — visible only to you."}
+            {isPublished ? translate("Product will be live and visible to customers.", "Product will be live and visible to customers.") : translate("Save as draft — visible only to you.", "Save as draft — visible only to you.")}
           </p>
         </div>
         <button
@@ -794,17 +801,17 @@ export default function AddProductPage() {
 
       {/* Summary card */}
       <div className="rounded-2xl border border-card-border p-5 bg-card-bg/50 flex flex-col gap-3">
-        <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted">Summary</h4>
+        <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted">{translate("Summary", "Summary")}</h4>
         <div className="grid grid-cols-2 gap-x-6 gap-y-2">
           {[
-            ["Title", title || "—"],
-            ["Category", selectedCategory?.name || "—"],
-            ["Price", price ? `$${parseFloat(price).toFixed(2)}` : "—"],
-            ["Brand", brand || "—"],
-            ["Attributes", attributes.filter((a) => a.values.length > 0).length ? `${attributes.filter((a) => a.values.length > 0).length} axes` : "None"],
-            ["Variants", variants.length ? `${variants.length} SKUs` : "None"],
-            ["Images", `${uploadedImages.length} uploaded`],
-            ["Status", isPublished ? "Live" : "Draft"],
+            [translate("Title", "Title"), title || "—"],
+            [translate("Category", "Category"), selectedCategory?.name || "—"],
+            [translate("Price", "Price"), price ? `$${parseFloat(price).toFixed(2)}` : "—"],
+            [translate("Brand", "Brand"), brand || "—"],
+            [translate("Attributes", "Attributes"), attributes.filter((a) => a.values.length > 0).length ? `${attributes.filter((a) => a.values.length > 0).length} ${translate("axes", "axes")}` : translate("None", "None")],
+            [translate("Variants", "Variants"), variants.length ? `${variants.length} ${translate("SKUs", "SKUs")}` : translate("None", "None")],
+            [translate("Images", "Images"), `${uploadedImages.length} ${translate("uploaded", "uploaded")}`],
+            [translate("Status", "Status"), isPublished ? translate("Live", "Live") : translate("Draft", "Draft")],
           ].map(([k, v]) => (
             <div key={k} className="flex flex-col gap-0.5">
               <span className="text-[9px] font-bold uppercase tracking-widest text-muted/70">{k}</span>
@@ -828,24 +835,24 @@ export default function AddProductPage() {
         {/* Page header */}
         <div className="mb-8">
           <div className="flex items-center gap-2 text-xs text-muted mb-4">
-            <Link href="/seller" className="hover:text-gold transition-colors">Seller Hub</Link>
+            <Link href="/seller" className="hover:text-gold transition-colors">{translate("Seller Hub", "Seller Hub")}</Link>
             <ChevronRight className="h-3 w-3" />
-            <span className="text-foreground font-medium">Add New Product</span>
+            <span className="text-foreground font-medium">{translate("Add New Product", "Add New Product")}</span>
           </div>
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-2xl bg-gold/10 border border-gold/20 flex items-center justify-center">
               <ShoppingBag className="h-5 w-5 text-gold" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">New Product</h1>
-              <p className="text-[11px] text-muted mt-0.5">Create a listing with dynamic attributes and variants.</p>
+              <h1 className="text-2xl font-bold text-foreground">{translate("New Product", "New Product")}</h1>
+              <p className="text-[11px] text-muted mt-0.5">{translate("Create a listing with dynamic attributes and variants.", "Create a listing with dynamic attributes and variants.")}</p>
             </div>
           </div>
         </div>
 
         {/* Form card */}
         <div className="rounded-3xl border border-card-border bg-card-bg/60 backdrop-blur-sm shadow-xl shadow-black/5 p-8">
-          <StepIndicator current={step} />
+          <StepIndicator current={step} labels={stepLabels} />
 
           <AnimatePresence mode="wait">
             <motion.div
@@ -869,7 +876,7 @@ export default function AddProductPage() {
               disabled={step === 0}
               className="flex items-center gap-2 h-11 px-5 rounded-xl border border-card-border text-sm font-semibold text-muted hover:text-foreground hover:border-gold/40 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <ChevronLeft className="h-4 w-4" /> Back
+              <ChevronLeft className="h-4 w-4" /> {translate("Back", "Back")}
             </button>
 
             {step < 2 ? (
@@ -879,7 +886,7 @@ export default function AddProductPage() {
                 disabled={step === 0 ? !step1Valid : !step2Valid}
                 className="flex items-center gap-2 h-11 px-6 rounded-xl bg-foreground text-background text-sm font-semibold hover:bg-gold hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
               >
-                Continue <ChevronRight className="h-4 w-4" />
+                {translate("Continue", "Continue")} <ChevronRight className="h-4 w-4" />
               </button>
             ) : (
               <button
@@ -889,9 +896,9 @@ export default function AddProductPage() {
                 className="flex items-center gap-2 h-11 px-6 rounded-xl bg-gold text-background text-sm font-bold hover:bg-gold/90 transition-all disabled:opacity-60 shadow-lg shadow-gold/25"
               >
                 {isCreating ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Publishing…</>
+                  <><Loader2 className="h-4 w-4 animate-spin" /> {translate("Publishing…", "Publishing…")}</>
                 ) : (
-                  <><Check className="h-4 w-4" /> Publish Product</>
+                  <><Check className="h-4 w-4" /> {translate("Publish Product", "Publish Product")}</>
                 )}
               </button>
             )}

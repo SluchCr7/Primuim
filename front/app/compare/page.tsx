@@ -4,24 +4,14 @@
  * /app/compare/page.tsx
  * ─────────────────────────────────────────────────────────────────────────────
  * Professional Product Comparison Page
- *
- * Features:
- *  ① Searchable product picker (up to 4 slots)
- *  ② Sticky column headers with product image, title, links & actions
- *  ③ 14-row animated comparison table covering all Product schema fields
- *  ④ Best-value auto-highlighting (lowest price / highest rating / most stock)
- *  ⑤ Per-product: Add to Cart, Toggle Wishlist, View Detail, Remove
- *  ⑥ URL ?ids= persistence so comparisons are shareable
- *  ⑦ Floating bottom tray (synced with localStorage "compare_list")
- *  ⑧ Framer Motion animated transitions throughout
- *  ⑨ Full dark/light mode via CSS custom properties
- *  ⑩ Fully responsive — mobile horizontal scroll + sticky left label column
+ * ...
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslation } from "react-i18next"; // استدعاء الـ hook
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import {
@@ -71,7 +61,6 @@ const LS_KEY = "compare_list";
 // Utility helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Read / write the compare list from localStorage */
 function readLS(): string[] {
   if (typeof window === "undefined") return [];
   try {
@@ -85,20 +74,18 @@ function writeLS(ids: string[]) {
   localStorage.setItem(LS_KEY, JSON.stringify(ids));
 }
 
-/** Render a ✓ or – icon for boolean product fields */
 function BoolCell({ value }: { value: boolean }) {
+  const { t } = useTranslation();
   return value ? (
     <span className="inline-flex items-center gap-1 text-success font-semibold text-xs">
-      <Check className="h-3.5 w-3.5" /> Yes
+      <Check className="h-3.5 w-3.5" /> {t("Yes")}
     </span>
   ) : (
     <span className="text-muted text-xs font-light">—</span>
   );
 }
 
-/** Star-bar rating visual */
 function StarBar({ rating }: { rating: number }) {
-  const pct = Math.round((rating / 5) * 100);
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1.5">
@@ -109,7 +96,7 @@ function StarBar({ rating }: { rating: number }) {
       <div className="h-1 w-full max-w-[80px] rounded-full bg-card-border overflow-hidden">
         <div
           className="h-full rounded-full bg-gold transition-all duration-700"
-          style={{ width: `${pct}%` }}
+          style={{ width: `${Math.round((rating / 5) * 100)}%` }}
         />
       </div>
     </div>
@@ -124,12 +111,12 @@ type RowDef = {
   label: string;
   icon: React.ReactNode;
   render: (p: any, winner?: boolean) => React.ReactNode;
-  /** Which field to use for "winner" comparison (higher = better unless invert) */
   compareKey?: (p: any) => number;
-  invertWinner?: boolean; // lower is better (e.g. price)
-  winnerLabel?: string;
+  invertWinner?: boolean;
+  winnerLabel: string;
 };
 
+// تم تعديل الـ ROWS ليتم استخدام الترجمة بداخل الـ Render مباشرة للنصوص الثابتة
 const ROWS: RowDef[] = [
   {
     id: "price",
@@ -158,14 +145,16 @@ const ROWS: RowDef[] = [
     id: "rating",
     label: "Rating",
     icon: <Star className="h-3.5 w-3.5" />,
-    render: (p, winner) => (
-      <div className={winner ? "opacity-100" : "opacity-80"}>
-        <StarBar rating={p.ratingAverage || 0} />
-        <span className="text-[10px] text-muted mt-1 block">
-          {p.ratingCount || 0} reviews
-        </span>
-      </div>
-    ),
+    render: (p, winner) => {
+      return (
+        <div className={winner ? "opacity-100" : "opacity-80"}>
+          <StarBar rating={p.ratingAverage || 0} />
+          <span className="text-[10px] text-muted mt-1 block">
+            {p.ratingCount || 0} reviews
+          </span>
+        </div>
+      );
+    },
     compareKey: (p) => p.ratingAverage || 0,
     winnerLabel: "Highest Rated",
   },
@@ -178,6 +167,7 @@ const ROWS: RowDef[] = [
         {p.brand || <span className="text-muted font-light">—</span>}
       </span>
     ),
+    winnerLabel: "",
   },
   {
     id: "category",
@@ -193,25 +183,28 @@ const ROWS: RowDef[] = [
         )}
       </div>
     ),
+    winnerLabel: "",
   },
   {
     id: "stock",
     label: "Availability",
     icon: <Package className="h-3.5 w-3.5" />,
-    render: (p, winner) => (
-      <div className="flex flex-col gap-1">
-        {p.stock > 0 ? (
-          <>
-            <span className={`text-xs font-bold ${winner ? "text-success" : "text-success/80"}`}>
-              ● In Stock
-            </span>
-            <span className="text-[10px] text-muted">{p.stock} units</span>
-          </>
-        ) : (
-          <span className="text-xs font-bold text-error">● Out of Stock</span>
-        )}
-      </div>
-    ),
+    render: (p, winner) => {
+      return (
+        <div className="flex flex-col gap-1">
+          {p.stock > 0 ? (
+            <>
+              <span className={`text-xs font-bold ${winner ? "text-success" : "text-success/80"}`}>
+                ● In Stock
+              </span>
+              <span className="text-[10px] text-muted">{p.stock} units</span>
+            </>
+          ) : (
+            <span className="text-xs font-bold text-error">● Out of Stock</span>
+          )}
+        </div>
+      );
+    },
     compareKey: (p) => p.stock || 0,
     winnerLabel: "Most Available",
   },
@@ -224,6 +217,7 @@ const ROWS: RowDef[] = [
         {p.sku || "—"}
       </span>
     ),
+    winnerLabel: "",
   },
   {
     id: "variants",
@@ -248,6 +242,7 @@ const ROWS: RowDef[] = [
         </div>
       );
     },
+    winnerLabel: "",
   },
   {
     id: "specifications",
@@ -269,6 +264,7 @@ const ROWS: RowDef[] = [
         </ul>
       );
     },
+    winnerLabel: "",
   },
   {
     id: "tags",
@@ -293,6 +289,7 @@ const ROWS: RowDef[] = [
         </div>
       );
     },
+    winnerLabel: "",
   },
   {
     id: "sold",
@@ -311,18 +308,21 @@ const ROWS: RowDef[] = [
     label: "Best Seller",
     icon: <Sparkles className="h-3.5 w-3.5" />,
     render: (p) => <BoolCell value={!!p.isBestSeller} />,
+    winnerLabel: "",
   },
   {
     id: "isDigital",
     label: "Digital Product",
     icon: <Cpu className="h-3.5 w-3.5" />,
     render: (p) => <BoolCell value={!!p.isDigital} />,
+    winnerLabel: "",
   },
   {
     id: "isBundle",
     label: "Bundle",
     icon: <Layers className="h-3.5 w-3.5" />,
     render: (p) => <BoolCell value={!!p.isBundle} />,
+    winnerLabel: "",
   },
   {
     id: "seller",
@@ -339,6 +339,7 @@ const ROWS: RowDef[] = [
       ) : (
         <span className="text-xs text-muted">—</span>
       ),
+    winnerLabel: "",
   },
 ];
 
@@ -346,27 +347,25 @@ const ROWS: RowDef[] = [
 // Main Component
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ComparePage() {
+  const { t } = useTranslation(); // استدعاء الدالة
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthenticated, currency } = useAppSelector((s) => s.auth);
+  const { isAuthenticated } = useAppSelector((s) => s.auth);
   const { showToast } = useToast();
 
-  // ── Data fetching ──────────────────────────────────────────────────────────
   const { data: productsData, isLoading: productsLoading } = useGetProductsQuery({ limit: 60 });
-  const [addToCart, { isLoading: cartLoading }] = useAddToCartMutation();
+  const [addToCart] = useAddToCartMutation();
   const [toggleWishlist] = useToggleWishlistMutation();
   const { data: wishlistData } = useGetWishlistQuery(undefined, { skip: !isAuthenticated });
 
   const allProducts: any[] = useMemo(() => productsData?.products || [], [productsData]);
 
-  // ── Compare list state ─────────────────────────────────────────────────────
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerOpen, setPickerOpen] = useState(true);
   const [trayDismissed, setTrayDismissed] = useState(false);
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
 
-  // ── Boot: read from URL ?ids= first, then localStorage ────────────────────
   useEffect(() => {
     const urlIds = searchParams.get("ids");
     if (urlIds) {
@@ -376,9 +375,8 @@ export default function ComparePage() {
     } else {
       setCompareIds(readLS());
     }
-  }, []);  // eslint-disable-line
+  }, []); // eslint-disable-line
 
-  // ── Sync compareIds → URL + localStorage ──────────────────────────────────
   const syncIds = useCallback((ids: string[]) => {
     setCompareIds(ids);
     writeLS(ids);
@@ -387,11 +385,10 @@ export default function ComparePage() {
     router.replace(`/compare${ids.length ? `?${params.toString()}` : ""}`, { scroll: false });
   }, [router]);
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
   const handleAdd = (id: string) => {
     if (compareIds.includes(id)) return;
     if (compareIds.length >= MAX_COMPARE) {
-      showToast(`You can compare up to ${MAX_COMPARE} products at once.`, "error");
+      showToast(t("You can compare up to 4 products at once."), "error");
       return;
     }
     syncIds([...compareIds, id]);
@@ -404,25 +401,25 @@ export default function ComparePage() {
 
   const handleClearAll = () => {
     syncIds([]);
-    showToast("Comparison cleared.", "info");
+    showToast(t("Comparison cleared."), "info");
   };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
-    showToast("Comparison link copied to clipboard!", "success");
+    showToast(t("Comparison link copied to clipboard!"), "success");
   };
 
   const handleAddToCart = async (product: any) => {
     if (!isAuthenticated) {
-      showToast("Please log in to add items to your cart.", "error");
+      showToast(t("Please log in to add items to your cart."), "error");
       return;
     }
     setAddingToCart(product._id);
     try {
       await addToCart({ productId: product._id, quantity: 1 }).unwrap();
-      showToast(`"${product.title}" added to your bag.`, "success");
+      showToast(`${t("Added to your bag.")}`, "success"); // تم استبعاد العنوان الـ dynamic
     } catch (err: any) {
-      showToast(err?.data?.message || "Failed to add to cart.", "error");
+      showToast(err?.data?.message || t("Failed to add to cart."), "error");
     } finally {
       setAddingToCart(null);
     }
@@ -430,18 +427,17 @@ export default function ComparePage() {
 
   const handleWishlist = async (product: any) => {
     if (!isAuthenticated) {
-      showToast("Please log in to use your wishlist.", "error");
+      showToast(t("Please log in to use your wishlist."), "error");
       return;
     }
     try {
       const res = await toggleWishlist(product._id).unwrap();
-      showToast(res.message, "success");
+      showToast(res.message, "success"); // الـ res.message جاي من الـ DB/API ومترجمش
     } catch {
-      showToast("Failed to update wishlist.", "error");
+      showToast(t("Failed to update wishlist."), "error");
     }
   };
 
-  // ── Derived data ───────────────────────────────────────────────────────────
   const comparedItems: any[] = useMemo(
     () => compareIds.map((id) => allProducts.find((p) => p._id === id)).filter(Boolean),
     [compareIds, allProducts]
@@ -450,7 +446,6 @@ export default function ComparePage() {
   const isWishlisted = (id: string) =>
     wishlistData?.wishlist?.some((w: any) => w.product?._id === id);
 
-  /** Filtered picker list */
   const pickerList = useMemo(() => {
     const q = pickerSearch.toLowerCase();
     return allProducts.filter(
@@ -462,10 +457,6 @@ export default function ComparePage() {
     );
   }, [allProducts, compareIds, pickerSearch]);
 
-  /**
-   * Compute per-row "winner" index.
-   * Returns a map: rowId → productId of winner
-   */
   const winners = useMemo<Record<string, string>>(() => {
     const result: Record<string, string> = {};
     if (comparedItems.length < 2) return result;
@@ -476,16 +467,12 @@ export default function ComparePage() {
       const best = row.invertWinner
         ? values.reduce((a, b) => (a.val <= b.val ? a : b))
         : values.reduce((a, b) => (a.val >= b.val ? a : b));
-      // Only highlight if not all equal
       const allSame = values.every((v) => v.val === values[0].val);
       if (!allSame) result[row.id] = best.id;
     });
     return result;
   }, [comparedItems]);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Header />
@@ -496,17 +483,16 @@ export default function ComparePage() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
             <span className="text-[10px] font-bold tracking-[0.28em] text-gold uppercase flex items-center gap-1.5 mb-2">
-              <GitCompare className="h-3.5 w-3.5" /> Side-by-Side Analysis
+              <GitCompare className="h-3.5 w-3.5" /> {t("Side-by-Side Analysis")}
             </span>
             <h1 className="font-serif text-3xl sm:text-4xl font-bold leading-tight">
-              Compare Products
+              {t("Compare Products")}
             </h1>
             <p className="text-sm text-muted font-light mt-2">
-              Evaluate up to {MAX_COMPARE} products side-by-side across {ROWS.length} attributes.
+              {t("Evaluate up to 4 products side-by-side across detailed attributes.")}
             </p>
           </div>
 
-          {/* Actions row */}
           <div className="flex items-center gap-3 flex-wrap">
             {compareIds.length > 0 && (
               <>
@@ -514,13 +500,13 @@ export default function ComparePage() {
                   onClick={handleCopyLink}
                   className="flex items-center gap-2 px-4 py-2 rounded-full border border-card-border text-xs font-semibold uppercase tracking-wider text-muted hover:border-gold/50 hover:text-gold transition-all cursor-pointer"
                 >
-                  <Link2 className="h-3.5 w-3.5" /> Share Link
+                  <Link2 className="h-3.5 w-3.5" /> {t("Share Link")}
                 </button>
                 <button
                   onClick={handleClearAll}
                   className="flex items-center gap-2 px-4 py-2 rounded-full border border-error/30 text-xs font-semibold uppercase tracking-wider text-error hover:bg-error/5 transition-all cursor-pointer"
                 >
-                  <Trash2 className="h-3.5 w-3.5" /> Clear All
+                  <Trash2 className="h-3.5 w-3.5" /> {t("Clear All")}
                 </button>
               </>
             )}
@@ -529,7 +515,6 @@ export default function ComparePage() {
 
         {/* ── Product Picker ─────────────────────────────────────────────── */}
         <div className="luxury-card mb-8 overflow-hidden">
-          {/* Picker header — collapsible */}
           <button
             onClick={() => setPickerOpen((o) => !o)}
             className="w-full flex items-center justify-between px-6 py-4 hover:bg-muted-light/30 transition-colors cursor-pointer"
@@ -539,9 +524,9 @@ export default function ComparePage() {
                 <Plus className="h-4 w-4 text-gold" />
               </div>
               <div className="text-left">
-                <p className="font-semibold text-sm">Add products to compare</p>
+                <p className="font-semibold text-sm">{t("Add products to compare")}</p>
                 <p className="text-[10px] text-muted">
-                  {compareIds.length}/{MAX_COMPARE} slots used
+                  {compareIds.length}/{MAX_COMPARE} {t("slots used")}
                 </p>
               </div>
             </div>
@@ -562,7 +547,6 @@ export default function ComparePage() {
                 className="overflow-hidden border-t border-card-border"
               >
                 <div className="p-5 flex flex-col gap-4">
-                  {/* Selected chips */}
                   {comparedItems.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {comparedItems.map((p) => (
@@ -592,7 +576,6 @@ export default function ComparePage() {
                     </div>
                   )}
 
-                  {/* Slot progress bar */}
                   <div className="flex items-center gap-2">
                     {Array.from({ length: MAX_COMPARE }).map((_, i) => (
                       <div
@@ -607,7 +590,6 @@ export default function ComparePage() {
                     </span>
                   </div>
 
-                  {/* Search input */}
                   {compareIds.length < MAX_COMPARE && (
                     <>
                       <div className="relative">
@@ -615,7 +597,7 @@ export default function ComparePage() {
                         <input
                           id="picker-search"
                           type="text"
-                          placeholder="Search by name, brand or category..."
+                          placeholder={t("Search by name, brand or category...")}
                           value={pickerSearch}
                           onChange={(e) => setPickerSearch(e.target.value)}
                           className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-card-border bg-background text-sm focus:outline-none focus:border-gold/60 transition-colors"
@@ -630,7 +612,6 @@ export default function ComparePage() {
                         )}
                       </div>
 
-                      {/* Product grid picker */}
                       {productsLoading ? (
                         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                           {[...Array(6)].map((_, i) => (
@@ -660,7 +641,7 @@ export default function ComparePage() {
                           ))}
                           {pickerList.length === 0 && (
                             <div className="col-span-full text-center py-8 text-sm text-muted">
-                              No products match your search.
+                              {t("No products match your search.")}
                             </div>
                           )}
                         </div>
@@ -670,7 +651,7 @@ export default function ComparePage() {
 
                   {compareIds.length >= MAX_COMPARE && (
                     <p className="text-xs text-muted text-center py-2">
-                      Maximum {MAX_COMPARE} products reached. Remove one to add another.
+                      {t("Maximum products reached. Remove one to add another.")}
                     </p>
                   )}
                 </div>
@@ -689,7 +670,6 @@ export default function ComparePage() {
               transition={{ duration: 0.4, ease: "easeOut" }}
               className="luxury-card py-20 px-8 flex flex-col items-center gap-6 text-center max-w-lg mx-auto"
             >
-              {/* SVG illustration */}
               <svg
                 viewBox="0 0 120 100"
                 className="w-32 h-auto opacity-30"
@@ -711,10 +691,9 @@ export default function ComparePage() {
               </svg>
 
               <div>
-                <h2 className="font-serif text-xl font-bold mb-2">Nothing to compare yet</h2>
+                <h2 className="font-serif text-xl font-bold mb-2">{t("Nothing to compare yet")}</h2>
                 <p className="text-sm text-muted font-light leading-relaxed max-w-xs">
-                  Use the picker above to select up to {MAX_COMPARE} products and
-                  evaluate them across {ROWS.length} detailed attributes.
+                  {t("Use the picker above to select up to 4 products and evaluate them across detailed attributes.")}
                 </p>
               </div>
 
@@ -722,7 +701,7 @@ export default function ComparePage() {
                 href="/products"
                 className="flex items-center gap-2 h-11 px-7 rounded-full bg-foreground text-background hover:bg-gold hover:text-white transition-all text-xs font-bold uppercase tracking-widest shadow-md hover:-translate-y-0.5"
               >
-                <ShoppingBag className="h-4 w-4" /> Browse Products
+                <ShoppingBag className="h-4 w-4" /> {t("Browse Products")}
               </Link>
             </motion.div>
           )}
@@ -738,25 +717,20 @@ export default function ComparePage() {
           >
             <div className="overflow-x-auto">
               <table className="w-full border-collapse" style={{ minWidth: "600px" }}>
-
-                {/* ── Sticky product header row ── */}
                 <thead>
                   <tr className="border-b border-card-border">
-                    {/* Label column */}
                     <th className="sticky left-0 z-20 bg-card-bg w-[160px] min-w-[160px] p-5 text-left">
                       <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-muted">
-                        Attribute
+                        {t("Attribute")}
                       </span>
                     </th>
 
-                    {/* Product columns */}
                     {comparedItems.map((item) => (
                       <th
                         key={item._id}
                         className="p-5 min-w-[220px] max-w-[280px] align-top border-l border-card-border"
                       >
                         <div className="flex flex-col gap-3">
-                          {/* Product image */}
                           <div className="relative">
                             <img
                               src={item.images?.[0]?.url || "https://placehold.co/200x200"}
@@ -765,7 +739,7 @@ export default function ComparePage() {
                             />
                             {item.isBestSeller && (
                               <span className="absolute top-2 left-2 text-[9px] font-bold uppercase tracking-widest bg-gold text-white px-2 py-0.5 rounded-full">
-                                Best Seller
+                                {t("Best Seller")}
                               </span>
                             )}
                             {item.comparePrice && item.comparePrice > item.price && (
@@ -775,7 +749,6 @@ export default function ComparePage() {
                             )}
                           </div>
 
-                          {/* Title */}
                           <div>
                             <p className="text-[10px] font-bold tracking-widest text-gold uppercase mb-0.5">
                               {item.brand || "—"}
@@ -788,9 +761,7 @@ export default function ComparePage() {
                             </Link>
                           </div>
 
-                          {/* Action row */}
                           <div className="flex flex-col gap-2">
-                            {/* Add to Cart */}
                             <button
                               onClick={() => handleAddToCart(item)}
                               disabled={addingToCart === item._id || item.stock === 0}
@@ -801,14 +772,13 @@ export default function ComparePage() {
                               ) : (
                                 <ShoppingBag className="h-3.5 w-3.5" />
                               )}
-                              {item.stock === 0 ? "Out of Stock" : "Add to Bag"}
+                              {item.stock === 0 ? t("Out of Stock") : t("Add to Bag")}
                             </button>
 
-                            {/* Wishlist + View + Remove */}
                             <div className="flex items-center gap-1.5">
                               <button
                                 onClick={() => handleWishlist(item)}
-                                title={isWishlisted(item._id) ? "Remove from Wishlist" : "Add to Wishlist"}
+                                title={isWishlisted(item._id) ? t("Remove from Wishlist") : t("Add to Wishlist")}
                                 className={`flex-1 h-8 rounded-lg border text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
                                   isWishlisted(item._id)
                                     ? "border-error/30 bg-error/5 text-error"
@@ -821,14 +791,14 @@ export default function ComparePage() {
                               </button>
                               <Link
                                 href={`/product/${item.slug}`}
-                                title="View Product"
+                                title={t("View Product")}
                                 className="flex-1 h-8 rounded-lg border border-card-border hover:border-gold/50 text-muted hover:text-gold text-[10px] font-semibold flex items-center justify-center gap-1 transition-all"
                               >
                                 <ExternalLink className="h-3.5 w-3.5" />
                               </Link>
                               <button
                                 onClick={() => handleRemove(item._id)}
-                                title="Remove"
+                                title={t("Remove")}
                                 className="flex-1 h-8 rounded-lg border border-card-border hover:border-error/40 text-muted hover:text-error text-[10px] font-semibold flex items-center justify-center transition-all cursor-pointer"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -839,7 +809,6 @@ export default function ComparePage() {
                       </th>
                     ))}
 
-                    {/* Empty slot column */}
                     {comparedItems.length < MAX_COMPARE && (
                       <th className="p-5 min-w-[180px] border-l border-card-border border-dashed align-middle">
                         <button
@@ -850,7 +819,7 @@ export default function ComparePage() {
                             <Plus className="h-5 w-5 text-muted group-hover:text-gold" />
                           </div>
                           <span className="text-xs text-muted group-hover:text-gold font-medium transition-colors">
-                            Add product
+                            {t("Add product")}
                           </span>
                         </button>
                       </th>
@@ -858,7 +827,6 @@ export default function ComparePage() {
                   </tr>
                 </thead>
 
-                {/* ── Comparison rows ── */}
                 <tbody>
                   {ROWS.map((row, rowIdx) => {
                     const winnerId = winners[row.id];
@@ -869,39 +837,33 @@ export default function ComparePage() {
                           rowIdx % 2 === 0 ? "bg-transparent" : "bg-muted-light/20"
                         }`}
                       >
-                        {/* Label cell — sticky left */}
                         <td className="sticky left-0 z-10 bg-card-bg px-5 py-4 w-[160px] min-w-[160px] border-r border-card-border/60">
                           <div className="flex items-center gap-2">
                             <span className="text-muted/60">{row.icon}</span>
                             <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted">
-                              {row.label}
+                              {t(row.label)}
                             </span>
                           </div>
-                          {/* Winner badge */}
                           {winnerId && row.winnerLabel && (
                             <span className="mt-1.5 inline-flex items-center gap-1 text-[8px] font-bold text-gold uppercase tracking-wider">
-                              <Sparkles className="h-2.5 w-2.5" /> {row.winnerLabel}
+                              <Sparkles className="h-2.5 w-2.5" /> {t(row.winnerLabel)}
                             </span>
                           )}
                         </td>
 
-                        {/* Data cells */}
                         {comparedItems.map((item) => {
                           const isWinner = winnerId === item._id;
                           return (
                             <td
                               key={item._id}
                               className={`px-5 py-4 border-l border-card-border align-top transition-all ${
-                                isWinner
-                                  ? "bg-gold/5 border-gold/15"
-                                  : ""
+                                isWinner ? "bg-gold/5 border-gold/15" : ""
                               }`}
                             >
-                              {/* Winner top indicator */}
-                              {isWinner && (
+                              {isWinner && row.winnerLabel && (
                                 <div className="flex items-center gap-1 mb-2">
                                   <span className="text-[8px] font-bold text-gold uppercase tracking-widest bg-gold/10 border border-gold/20 px-1.5 py-0.5 rounded-full">
-                                    ✦ {row.winnerLabel}
+                                    ✦ {t(row.winnerLabel)}
                                   </span>
                                 </div>
                               )}
@@ -910,7 +872,6 @@ export default function ComparePage() {
                           );
                         })}
 
-                        {/* Empty slot cell */}
                         {comparedItems.length < MAX_COMPARE && (
                           <td className="px-5 py-4 border-l border-card-border border-dashed bg-muted-light/5" />
                         )}
@@ -921,27 +882,22 @@ export default function ComparePage() {
               </table>
             </div>
 
-            {/* Bottom summary bar */}
             <div className="border-t border-card-border px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-muted-light/20">
               <p className="text-[10px] text-muted font-light">
-                Comparing <span className="font-bold text-foreground">{comparedItems.length}</span> products
-                across <span className="font-bold text-foreground">{ROWS.length}</span> attributes.
-                {comparedItems.length < MAX_COMPARE && (
-                  <> You can add <span className="font-bold text-gold">{MAX_COMPARE - comparedItems.length}</span> more.</>
-                )}
+                {t("Comparing products across attributes.")}
               </p>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleCopyLink}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-card-border text-[10px] font-semibold text-muted hover:text-gold hover:border-gold/50 transition-all cursor-pointer"
                 >
-                  <Copy className="h-3 w-3" /> Copy Share Link
+                  <Copy className="h-3 w-3" /> {t("Copy Share Link")}
                 </button>
                 <button
                   onClick={handleClearAll}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-error/20 text-[10px] font-semibold text-error hover:bg-error/5 transition-all cursor-pointer"
                 >
-                  <Trash2 className="h-3 w-3" /> Clear All
+                  <Trash2 className="h-3 w-3" /> {t("Clear All")}
                 </button>
               </div>
             </div>
@@ -960,7 +916,6 @@ export default function ComparePage() {
             className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl"
           >
             <div className="luxury-card shadow-2xl shadow-black/20 backdrop-blur-xl border-gold/20 px-5 py-4 flex items-center gap-4">
-              {/* Thumbnails */}
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 {comparedItems.map((item) => (
                   <div key={item._id} className="relative shrink-0">
@@ -987,20 +942,16 @@ export default function ComparePage() {
                 ))}
                 <div className="min-w-0 ml-1 hidden sm:block">
                   <p className="text-xs font-bold truncate">
-                    {compareIds.length} product{compareIds.length !== 1 ? "s" : ""} selected
-                  </p>
-                  <p className="text-[10px] text-muted">
-                    {MAX_COMPARE - compareIds.length} slot{MAX_COMPARE - compareIds.length !== 1 ? "s" : ""} remaining
+                    {t("Products selected")}
                   </p>
                 </div>
               </div>
 
-              {/* CTAs */}
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setTrayDismissed(true)}
                   className="p-2 rounded-lg text-muted hover:text-foreground transition-colors cursor-pointer"
-                  title="Dismiss"
+                  title={t("Dismiss")}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -1009,8 +960,8 @@ export default function ComparePage() {
                   className="flex items-center gap-2 h-9 px-5 rounded-full bg-foreground text-background hover:bg-gold hover:text-white text-xs font-bold uppercase tracking-widest transition-all shadow-md"
                 >
                   <GitCompare className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Compare Now</span>
-                  <span className="sm:hidden">Compare</span>
+                  <span className="hidden sm:inline">{t("Compare Now")}</span>
+                  <span className="sm:hidden">{t("Compare")}</span>
                 </Link>
               </div>
             </div>

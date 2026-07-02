@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import { 
@@ -38,6 +39,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function PublicStorePage() {
+  const { t } = useTranslation();
   const { slug } = useParams();
   const { showToast } = useToast();
   const { user: currentUser, isAuthenticated } = useAppSelector((state) => state.auth);
@@ -59,7 +61,7 @@ export default function PublicStorePage() {
 
   const handleWishlistToggle = async (productId: string) => {
     if (!isAuthenticated) {
-      showToast("Please log in to add items to your wishlist.", "error");
+      showToast(t("Please log in to add items to your wishlist."), "error");
       return;
     }
     try {
@@ -67,7 +69,7 @@ export default function PublicStorePage() {
       showToast(res.message, "success");
       refetchWishlist();
     } catch (err) {
-      showToast("Failed to update wishlist.", "error");
+      showToast(t("Failed to update wishlist."), "error");
     }
   };
 
@@ -104,10 +106,10 @@ export default function PublicStorePage() {
       <div className="min-h-screen flex flex-col bg-background text-foreground">
         <Header />
         <div className="flex-grow flex flex-col items-center justify-center py-20 px-6 text-center">
-          <h2 className="font-serif text-3xl font-bold mb-4">Store Not Found</h2>
-          <p className="text-muted text-sm max-w-sm mb-6 font-light">The requested store profile does not exist or has been suspended.</p>
+          <h2 className="font-serif text-3xl font-bold mb-4">{t("Store Not Found")}</h2>
+          <p className="text-muted text-sm max-w-sm mb-6 font-light">{t("The requested store profile does not exist or has been suspended.")}</p>
           <Link href="/stores" className="inline-flex h-12 items-center justify-center rounded-full bg-foreground px-8 text-xs font-semibold uppercase tracking-widest text-background hover:bg-gold hover:text-white transition-all">
-            Browse All Stores
+            {t("Browse All Stores")}
           </Link>
         </div>
         <Footer />
@@ -117,7 +119,7 @@ export default function PublicStorePage() {
 
   const handleFollowToggle = async () => {
     if (!isAuthenticated) {
-      showToast("Please log in to follow store channels.", "error");
+      showToast(t("Please log in to follow store channels."), "error");
       return;
     }
 
@@ -134,7 +136,7 @@ export default function PublicStorePage() {
     } catch (err: any) {
       setLocalIsFollowing(oldFollow);
       setLocalFollowersCount(oldCount);
-      showToast(err.data?.message || "Failed to toggle follow status.", "error");
+      showToast(err.data?.message || t("Failed to toggle follow status."), "error");
     }
   };
 
@@ -142,23 +144,23 @@ export default function PublicStorePage() {
     // Owner check
     const productSellerId = product.seller?._id || product.seller;
     if (currentUser && productSellerId && productSellerId.toString() === currentUser.id) {
-      showToast("Sellers cannot add their own products to the cart.", "error");
+      showToast(t("Sellers cannot add their own products to the cart."), "error");
       return;
     }
 
     setAddingId(product._id);
     if (!isAuthenticated) {
       addGuestCartItem(product, 1);
-      showToast("Added to guest cart.", "success");
+      showToast(t("Added to guest cart."), "success");
       setAddingId(null);
       return;
     }
 
     try {
       await addToCart({ productId: product._id, quantity: 1 }).unwrap();
-      showToast("Item added to your shopping bag.", "success");
+      showToast(t("Item added to your shopping bag."), "success");
     } catch (err) {
-      showToast("Could not add item to bag.", "error");
+      showToast(t("Could not add item to bag."), "error");
     } finally {
       setAddingId(null);
     }
@@ -206,7 +208,7 @@ export default function PublicStorePage() {
 
   const memberSince = seller.createdAt
     ? new Date(seller.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long" })
-    : "Verified Partner";
+    : t("Verified Partner");
 
   // Safe logo and cover image resolution
   const logoUrl = seller.storeLogo?.url || seller.storeLogo || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
@@ -244,17 +246,17 @@ export default function PublicStorePage() {
             <div className="flex-grow">
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                 <span className="inline-flex items-center gap-1 text-[9px] font-bold tracking-[0.24em] text-gold uppercase px-2.5 py-0.5 rounded border border-gold/25 bg-gold/5">
-                  <Award className="h-3 w-3" /> Approved Brand Partner
+                  <Award className="h-3 w-3" /> {t("Approved Brand Partner")}
                 </span>
                 {seller.totalSales > 10 && (
                   <span className="inline-flex items-center gap-1 text-[9px] font-bold tracking-[0.24em] text-success uppercase px-2.5 py-0.5 rounded border border-success/25 bg-success/5">
-                    <Sparkles className="h-3 w-3 animate-pulse" /> Top Seller
+                    <Sparkles className="h-3 w-3 animate-pulse" /> {t("Top Seller")}
                   </span>
                 )}
               </div>
               <h1 className="font-serif text-3xl md:text-4xl font-bold leading-tight tracking-wide">{seller.storeName}</h1>
               {seller.brandName && (
-                <p className="text-xs text-gold/80 tracking-widest uppercase font-medium mt-0.5 mb-4">Atelier: {seller.brandName}</p>
+                <p className="text-xs text-gold/80 tracking-widest uppercase font-medium mt-0.5 mb-4">{t("Atelier:")} {seller.brandName}</p>
               )}
               
               {/* Quick Info Badges */}
@@ -265,10 +267,10 @@ export default function PublicStorePage() {
                   </span>
                 )}
                 <span className="flex items-center gap-1.5 font-light">
-                  <Clock className="h-4 w-4 text-gold" /> Response: {seller.responseTime}
+                  <Clock className="h-4 w-4 text-gold" /> {t("Response:")} {seller.responseTime}
                 </span>
                 <span className="flex items-center gap-1.5 font-light">
-                  <Calendar className="h-4 w-4 text-gold" /> Since {memberSince}
+                  <Calendar className="h-4 w-4 text-gold" /> {t("Since")} {memberSince}
                 </span>
               </div>
             </div>
@@ -287,11 +289,11 @@ export default function PublicStorePage() {
             >
               {localIsFollowing ? (
                 <>
-                  <UserMinus className="h-4 w-4" /> Unfollow Store
+                  <UserMinus className="h-4 w-4" /> {t("Unfollow Store")}
                 </>
               ) : (
                 <>
-                  <UserPlus className="h-4 w-4" /> Follow Channel
+                  <UserPlus className="h-4 w-4" /> {t("Follow Channel")}
                 </>
               )}
             </button>
@@ -303,22 +305,22 @@ export default function PublicStorePage() {
           <div className="bg-card-bg/40 border border-card-border p-5 rounded-2xl text-center backdrop-blur-sm transition-all hover:border-gold/30 hover:bg-card-bg/60">
             <Star className="h-5 w-5 fill-gold text-gold mx-auto mb-2" />
             <span className="block text-xl font-bold font-serif">{parseFloat(averageRating).toFixed(1)} / 5.0</span>
-            <span className="text-[10px] text-muted font-bold uppercase tracking-wider">Atelier Rating</span>
+            <span className="text-[10px] text-muted font-bold uppercase tracking-wider">{t("Atelier Rating")}</span>
           </div>
           <div className="bg-card-bg/40 border border-card-border p-5 rounded-2xl text-center backdrop-blur-sm transition-all hover:border-gold/30 hover:bg-card-bg/60">
             <Users className="h-5 w-5 text-gold mx-auto mb-2" />
             <span className="block text-xl font-bold font-serif">{localFollowersCount ?? seller.followersCount}</span>
-            <span className="text-[10px] text-muted font-bold uppercase tracking-wider">Followers</span>
+            <span className="text-[10px] text-muted font-bold uppercase tracking-wider">{t("Followers")}</span>
           </div>
           <div className="bg-card-bg/40 border border-card-border p-5 rounded-2xl text-center backdrop-blur-sm transition-all hover:border-gold/30 hover:bg-card-bg/60">
             <TrendingUp className="h-5 w-5 text-gold mx-auto mb-2" />
             <span className="block text-xl font-bold font-serif">{seller.totalSales || 0}</span>
-            <span className="text-[10px] text-muted font-bold uppercase tracking-wider">Sales Completed</span>
+            <span className="text-[10px] text-muted font-bold uppercase tracking-wider">{t("Sales Completed")}</span>
           </div>
           <div className="bg-card-bg/40 border border-card-border p-5 rounded-2xl text-center backdrop-blur-sm transition-all hover:border-gold/30 hover:bg-card-bg/60">
             <ShoppingBag className="h-5 w-5 text-gold mx-auto mb-2" />
             <span className="block text-xl font-bold font-serif">{products.length}</span>
-            <span className="text-[10px] text-muted font-bold uppercase tracking-wider">Listed Products</span>
+            <span className="text-[10px] text-muted font-bold uppercase tracking-wider">{t("Listed Products")}</span>
           </div>
         </div>
 
@@ -328,7 +330,7 @@ export default function PublicStorePage() {
             <div className="lg:col-span-2 luxury-card p-6 md:p-8 border border-card-border/60 bg-card-bg/25 rounded-2xl relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1 h-full bg-gold" />
               <h3 className="text-[10px] font-bold uppercase tracking-[0.25em] text-gold mb-3 flex items-center gap-1.5">
-                <Briefcase className="h-3.5 w-3.5" /> Brand Identity & Vision
+                <Briefcase className="h-3.5 w-3.5" /> {t("Brand Identity & Vision")}
               </h3>
               <p className="text-sm text-muted font-light leading-relaxed whitespace-pre-line italic">
                 "{seller.storeDescription}"
@@ -339,33 +341,33 @@ export default function PublicStorePage() {
           <div className="luxury-card p-6 border border-card-border/60 bg-card-bg/25 rounded-2xl flex flex-col justify-between">
             <div>
               <h3 className="text-[10px] font-bold uppercase tracking-[0.25em] text-gold mb-4 flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5" /> Quality Checklist
+                <CheckCircle2 className="h-3.5 w-3.5" /> {t("Quality Checklist")}
               </h3>
               <ul className="space-y-2.5 text-xs text-muted font-light">
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-gold" />
-                  Verified Atelier Partner
+                  {t("Verified Atelier Partner")}
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-gold" />
-                  Eco-friendly Premium Packaging
+                  {t("Eco-friendly Premium Packaging")}
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-gold" />
-                  Insured Express Delivery
+                  {t("Insured Express Delivery")}
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-gold" />
-                  Secure Checkout Encrypted SSL
+                  {t("Secure Checkout Encrypted SSL")}
                 </li>
               </ul>
             </div>
 
             <button
-              onClick={() => showToast(`A secure chat portal with ${seller.storeName} is loading...`, "success")}
+              onClick={() => showToast(t("A secure chat portal with store is loading", { storeName: seller.storeName }), "success")}
               className="w-full mt-6 h-9 rounded-full border border-gold/40 hover:bg-gold/10 text-[10px] font-bold uppercase tracking-widest text-gold transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
-              <MessageSquare className="h-3.5 w-3.5" /> Inquire / Send Message
+              <MessageSquare className="h-3.5 w-3.5" /> {t("Inquire / Send Message")}
             </button>
           </div>
         </div>
@@ -389,7 +391,7 @@ export default function PublicStorePage() {
                     : "border-transparent text-muted hover:text-foreground"
                 }`}
               >
-                {tab} <span className="text-[10px] font-normal text-muted">({counts[tab]})</span>
+                {t(tab)} <span className="text-[10px] font-normal text-muted">({counts[tab]})</span>
               </button>
             );
           })}
@@ -403,9 +405,9 @@ export default function PublicStorePage() {
               {products.length === 0 ? (
                 <div className="text-center py-20 border border-dashed border-card-border rounded-2xl p-6 bg-card-bg/25">
                   <ShoppingBag className="h-10 w-10 text-gold/30 mx-auto mb-3" />
-                  <h4 className="font-serif text-lg font-bold">No Products Listed</h4>
+                  <h4 className="font-serif text-lg font-bold">{t("No Products Listed")}</h4>
                   <p className="text-xs text-muted mt-1 max-w-sm mx-auto font-light leading-relaxed">
-                    This brand hasn't listed any items for purchase yet. Check back soon.
+                    {t("This brand hasn't listed any items for purchase yet. Check back soon.")}
                   </p>
                 </div>
               ) : (
@@ -414,7 +416,7 @@ export default function PublicStorePage() {
                   <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center mb-8 border-b border-card-border/30 pb-6">
                     {/* Category Filter Pills */}
                     <div className="flex flex-wrap gap-2 items-center w-full lg:w-auto">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted mr-2">Categories:</span>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted mr-2">{t("Categories:")}</span>
                       {sellerCategories.map((cat) => (
                         <button
                           key={cat}
@@ -425,7 +427,7 @@ export default function PublicStorePage() {
                               : "border-card-border bg-card-bg/25 text-muted hover:text-foreground hover:border-gold/50"
                           }`}
                         >
-                          {cat}
+                          {t(cat)}
                         </button>
                       ))}
                     </div>
@@ -435,7 +437,7 @@ export default function PublicStorePage() {
                       <div className="relative w-full sm:w-60">
                         <input
                           type="text"
-                          placeholder="Search in store catalog..."
+                          placeholder={t("Search in store catalog...")}
                           value={productSearch}
                           onChange={(e) => setProductSearch(e.target.value)}
                           className="w-full rounded-full border border-card-border/80 bg-card-bg/30 py-2 pl-4 pr-10 text-xs text-foreground outline-none focus:border-gold transition-all"
@@ -448,10 +450,10 @@ export default function PublicStorePage() {
                         onChange={(e) => setProductSort(e.target.value as any)}
                         className="bg-card-bg/30 border border-card-border rounded-full px-4 py-2 text-xs font-semibold outline-none focus:border-gold transition-colors w-full sm:w-auto cursor-pointer"
                       >
-                        <option value="newest">Newest Arrivals</option>
-                        <option value="price-asc">Price: Low to High</option>
-                        <option value="price-desc">Price: High to Low</option>
-                        <option value="rating">Top Rated</option>
+                        <option value="newest">{t("Newest Arrivals")}</option>
+                        <option value="price-asc">{t("Price: Low to High")}</option>
+                        <option value="price-desc">{t("Price: High to Low")}</option>
+                        <option value="rating">{t("Top Rated")}</option>
                       </select>
                     </div>
                   </div>
@@ -459,8 +461,8 @@ export default function PublicStorePage() {
                   {processedProducts.length === 0 ? (
                     <div className="text-center py-20 bg-card-bg/10 rounded-2xl border border-dashed border-card-border max-w-sm mx-auto">
                       <ShoppingBag className="h-8 w-8 text-gold/30 mx-auto mb-3" />
-                      <h5 className="font-bold text-sm">No Matching Items</h5>
-                      <p className="text-xs text-muted mt-1">Try modifying your filter categories or search query.</p>
+                      <h5 className="font-bold text-sm">{t("No Matching Items")}</h5>
+                      <p className="text-xs text-muted mt-1">{t("Try modifying your filter categories or search query.")}</p>
                     </div>
                   ) : (
                     /* Grid layout for catalog */
@@ -507,7 +509,7 @@ export default function PublicStorePage() {
                                 if (isProductOwner) {
                                   return (
                                     <div className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider text-gold bg-background/95 shadow-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-full border border-gold/25 select-none">
-                                      <Lock className="h-3 w-3" /> Owner Account
+                                      <Lock className="h-3 w-3" /> {t("Owner Account")}
                                     </div>
                                   );
                                 }
@@ -517,7 +519,7 @@ export default function PublicStorePage() {
                                     disabled={addingId === item._id}
                                     className="absolute inset-x-4 bottom-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white/95 text-xs font-semibold uppercase tracking-[0.24em] text-luxury-black opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white cursor-pointer"
                                   >
-                                    {addingId === item._id ? "Adding..." : "Quick Add"}
+                                    {addingId === item._id ? t("Adding...") : t("Quick Add")}
                                   </button>
                                 );
                               })()}
@@ -539,7 +541,7 @@ export default function PublicStorePage() {
                                   <Star className="h-3.5 w-3.5 fill-gold text-gold" />
                                   <span>{item.ratingAverage?.toFixed(1) || "5.0"}</span>
                                 </div>
-                                <span className="font-bold text-gold">{item.price.toLocaleString()} EGP</span>
+                                <span className="font-bold text-gold">{item.price.toLocaleString()} {t("EGP")}</span>
                               </div>
                             </div>
                           </motion.article>
@@ -558,9 +560,9 @@ export default function PublicStorePage() {
               {articles.length === 0 ? (
                 <div className="text-center py-20 border border-dashed border-card-border rounded-2xl p-6 bg-card-bg/25">
                   <FileText className="h-10 w-10 text-gold/30 mx-auto mb-3" />
-                  <h4 className="font-serif text-lg font-bold">No Editorial Pieces</h4>
+                  <h4 className="font-serif text-lg font-bold">{t("No Editorial Pieces")}</h4>
                   <p className="text-xs text-muted mt-1 max-w-sm mx-auto font-light leading-relaxed">
-                    This brand hasn't published any articles or buying guides yet.
+                    {t("This brand hasn't published any articles or buying guides yet.")}
                   </p>
                 </div>
               ) : (
@@ -582,7 +584,7 @@ export default function PublicStorePage() {
                       </div>
                       <div className="flex flex-col justify-between h-full py-1">
                         <div>
-                          <span className="text-[9px] font-bold uppercase tracking-widest text-gold">{art.category || "Editorial"}</span>
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-gold">{t(art.category || "Editorial")}</span>
                           <Link 
                             href={`/article/${art._id}`} 
                             className="mt-1 block font-serif text-lg font-bold leading-tight text-foreground hover:text-gold transition-colors line-clamp-2"
@@ -595,7 +597,7 @@ export default function PublicStorePage() {
                         </div>
                         <div className="text-[10px] text-muted font-medium mt-4 flex gap-4">
                           <span>{new Date(art.publishedAt || art.createdAt).toLocaleDateString()}</span>
-                          <span>{art.readTime || 1} min read</span>
+                          <span>{art.readTime || 1} {t("min read")}</span>
                         </div>
                       </div>
                     </motion.article>
@@ -611,9 +613,9 @@ export default function PublicStorePage() {
               {reviews.length === 0 ? (
                 <div className="text-center py-20 border border-dashed border-card-border rounded-2xl p-6 bg-card-bg/25">
                   <Star className="h-10 w-10 text-gold/30 mx-auto mb-3" />
-                  <h4 className="font-serif text-lg font-bold">No Reviews Received</h4>
+                  <h4 className="font-serif text-lg font-bold">{t("No Reviews Received")}</h4>
                   <p className="text-xs text-muted mt-1 max-w-sm mx-auto font-light leading-relaxed">
-                    Clients haven't left review scores on this store's product catalogs yet.
+                    {t("Clients haven't left review scores on this store's product catalogs yet.")}
                   </p>
                 </div>
               ) : (
@@ -622,7 +624,7 @@ export default function PublicStorePage() {
                   {/* Reviews Summary Column */}
                   <div className="lg:col-span-1 flex flex-col gap-6">
                     <div className="luxury-card p-6 border border-card-border bg-card-bg/20 rounded-2xl">
-                      <h4 className="text-sm font-bold uppercase tracking-wider mb-4 text-muted">Feedback Summary</h4>
+                      <h4 className="text-sm font-bold uppercase tracking-wider mb-4 text-muted">{t("Feedback Summary")}</h4>
                       <div className="flex items-center gap-4 mb-6">
                         <span className="text-5xl font-serif font-bold text-foreground">{parseFloat(averageRating).toFixed(1)}</span>
                         <div>
@@ -634,7 +636,7 @@ export default function PublicStorePage() {
                               />
                             ))}
                           </div>
-                          <span className="text-xs text-muted">{totalReviews} customer reviews</span>
+                          <span className="text-xs text-muted">{totalReviews} {t("customer reviews")}</span>
                         </div>
                       </div>
 
@@ -645,7 +647,7 @@ export default function PublicStorePage() {
                           const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
                           return (
                             <div key={stars} className="flex items-center gap-3 text-xs">
-                              <span className="w-10 text-right">{stars} star</span>
+                              <span className="w-10 text-right">{stars} {t("star")}</span>
                               <div className="flex-grow h-2 bg-card-border/40 rounded-full overflow-hidden">
                                 <div 
                                   className="h-full bg-gold rounded-full" 
@@ -672,10 +674,10 @@ export default function PublicStorePage() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2.5">
-                            <span className="text-sm font-bold text-foreground">{rev.user?.username || "Client"}</span>
+                            <span className="text-sm font-bold text-foreground">{rev.user?.username || t("Client")}</span>
                             {rev.isVerifiedPurchase && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-success/10 text-[9px] font-bold text-success px-2.5 py-0.5 uppercase tracking-widest border border-success/15">
-                                <CheckCircle2 className="h-3 w-3" /> Verified Purchase
+                                <CheckCircle2 className="h-3 w-3" /> {t("Verified Purchase")}
                               </span>
                             )}
                           </div>
@@ -699,7 +701,7 @@ export default function PublicStorePage() {
                             <div className="absolute top-0 left-0 w-0.5 h-full bg-gold" />
                             <div className="flex items-center justify-between gap-2 mb-1">
                               <span className="font-bold text-gold uppercase tracking-wider text-[9px] flex items-center gap-1">
-                                <Briefcase className="h-3 w-3" /> Store Response
+                                <Briefcase className="h-3 w-3" /> {t("Store Response")}
                               </span>
                               <span className="text-muted text-[10px]">{new Date(rev.reply.createdAt).toLocaleDateString()}</span>
                             </div>

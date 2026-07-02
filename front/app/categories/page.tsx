@@ -8,8 +8,10 @@ import Breadcrumbs from "../components/Breadcrumbs";
 import { useGetCategoriesQuery } from "../../lib/api";
 import { CardSkeleton } from "../components/Skeletons";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function CategoriesPage() {
+  const { t } = useTranslation();
   const { data: categoriesData, isLoading } = useGetCategoriesQuery(undefined);
 
   const categories = categoriesData?.categories || [];
@@ -19,15 +21,15 @@ export default function CategoriesPage() {
       <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12">
-        <Breadcrumbs items={[{ label: "Categories", url: "/categories" }]} />
+        <Breadcrumbs items={[{ label: t("Categories"), url: "/categories" }]} />
 
         {/* Header */}
         <div className="mb-12">
           <span className="text-xs font-bold tracking-widest text-gold uppercase flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" /> Curated Selections
+            <Sparkles className="h-3.5 w-3.5" /> {t("Curated Selections")}
           </span>
-          <h1 className="font-serif text-4xl font-extrabold mt-1">Design Categories</h1>
-          <p className="text-sm text-muted mt-2">Browse bespoke collections curated by luxury houses</p>
+          <h1 className="font-serif text-4xl font-extrabold mt-1">{t("Design Categories")}</h1>
+          <p className="text-sm text-muted mt-2">{t("Browse bespoke collections curated by luxury houses")}</p>
         </div>
 
         {isLoading ? (
@@ -38,8 +40,8 @@ export default function CategoriesPage() {
           </div>
         ) : categories.length === 0 ? (
           <div className="text-center py-20 luxury-card max-w-md mx-auto">
-            <h3 className="font-serif text-xl font-bold">No categories found</h3>
-            <p className="text-sm text-muted mt-1.5 font-light">Check back later for updated design catalogs.</p>
+            <h3 className="font-serif text-xl font-bold">{t("No categories found")}</h3>
+            <p className="text-sm text-muted mt-1.5 font-light">{t("Check back later for updated design catalogs.")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -67,7 +69,7 @@ export default function CategoriesPage() {
                     href={`/category/${cat.slug || cat._id}`}
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold group-hover:text-gold-hover transition-colors uppercase tracking-widest mt-2"
                   >
-                    Explore Subcategories <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                    {t("Explore Subcategories")} <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>
               </div>

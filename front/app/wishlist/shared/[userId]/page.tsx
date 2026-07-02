@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import Header from "../../../components/Header";
 import Footer from "../../../components/Footer";
 import Breadcrumbs from "../../../components/Breadcrumbs";
@@ -13,6 +14,7 @@ import { addGuestCartItem } from "../../../../lib/cartUtils";
 import { Star, ShoppingBag, Heart } from "lucide-react";
 
 export default function SharedWishlistPage() {
+  const { t } = useTranslation();
   const { userId } = useParams();
   const { showToast } = useToast();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
@@ -29,16 +31,16 @@ export default function SharedWishlistPage() {
     setAddingId(product._id);
     if (!isAuthenticated) {
       addGuestCartItem(product, 1);
-      showToast("Added to guest cart successfully.", "success");
+      showToast(t("Added to guest cart successfully."), "success");
       setAddingId(null);
       return;
     }
 
     try {
       await addToCart({ productId: product._id, quantity: 1 }).unwrap();
-      showToast("Added to your shopping bag.", "success");
+      showToast(t("Added to your shopping bag."), "success");
     } catch (err) {
-      showToast("Could not add item to cart.", "error");
+      showToast(t("Could not add item to cart."), "error");
     } finally {
       setAddingId(null);
     }
@@ -61,12 +63,12 @@ export default function SharedWishlistPage() {
       <div className="min-h-screen flex flex-col bg-background text-foreground">
         <Header />
         <div className="flex-grow flex flex-col items-center justify-center gap-4">
-          <h2 className="font-serif text-2xl font-bold">Wishlist Not Found</h2>
+          <h2 className="font-serif text-2xl font-bold">{t("Wishlist Not Found")}</h2>
           <Link
             href="/"
             className="inline-flex h-11 items-center gap-2 rounded-full border border-card-border px-5 text-sm font-semibold hover:border-gold cursor-pointer"
           >
-            Return to Homepage
+            {t("Return to Homepage")}
           </Link>
         </div>
         <Footer />
@@ -81,8 +83,8 @@ export default function SharedWishlistPage() {
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12">
         <Breadcrumbs
           items={[
-            { label: "Bespoke Curation", url: "/" },
-            { label: `${targetUser.username}'s Wishlist`, url: `/wishlist/shared/${userId}` }
+            { label: t("Bespoke Curation"), url: "/" },
+            { label: t("userWishlist", { username: targetUser.username }), url: `/wishlist/shared/${userId}` }
           ]}
         />
 
@@ -96,17 +98,17 @@ export default function SharedWishlistPage() {
           </div>
           <div>
             <span className="text-[10px] font-bold tracking-[0.24em] text-gold uppercase flex items-center gap-1.5 mb-0.5">
-              <Heart className="h-3 w-3 fill-gold" /> Shared Curations
+              <Heart className="h-3 w-3 fill-gold" /> {t("Shared Curations")}
             </span>
-            <h1 className="font-serif text-3xl font-bold">{targetUser.username}'s Collection</h1>
+            <h1 className="font-serif text-3xl font-bold">{t("userCollection", { username: targetUser.username })}</h1>
           </div>
         </div>
 
         {wishlistItems.length === 0 ? (
           <div className="text-center py-20 border border-dashed border-card-border rounded-2xl p-6 bg-card-bg/25 max-w-md mx-auto">
             <Heart className="h-10 w-10 text-gold/30 mx-auto mb-3" />
-            <h3 className="font-serif text-xl font-bold">Wishlist is empty</h3>
-            <p className="text-sm text-muted mt-1.5 font-light">This user has not wishlisted any designs yet.</p>
+            <h3 className="font-serif text-xl font-bold">{t("Wishlist is empty")}</h3>
+            <p className="text-sm text-muted mt-1.5 font-light">{t("This user has not wishlisted any designs yet.")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -130,12 +132,12 @@ export default function SharedWishlistPage() {
                       disabled={addingId === product._id}
                       className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur-sm py-2 rounded text-xs font-semibold tracking-wider uppercase opacity-0 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white transition-all duration-300 border border-card-border cursor-pointer"
                     >
-                      {addingId === product._id ? "Adding..." : "Quick Add"}
+                      {addingId === product._id ? t("Adding...") : t("Quick Add")}
                     </button>
                   </div>
                   <div className="flex flex-col p-4 flex-grow justify-between">
                     <div>
-                      <span className="text-xs text-muted tracking-widest uppercase mb-1">{product.brand || "DESIGNER"}</span>
+                      <span className="text-xs text-muted tracking-widest uppercase mb-1">{product.brand || t("DESIGNER")}</span>
                       <Link
                         href={`/product/${product.slug}`}
                         className="font-serif font-bold text-sm text-foreground hover:text-gold transition-colors line-clamp-1 mb-2"
@@ -144,7 +146,7 @@ export default function SharedWishlistPage() {
                       </Link>
                     </div>
                     <div className="flex items-center justify-between mt-auto border-t border-card-border/40 pt-3">
-                      <span className="text-sm font-bold text-gold">{product.price.toLocaleString()} EGP</span>
+                      <span className="text-sm font-bold text-gold">{product.price.toLocaleString()} {t("EGP")}</span>
                       <span className="flex items-center gap-1 text-xs text-muted">
                         <Star className="h-3.5 w-3.5 fill-gold text-gold" /> {product.ratingAverage || 5.0}
                       </span>

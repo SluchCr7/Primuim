@@ -15,13 +15,15 @@ import {
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import { useToast } from "../../components/Toast";
-import { useAppSelector } from "../../../lib/store";
+import { useTranslation } from "react-i18next";
+import { useAppSelector, type RootState } from "../../../lib/store";
 import { API_BASE_URL } from "../../../lib/api";
 
 export default function NewReviewPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { showToast } = useToast();
-  const { user, accessToken, isAuthenticated } = useAppSelector((state) => state.auth);
+  const { user, accessToken, isAuthenticated } = useAppSelector((state: RootState) => state.auth);
 
   const [mounted, setMounted] = useState(false);
   const [reviewBody, setReviewBody] = useState("");
@@ -39,7 +41,7 @@ export default function NewReviewPage() {
   useEffect(() => {
     setMounted(true);
     if (mounted && !isAuthenticated) {
-      showToast("Please log in to share your experience.", "error");
+      showToast(t("Please log in to share your experience.", "Please log in to share your experience."), "error");
       router.push("/login");
     }
   }, [isAuthenticated, router, mounted]);
@@ -62,13 +64,13 @@ export default function NewReviewPage() {
       const data = await response.json();
 
       if (response.ok) {
-        showToast("Your review has been submitted for moderation!", "success");
+        showToast(t("Your review has been submitted for moderation!", "Your review has been submitted for moderation!"), "success");
         setSubmitSuccess(true);
       } else {
-        showToast(data.message || "Failed to submit review.", "error");
+        showToast(data.message || t("Failed to submit review.", "Failed to submit review."), "error");
       }
     } catch (error) {
-      showToast("A network error occurred. Please try again.", "error");
+      showToast(t("A network error occurred. Please try again.", "A network error occurred. Please try again."), "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -80,7 +82,7 @@ export default function NewReviewPage() {
         <Header />
         <div className="flex-grow flex flex-col items-center justify-center gap-4 py-20">
           <Lock className="h-12 w-12 text-gold animate-pulse" />
-          <h2 className="text-xl font-serif tracking-widest text-muted uppercase">Redirecting to Login...</h2>
+          <h2 className="text-xl font-serif tracking-widest text-muted uppercase">{t("Redirecting to Login...", "Redirecting to Login...")}</h2>
         </div>
         <Footer />
       </div>
@@ -110,13 +112,13 @@ export default function NewReviewPage() {
                 {/* Header */}
                 <div className="text-center mb-8">
                   <span className="text-[10px] font-bold text-gold uppercase tracking-[0.3em] block mb-2.5">
-                    Client Voice
+                    {t("Client Voice", "Client Voice")}
                   </span>
                   <h1 className="text-2xl md:text-3xl font-serif font-bold tracking-tight text-foreground">
-                    Share your experience with our platform.
+                    {t("Share your experience with our platform.", "Share your experience with our platform.")}
                   </h1>
                   <p className="text-xs text-muted font-light mt-3 max-w-xs mx-auto leading-relaxed">
-                    We appreciate your thoughts and insights to help us continuously refine our premium services.
+                    {t("We appreciate your thoughts and insights to help us continuously refine our premium services.", "We appreciate your thoughts and insights to help us continuously refine our premium services.")}
                   </p>
                 </div>
 
@@ -124,7 +126,7 @@ export default function NewReviewPage() {
                 <div className="bg-gold/5 border border-gold/10 rounded-2xl p-4 mb-8 flex gap-3 items-start">
                   <Sparkles className="h-4.5 w-4.5 text-gold shrink-0 mt-0.5" />
                   <p className="text-[11px] leading-relaxed text-gold/90 font-medium">
-                    Your review will be evaluated by our curation team before appearing publicly on the homepage listing.
+                    {t("Your review will be evaluated by our curation team before appearing publicly on the homepage listing.", "Your review will be evaluated by our curation team before appearing publicly on the homepage listing.")}
                   </p>
                 </div>
 
@@ -132,13 +134,13 @@ export default function NewReviewPage() {
                 <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-muted">
-                      Write your testimonial
+                      {t("Write your testimonial", "Write your testimonial")}
                     </label>
                     <div className="relative">
                       <textarea
                         value={reviewBody}
                         onChange={(e) => setReviewBody(e.target.value)}
-                        placeholder="Tell us what you liked about our products, store experiences, and delivery times..."
+                        placeholder={t("Tell us what you liked about our products, store experiences, and delivery times...", "Tell us what you liked about our products, store experiences, and delivery times...")}
                         maxLength={maxCharCount}
                         disabled={isSubmitting}
                         className="w-full min-h-[160px] bg-background border border-card-border rounded-2xl p-4 text-sm font-light text-foreground outline-none focus:border-gold focus:ring-1 focus:ring-gold/20 placeholder-muted/60 transition-all duration-300 resize-y"
@@ -151,9 +153,9 @@ export default function NewReviewPage() {
                         {currentLength > 0 && (
                           <span className={`font-semibold ${isLengthValid ? "text-success" : "text-gold/80"}`}>
                             {isLengthValid ? (
-                              "✓ Looks perfect"
+                              t("✓ Looks perfect", "✓ Looks perfect")
                             ) : (
-                              `Requires ${minCharCount - currentLength} more characters`
+                              t("Requires {{count}} more characters", { count: minCharCount - currentLength })
                             )}
                           </span>
                         )}
@@ -172,7 +174,7 @@ export default function NewReviewPage() {
                       disabled={isSubmitting}
                       className="flex items-center gap-1.5 px-5 py-3 rounded-2xl border border-card-border bg-muted-light text-xs font-semibold uppercase tracking-wider text-muted hover:text-foreground transition-colors disabled:opacity-40 cursor-pointer"
                     >
-                      <ArrowLeft className="h-4 w-4" /> Back
+                      <ArrowLeft className="h-4 w-4" /> {t("Back", "Back")}
                     </button>
                     
                     <button
@@ -186,7 +188,7 @@ export default function NewReviewPage() {
                         </>
                       ) : (
                         <>
-                          Submit Review <Send className="h-3.5 w-3.5" />
+                          {t("Submit Review", "Submit Review")} <Send className="h-3.5 w-3.5" />
                         </>
                       )}
                     </button>
@@ -220,13 +222,13 @@ export default function NewReviewPage() {
                 </div>
 
                 <span className="text-[10px] font-bold text-gold uppercase tracking-[0.3em] block mb-2">
-                  Feedback Received
+                  {t("Feedback Received", "Feedback Received")}
                 </span>
                 <h2 className="text-2xl md:text-3xl font-serif font-bold text-foreground">
-                  Thank You for Your Feedback
+                  {t("Thank You for Your Feedback", "Thank You for Your Feedback")}
                 </h2>
                 <p className="text-xs text-muted font-light mt-4 max-w-sm mx-auto leading-relaxed">
-                  Your insights are incredibly valuable to us. Once our editorial curation team reviews your submission, it will be published to the community platform.
+                  {t("Your insights are incredibly valuable to us. Once our editorial curation team reviews your submission, it will be published to the community platform.", "Your insights are incredibly valuable to us. Once our editorial curation team reviews your submission, it will be published to the community platform.")}
                 </p>
 
                 <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
@@ -237,13 +239,13 @@ export default function NewReviewPage() {
                     }}
                     className="px-6 py-3 rounded-2xl border border-card-border bg-muted-light text-xs font-semibold uppercase tracking-wider text-muted hover:text-foreground transition-colors cursor-pointer"
                   >
-                    Submit Another Review
+                    {t("Submit Another Review", "Submit Another Review")}
                   </button>
                   <button
                     onClick={() => router.push("/")}
                     className="px-6 py-3 rounded-2xl bg-gold hover:bg-gold-hover text-background font-bold text-xs uppercase tracking-widest transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
                   >
-                    Go to Homepage <ArrowRight className="h-3.5 w-3.5" />
+                    {t("Go to Homepage", "Go to Homepage")} <ArrowRight className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </motion.div>

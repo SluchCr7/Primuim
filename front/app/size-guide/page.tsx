@@ -42,6 +42,7 @@ import {
   Info,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -178,6 +179,7 @@ function LuxurySlider({
 
 /** Foot measurement SVG line-art tip */
 function FootMeasurementTip() {
+  const { t : translate } = useTranslation();
   return (
     <div className="luxury-card p-5 flex flex-col sm:flex-row items-center gap-5 bg-gold/5 border-gold/15">
       {/* Minimal foot outline SVG */}
@@ -205,22 +207,22 @@ function FootMeasurementTip() {
         <polyline points="5,99 8,105 11,99" fill="none" stroke="var(--primary)" strokeWidth="1" />
         {/* Label */}
         <text x="14" y="60" fill="var(--primary)" fontSize="7" fontFamily="Outfit" fontWeight="600">
-          Length
+          {translate("Length", "Length")}
         </text>
       </svg>
 
       <div className="text-xs text-muted leading-relaxed">
         <p className="font-bold text-foreground mb-1 text-[11px] uppercase tracking-wider">
-          How to measure your foot
+          {translate("How to measure your foot", "How to measure your foot")}
         </p>
         <ol className="list-decimal list-inside space-y-1 text-[10px]">
-          <li>Place a blank sheet of paper on the floor.</li>
-          <li>Stand on it with your heel touching a wall.</li>
-          <li>Mark the tip of your longest toe.</li>
-          <li>Measure from wall to mark in centimetres.</li>
+          <li>{translate("Place a blank sheet of paper on the floor.", "Place a blank sheet of paper on the floor.")}</li>
+          <li>{translate("Stand on it with your heel touching a wall.", "Stand on it with your heel touching a wall.")}</li>
+          <li>{translate("Mark the tip of your longest toe.", "Mark the tip of your longest toe.")}</li>
+          <li>{translate("Measure from wall to mark in centimetres.", "Measure from wall to mark in centimetres.")}</li>
         </ol>
         <p className="mt-2 text-[9px] text-gold/80 font-semibold">
-          Tip: Measure in the evening when feet are largest.
+          {translate("Tip: Measure in the evening when feet are largest.", "Tip: Measure in the evening when feet are largest.")}
         </p>
       </div>
     </div>
@@ -234,6 +236,7 @@ export default function SizeGuidePage() {
   const router = useRouter();
   const { showToast } = useToast();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { t: translate } = useTranslation();
 
   // Fetch existing profile for pre-populating values
   const { data: meData } = useGetMeQuery(undefined, { skip: !isAuthenticated });
@@ -288,7 +291,7 @@ export default function SizeGuidePage() {
 
   const handleSaveToProfile = useCallback(async () => {
     if (!isAuthenticated) {
-      showToast("Please log in to save your size profile.", "error");
+      showToast(translate("Please log in to save your size profile.", "Please log in to save your size profile."), "error");
       router.push("/login");
       return;
     }
@@ -309,9 +312,9 @@ export default function SizeGuidePage() {
         setSavedSize(serverProfile?.shoes?.calculatedSizeEU ?? livePreview);
       }
 
-      showToast("Size profile saved successfully! ✨", "success");
+      showToast(translate("Size profile saved successfully! ✨", "Size profile saved successfully! ✨"), "success");
     } catch (err: any) {
-      showToast(err?.data?.message || "Failed to save profile.", "error");
+      showToast(err?.data?.message || translate("Failed to save profile.", "Failed to save profile."), "error");
     }
   }, [
     isAuthenticated, category, height, weight, preference, footLength,
@@ -339,14 +342,13 @@ export default function SizeGuidePage() {
         {/* ── Page headline ── */}
         <div className="text-center mb-12">
           <span className="text-[10px] font-bold tracking-[0.28em] text-gold uppercase flex items-center justify-center gap-1.5 mb-3">
-            <Sparkles className="h-3.5 w-3.5" /> Smart Fit Technology
+            <Sparkles className="h-3.5 w-3.5" /> {translate("Smart Fit Technology", "Smart Fit Technology")}
           </span>
           <h1 className="font-serif text-3xl sm:text-4xl font-bold leading-tight">
-            Your Digital Fit Profile
+            {translate("Your Digital Fit Profile", "Your Digital Fit Profile")}
           </h1>
           <p className="text-sm text-muted font-light mt-3 max-w-md mx-auto leading-relaxed">
-            Answer two quick questions and our precision algorithm will determine
-            your ideal size — saved automatically to your account.
+            {translate("Answer two quick questions and our precision algorithm will determine your ideal size — saved automatically to your account.", "Answer two quick questions and our precision algorithm will determine your ideal size — saved automatically to your account.")}
           </p>
         </div>
 
@@ -368,7 +370,7 @@ export default function SizeGuidePage() {
                 transition={{ duration: 0.35, ease: "easeInOut" }}
               >
                 <p className="text-center text-[10px] font-bold uppercase tracking-[0.22em] text-muted mb-6">
-                  Step 1 of 3 — Select a category
+                  {translate("Step 1 of 3 — Select a category", "Step 1 of 3 — Select a category")}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   {/* Clothing card */}
@@ -381,9 +383,9 @@ export default function SizeGuidePage() {
                       <Shirt className="h-7 w-7 text-gold" />
                     </div>
                     <div>
-                      <p className="font-serif text-lg font-semibold">Clothing</p>
+                      <p className="font-serif text-lg font-semibold">{translate("Clothing", "Clothing")}</p>
                       <p className="text-xs text-muted mt-1 font-light leading-snug">
-                        T-shirts, dresses, jackets & all apparel
+                        {translate("T-shirts, dresses, jackets & all apparel", "T-shirts, dresses, jackets & all apparel")}
                       </p>
                     </div>
                     <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-gold opacity-0 group-hover:opacity-100 transition-opacity">
@@ -401,9 +403,9 @@ export default function SizeGuidePage() {
                       <Footprints className="h-7 w-7 text-gold" />
                     </div>
                     <div>
-                      <p className="font-serif text-lg font-semibold">Footwear</p>
+                      <p className="font-serif text-lg font-semibold">{translate("Footwear", "Footwear")}</p>
                       <p className="text-xs text-muted mt-1 font-light leading-snug">
-                        Sneakers, heels, boots & all shoes
+                        {translate("Sneakers, heels, boots & all shoes", "Sneakers, heels, boots & all shoes")}
                       </p>
                     </div>
                     <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-gold opacity-0 group-hover:opacity-100 transition-opacity">
@@ -426,7 +428,7 @@ export default function SizeGuidePage() {
                 transition={{ duration: 0.35, ease: "easeInOut" }}
               >
                 <p className="text-center text-[10px] font-bold uppercase tracking-[0.22em] text-muted mb-6">
-                  Step 2 of 3 — {category === "clothing" ? "Your body measurements" : "Your foot length"}
+                  {translate("Step 2 of 3 — {{category}}", { category: category === "clothing" ? translate("Your body measurements", "Your body measurements") : translate("Your foot length", "Your foot length") })}
                 </p>
 
                 <div className="luxury-card p-7 sm:p-9 flex flex-col gap-7">
@@ -436,18 +438,18 @@ export default function SizeGuidePage() {
                     <>
                       <LuxurySlider
                         id="height-slider"
-                        label="Height"
+                        label={translate("Height", "Height")}
                         unit="cm"
                         min={140}
                         max={220}
                         value={height}
                         onChange={setHeight}
-                        tip="Stand straight against a wall without shoes for the most accurate reading."
+                        tip={translate("Stand straight against a wall without shoes for the most accurate reading.", "Stand straight against a wall without shoes for the most accurate reading.")}
                       />
 
                       <LuxurySlider
                         id="weight-slider"
-                        label="Weight"
+                        label={translate("Weight", "Weight")}
                         unit="kg"
                         min={40}
                         max={150}
@@ -458,7 +460,7 @@ export default function SizeGuidePage() {
                       {/* Fit Preference radio group */}
                       <div className="flex flex-col gap-3">
                         <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">
-                          Fit Preference
+                          {translate("Fit Preference", "Fit Preference")}
                         </span>
                         <div className="grid grid-cols-3 gap-3">
                           {(["tight", "regular", "oversized"] as FitPreference[]).map((pref) => (
@@ -477,7 +479,7 @@ export default function SizeGuidePage() {
                                 {pref === "tight" ? "🤏" : pref === "regular" ? "👕" : "🧥"}
                               </span>
                               <span className="text-[10px] font-bold uppercase tracking-wider capitalize">
-                                {pref}
+                                {translate(pref, pref)}
                               </span>
                               {preference === pref && (
                                 <motion.div
@@ -492,7 +494,7 @@ export default function SizeGuidePage() {
 
                       {/* Live preview badge */}
                       <div className="flex items-center justify-center gap-3 py-4 border-t border-card-border">
-                        <span className="text-xs text-muted font-light">Estimated size:</span>
+                        <span className="text-xs text-muted font-light">{translate("Estimated size:", "Estimated size:")}</span>
                         <motion.span
                           key={clothingPreview}
                           initial={{ scale: 0.7, opacity: 0 }}
@@ -512,18 +514,18 @@ export default function SizeGuidePage() {
 
                       <LuxurySlider
                         id="foot-length-slider"
-                        label="Foot Length"
+                        label={translate("Foot Length", "Foot Length")}
                         unit="cm"
                         min={22}
                         max={32}
                         value={footLength}
                         onChange={setFootLength}
-                        tip="Use the paper method described above for accurate measurement."
+                        tip={translate("Use the paper method described above for accurate measurement.", "Use the paper method described above for accurate measurement.")}
                       />
 
                       {/* Live preview badge */}
                       <div className="flex items-center justify-center gap-3 py-4 border-t border-card-border">
-                        <span className="text-xs text-muted font-light">Estimated EU size:</span>
+                        <span className="text-xs text-muted font-light">{translate("Estimated EU size:", "Estimated EU size:")}</span>
                         <motion.span
                           key={shoePreview}
                           initial={{ scale: 0.7, opacity: 0 }}
@@ -543,14 +545,14 @@ export default function SizeGuidePage() {
                     onClick={goBack}
                     className="flex items-center gap-2 px-5 py-3 rounded-full border border-card-border text-xs font-semibold uppercase tracking-widest text-muted hover:border-gold/50 hover:text-gold transition-all cursor-pointer"
                   >
-                    <ChevronLeft className="h-4 w-4" /> Back
+                    <ChevronLeft className="h-4 w-4" /> {translate("Back", "Back")}
                   </button>
                   <button
                     id="calculate-btn"
                     onClick={goForward}
                     className="flex-grow h-12 rounded-full bg-foreground text-background hover:bg-gold hover:text-white transition-all flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest shadow-md hover:-translate-y-0.5 cursor-pointer"
                   >
-                    <Ruler className="h-4 w-4" /> Calculate My Size
+                    <Ruler className="h-4 w-4" /> {translate("Calculate My Size", "Calculate My Size")}
                   </button>
                 </div>
               </motion.div>
@@ -568,7 +570,7 @@ export default function SizeGuidePage() {
                 transition={{ duration: 0.35, ease: "easeInOut" }}
               >
                 <p className="text-center text-[10px] font-bold uppercase tracking-[0.22em] text-muted mb-6">
-                  Step 3 of 3 — Your precision result
+                  {translate("Step 3 of 3 — Your precision result", "Step 3 of 3 — Your precision result")}
                 </p>
 
                 {/* ── Result card ── */}
@@ -591,8 +593,7 @@ export default function SizeGuidePage() {
 
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted mb-2">
-                        Your Premium{" "}
-                        {category === "clothing" ? "Fitted" : "Shoe"} Size
+                        {translate("Your Premium {{type}} Size", { type: category === "clothing" ? translate("Fitted", "Fitted") : translate("Shoe", "Shoe") })}
                       </p>
                       <motion.p
                         initial={{ scale: 0.5, opacity: 0 }}
@@ -609,22 +610,22 @@ export default function SizeGuidePage() {
                       {category === "clothing" ? (
                         <>
                           <div className="flex flex-col items-center gap-0.5">
-                            <span className="text-[9px] uppercase tracking-widest text-muted">Height</span>
+                            <span className="text-[9px] uppercase tracking-widest text-muted">{translate("Height", "Height")}</span>
                             <span className="font-semibold text-sm">{height} cm</span>
                           </div>
                           <div className="flex flex-col items-center gap-0.5">
-                            <span className="text-[9px] uppercase tracking-widest text-muted">Weight</span>
+                            <span className="text-[9px] uppercase tracking-widest text-muted">{translate("Weight", "Weight")}</span>
                             <span className="font-semibold text-sm">{weight} kg</span>
                           </div>
                           <div className="flex flex-col items-center gap-0.5 col-span-2 sm:col-span-1">
-                            <span className="text-[9px] uppercase tracking-widest text-muted">Fit Preference</span>
+                            <span className="text-[9px] uppercase tracking-widest text-muted">{translate("Fit Preference", "Fit Preference")}</span>
                             <span className="font-semibold text-sm capitalize">{preference}</span>
                           </div>
                         </>
                       ) : (
                         <>
                           <div className="flex flex-col items-center gap-0.5 col-span-2">
-                            <span className="text-[9px] uppercase tracking-widest text-muted">Foot Length</span>
+                            <span className="text-[9px] uppercase tracking-widest text-muted">{translate("Foot Length", "Foot Length")}</span>
                             <span className="font-semibold text-sm">{footLength} cm</span>
                           </div>
                         </>
@@ -648,12 +649,12 @@ export default function SizeGuidePage() {
                     {isSaving ? (
                       <span className="flex items-center gap-2">
                         <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        Saving...
+                        {translate("Saving...", "Saving...")}
                       </span>
                     ) : (
                       <>
                         <Save className="h-4 w-4" />
-                        {isAuthenticated ? "Save to My Profile" : "Log In to Save"}
+                        {isAuthenticated ? translate("Save to My Profile", "Save to My Profile") : translate("Log In to Save", "Log In to Save")}
                       </>
                     )}
                   </motion.button>
@@ -674,7 +675,7 @@ export default function SizeGuidePage() {
                       className="w-full h-12 rounded-full border border-gold/40 text-gold hover:bg-gold/10 transition-all flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-widest"
                     >
                       <ShoppingBag className="h-4 w-4" />
-                      Shop Your Size Now
+                      {translate("Shop Your Size Now", "Shop Your Size Now")}
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   </motion.div>
@@ -691,7 +692,7 @@ export default function SizeGuidePage() {
                     }}
                     className="text-[10px] text-muted hover:text-gold transition-colors uppercase tracking-wider font-semibold text-center mt-1 cursor-pointer"
                   >
-                    ← Recalibrate for another category
+                    {translate("← Recalibrate for another category", "← Recalibrate for another category")}
                   </motion.button>
                 </div>
 
@@ -705,11 +706,11 @@ export default function SizeGuidePage() {
                   >
                     <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
                     <span>
-                      Your size profile is now visible in your{" "}
+                      {translate("Your size profile is now visible in your", "Your size profile is now visible in your")} {" "}
                       <Link href="/dashboard" className="font-bold underline underline-offset-2">
-                        Dashboard → My Fit Profile
+                        {translate("Dashboard → My Fit Profile", "Dashboard → My Fit Profile")}
                       </Link>
-                      . It will be used to pre-select sizes on product pages.
+                      . {translate("It will be used to pre-select sizes on product pages.", "It will be used to pre-select sizes on product pages.")}
                     </span>
                   </motion.div>
                 )}

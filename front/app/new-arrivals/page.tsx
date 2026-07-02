@@ -9,6 +9,7 @@ import { CardSkeleton } from "../components/Skeletons";
 import { useAppSelector } from "../../lib/store";
 import { Star, Sparkles } from "lucide-react";
 import { addGuestCartItem } from "../../lib/cartUtils";
+import { useTranslation } from "react-i18next";
 
 export default function NewArrivalsPage() {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
@@ -34,7 +35,7 @@ export default function NewArrivalsPage() {
       alert("Failed to add to cart.");
     }
   };
-
+  const { t } = useTranslation(); // تفعيل دالة الترجمة
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Header />
@@ -44,10 +45,10 @@ export default function NewArrivalsPage() {
 
         <div className="mb-12">
           <span className="text-xs font-bold tracking-widest text-gold uppercase flex items-center gap-1.5">
-            <Sparkles className="h-4 w-4" /> Season 2026
+            <Sparkles className="h-4 w-4" /> {t("Season 2026")}
           </span>
-          <h1 className="font-serif text-4xl font-extrabold mt-1">New Arrivals</h1>
-          <p className="text-sm text-muted mt-2">Discover fresh silhouettes and seasonal designs just added to stock</p>
+          <h1 className="font-serif text-4xl font-extrabold mt-1">{t("New Arrivals")}</h1>
+          <p className="text-sm text-muted mt-2">{t("Discover fresh silhouettes and seasonal designs just added to stock")}</p>
         </div>
 
         {isLoading ? (
@@ -58,9 +59,9 @@ export default function NewArrivalsPage() {
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-20 luxury-card max-w-md mx-auto">
-            <h3 className="font-serif text-xl font-bold">No new items found</h3>
+            <h3 className="font-serif text-xl font-bold">{t("No new items found")}</h3>
             <p className="text-xs text-muted mt-1.5 font-light leading-relaxed">
-              We have not received any new designs this week. Follow dashboard alerts for upcoming releases.
+              {t("We have not received any new designs this week. Follow dashboard alerts for upcoming releases.")}
             </p>
           </div>
         ) : (
@@ -72,7 +73,7 @@ export default function NewArrivalsPage() {
               >
                 <div className="relative aspect-square overflow-hidden bg-muted-light">
                   <span className="absolute top-3 left-3 bg-gold text-luxury-white font-bold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded z-10">
-                    New Release
+                    {t("New Release")}
                   </span>
                   <img
                     src={product.images?.[0]?.url || "https://placehold.co/400x400"}
@@ -83,7 +84,7 @@ export default function NewArrivalsPage() {
                     onClick={() => handleQuickAdd(product._id)}
                     className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur-sm py-2 rounded text-xs font-semibold tracking-wider uppercase opacity-0 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white transition-all duration-300 border border-card-border"
                   >
-                    Quick Add
+                    {t("Quick Add")}
                   </button>
                 </div>
                 <div className="flex flex-col p-4 flex-grow">

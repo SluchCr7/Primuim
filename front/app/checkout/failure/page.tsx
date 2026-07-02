@@ -6,11 +6,12 @@ import { useSearchParams } from "next/navigation";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import { AlertCircle, RefreshCw, PhoneCall } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function CheckoutFailurePage() {
   const searchParams = useSearchParams();
   const errorMsg = searchParams.get("message") || "Payment verification failed or card was declined.";
-
+  const {t} = useTranslation(); 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Header />
@@ -22,15 +23,15 @@ export default function CheckoutFailurePage() {
           </div>
 
           <div>
-            <span className="text-[10px] font-bold tracking-widest text-error uppercase">Checkout Terminated</span>
-            <h1 className="font-serif text-3xl font-bold mt-1">Transaction Failed</h1>
+            <span className="text-[10px] font-bold tracking-widest text-error uppercase">{t("Checkout Terminated")}</span>
+            <h1 className="font-serif text-3xl font-bold mt-1">{t("Transaction Failed")}</h1>
             <p className="text-xs text-muted mt-2 max-w-sm mx-auto leading-relaxed">
-              We were unable to process authorization request. No charges have been made to your billing account.
+              {t("We were unable to process authorization request. No charges have been made to your billing account.")}
             </p>
           </div>
 
           <div className="w-full bg-error/5 p-4 rounded border border-error/20 text-xs text-error font-medium text-left">
-            <strong>Gateway Reason:</strong> {errorMsg}
+            <strong>{t("Gateway Reason")}:</strong> {errorMsg}
           </div>
 
           <div className="w-full border-t border-card-border pt-6 flex flex-col sm:flex-row gap-4 justify-center">
@@ -38,13 +39,13 @@ export default function CheckoutFailurePage() {
               href="/checkout"
               className="inline-flex h-11 items-center justify-center gap-2 rounded bg-foreground px-6 text-background hover:bg-gold hover:text-luxury-white font-semibold text-xs uppercase tracking-wider transition-all shadow-md"
             >
-              <RefreshCw className="h-4 w-4" /> Retry Checkout
+              <RefreshCw className="h-4 w-4" /> {t("Retry Checkout")}
             </Link>
             <Link
               href="/contact"
               className="inline-flex h-11 items-center justify-center gap-2 rounded border border-card-border px-5 text-muted hover:text-foreground font-semibold text-xs uppercase tracking-wider transition-colors"
             >
-              <PhoneCall className="h-4 w-4" /> Help Desk
+              <PhoneCall className="h-4 w-4" /> {t("Help Desk")}
             </Link>
           </div>
         </div>

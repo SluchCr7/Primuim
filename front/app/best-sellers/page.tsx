@@ -27,14 +27,14 @@ export default function BestSellersPage() {
 
     if (!isAuthenticated) {
       addGuestCartItem(product, 1);
-      alert(t("addedToCart"));
+      alert(t("Added to Cart"));
       return;
     }
     try {
       await addToCart({ productId, quantity: 1 }).unwrap();
-      alert(t("addedToCart"));
+      alert(t("Added to Cart"));
     } catch (err) {
-      alert(t("failedToAddToCart"));
+      alert(t("Failed to add to cart"));
     }
   };
 
@@ -43,14 +43,14 @@ export default function BestSellersPage() {
       <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12">
-        <Breadcrumbs items={[{ label: t("bestSellers"), url: "/best-sellers" }]} />
+        <Breadcrumbs items={[{ label: t("Best Sellers"), url: "/best-sellers" }]} />
 
         <div className="mb-12">
           <span className="text-xs font-bold tracking-widest text-gold uppercase flex items-center gap-1.5">
-            <Award className="h-4 w-4" /> {t("topAllocationDemand")}
+            <Award className="h-4 w-4" /> {t("Top Allocation Demand")}
           </span>
-          <h1 className="font-serif text-4xl font-extrabold mt-1">{t("bestSellers")}</h1>
-          <p className="text-sm text-muted mt-2">{t("browseCovetedPieces")}</p>
+          <h1 className="font-serif text-4xl font-extrabold mt-1">{t("Best Sellers")}</h1>
+          <p className="text-sm text-muted mt-2">{t("Browse Coveted Pieces")}</p>
         </div>
 
         {isLoading ? (
@@ -62,9 +62,9 @@ export default function BestSellersPage() {
         ) : products.length === 0 ? (
           <div className="text-center py-20 luxury-card max-w-md mx-auto">
             <Award className="h-10 w-10 text-gold/30 mx-auto mb-3" />
-            <h3 className="font-serif text-xl font-bold">{t("noBestSellers")}</h3>
+            <h3 className="font-serif text-xl font-bold">{t("No Best Sellers")}</h3>
             <p className="text-xs text-muted mt-1.5 font-light leading-relaxed">
-              {t("logisticsBalanced")}
+              {t("Logistics Balanced")}
             </p>
           </div>
         ) : (
@@ -76,7 +76,7 @@ export default function BestSellersPage() {
               >
                 <div className="relative aspect-square overflow-hidden bg-muted-light">
                   <span className="absolute top-3 left-3 bg-gold text-luxury-white font-bold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded z-10">
-                    {t("highDemand")}
+                    {t("High Demand")}
                   </span>
                   <img
                     src={product.images?.[0]?.url || "https://placehold.co/400x400"}
@@ -87,11 +87,11 @@ export default function BestSellersPage() {
                     onClick={() => handleQuickAdd(product._id)}
                     className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur-sm py-2 rounded text-xs font-semibold tracking-wider uppercase opacity-0 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white transition-all duration-300 border border-card-border"
                   >
-                    {t("quickAdd")}
+                    {t("Quick Add")}
                   </button>
                 </div>
                 <div className="flex flex-col p-4 flex-grow">
-                  <span className="text-xs text-muted tracking-widest uppercase mb-1">{product.brand || t("designer")}</span>
+                  <span className="text-xs text-muted tracking-widest uppercase mb-1">{product.brand || t("Designer")}</span>
                   <a
                     href={`/products/${product._id}`}
                     className="font-serif font-bold text-sm text-foreground hover:text-gold transition-colors line-clamp-1 mb-2"

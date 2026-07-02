@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next"; // استدعاء الـ hook الخاص بالترجمة
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -10,6 +11,7 @@ import { useAppSelector } from "../../lib/store";
 import { Star, Clock, Sparkles } from "lucide-react";
 
 export default function FlashSalesPage() {
+  const { t } = useTranslation(); // تفعيل دالة الترجمة
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { data: productsData, isLoading } = useGetProductsQuery({ limit: 4 });
   const [addToCart] = useAddToCartMutation();
@@ -40,14 +42,14 @@ export default function FlashSalesPage() {
 
   const handleQuickAdd = async (productId: string) => {
     if (!isAuthenticated) {
-      alert("Please sign in to add items to your cart.");
+      alert(t("Please sign in to add items to your cart."));
       return;
     }
     try {
       await addToCart({ productId, quantity: 1 }).unwrap();
-      alert("Product added to cart!");
+      alert(t("Product added to cart!"));
     } catch (err) {
-      alert("Failed to add to cart.");
+      alert(t("Failed to add to cart."));
     }
   };
 
@@ -58,17 +60,17 @@ export default function FlashSalesPage() {
       <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12">
-        <Breadcrumbs items={[{ label: "Flash Sales", url: "/flash-sales" }]} />
+        <Breadcrumbs items={[{ label: t("Flash Sales"), url: "/flash-sales" }]} />
 
         {/* Timer Banner */}
         <div className="luxury-card p-8 mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-gold/10 via-card-bg to-card-bg">
           <div>
             <span className="text-xs font-bold tracking-widest text-gold uppercase flex items-center gap-1.5 mb-1.5 animate-pulse">
-              <Sparkles className="h-4 w-4" /> Live Allocation Lock
+              <Sparkles className="h-4 w-4" /> {t("Live Allocation Lock")}
             </span>
-            <h1 className="font-serif text-3xl font-extrabold">Flash Vault Releases</h1>
+            <h1 className="font-serif text-3xl font-extrabold">{t("Flash Vault Releases")}</h1>
             <p className="text-sm text-muted mt-2 font-light max-w-sm">
-              High-demand collector items whitelisted for immediate reservation at special rates.
+              {t("High-demand collector items whitelisted for immediate reservation at special rates.")}
             </p>
           </div>
 
@@ -78,21 +80,21 @@ export default function FlashSalesPage() {
             <div className="flex gap-2 text-center text-sm font-semibold">
               <div className="bg-background border border-card-border p-2.5 rounded min-w-[50px]">
                 <span className="block font-mono text-lg font-bold text-gold">{String(hours).padStart(2, "0")}</span>
-                <span className="text-[9px] text-muted font-light uppercase tracking-wider block mt-0.5">Hours</span>
+                <span className="text-[9px] text-muted font-light uppercase tracking-wider block mt-0.5">{t("Hours")}</span>
               </div>
               <div className="bg-background border border-card-border p-2.5 rounded min-w-[50px]">
                 <span className="block font-mono text-lg font-bold text-gold">{String(minutes).padStart(2, "0")}</span>
-                <span className="text-[9px] text-muted font-light uppercase tracking-wider block mt-0.5">Mins</span>
+                <span className="text-[9px] text-muted font-light uppercase tracking-wider block mt-0.5">{t("Mins")}</span>
               </div>
               <div className="bg-background border border-card-border p-2.5 rounded min-w-[50px]">
                 <span className="block font-mono text-lg font-bold text-gold">{String(seconds).padStart(2, "0")}</span>
-                <span className="text-[9px] text-muted font-light uppercase tracking-wider block mt-0.5">Secs</span>
+                <span className="text-[9px] text-muted font-light uppercase tracking-wider block mt-0.5">{t("Secs")}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <h2 className="font-serif text-2xl font-bold mb-8">Active Allocations</h2>
+        <h2 className="font-serif text-2xl font-bold mb-8">{t("Active Allocations")}</h2>
 
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -102,9 +104,9 @@ export default function FlashSalesPage() {
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-20 luxury-card max-w-md mx-auto">
-            <h3 className="font-serif text-xl font-bold">No active releases</h3>
+            <h3 className="font-serif text-xl font-bold">{t("No active releases")}</h3>
             <p className="text-xs text-muted mt-1.5 font-light leading-relaxed">
-              No flash vault items are currently active. Verify dashboard notifications for announcements.
+              {t("No flash vault items are currently active. Verify dashboard notifications for announcements.")}
             </p>
           </div>
         ) : (
@@ -124,11 +126,11 @@ export default function FlashSalesPage() {
                     onClick={() => handleQuickAdd(product._id)}
                     className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur-sm py-2 rounded text-xs font-semibold tracking-wider uppercase opacity-0 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white transition-all duration-300 border border-card-border"
                   >
-                    Quick Add
+                    {t("Quick Add")}
                   </button>
                 </div>
                 <div className="flex flex-col p-4 flex-grow">
-                  <span className="text-xs text-muted tracking-widest uppercase mb-1">{product.brand || "DESIGNER"}</span>
+                  <span className="text-xs text-muted tracking-widest uppercase mb-1">{product.brand || t("DESIGNER")}</span>
                   <a
                     href={`/products/${product._id}`}
                     className="font-serif font-bold text-sm text-foreground hover:text-gold transition-colors line-clamp-1 mb-2"

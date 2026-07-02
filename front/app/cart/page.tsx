@@ -467,7 +467,6 @@ import { useTranslation } from "react-i18next";
 
 export default function CartPage() {
   const { t } = useTranslation();
-
   const router = useRouter();
   const { isAuthenticated, currency } = useAppSelector((state) => state.auth);
   
@@ -516,7 +515,7 @@ export default function CartPage() {
       try {
         await updateDbQuantity({ productId, quantity: newQty }).unwrap();
       } catch (err) {
-        alert(t("errorUpdateQty"));
+        alert(t("Could not update item quantity."));
       }
     } else {
       updateGuestCartItemQuantity(productId, newQty, variantSku);
@@ -528,7 +527,7 @@ export default function CartPage() {
       try {
         await removeFromDb(productId).unwrap();
       } catch (err) {
-        alert(t("errorRemoveItem"));
+        alert(t("Could not remove item."));
       }
     } else {
       removeGuestCartItem(productId, variantSku);
@@ -536,12 +535,12 @@ export default function CartPage() {
   };
 
   const handleClearCart = async () => {
-    if (confirm(t("clearBagConfirm"))) {
+    if (confirm(t("Are you sure you want to empty your shopping bag?"))) {
       if (isAuthenticated) {
         try {
           await clearDbCart(undefined).unwrap();
         } catch (err) {
-          alert(t("errorClearBag"));
+          alert(t("Could not clear bag."));
         }
       } else {
         clearGuestCart();
@@ -562,20 +561,20 @@ export default function CartPage() {
     }
 
     if (!couponsData?.coupons) {
-      setDiscountError(t("couponSystemUnavailable"));
+      setDiscountError(t("System currently unavailable. Please try again later."));
       return;
     }
 
     const coupon = couponsData.coupons.find((c: any) => c.code === inputCode);
 
     if (!coupon) {
-      setDiscountError(t("couponInvalid"));
+      setDiscountError(t("Invalid coupon code."));
       setDiscount(0);
       return;
     }
 
     if (!coupon.isActive) {
-      setDiscountError(t("couponInactive"));
+      setDiscountError(t("This coupon is no longer active."));
       setDiscount(0);
       return;
     }
@@ -585,13 +584,13 @@ export default function CartPage() {
     const endDate = new Date(coupon.endDate);
 
     if (now < startDate || now > endDate) {
-      setDiscountError(t("couponExpired"));
+      setDiscountError(t("This coupon has expired."));
       setDiscount(0);
       return;
     }
 
     if (subtotal < coupon.minOrderAmount) {
-      setDiscountError(t("couponMinOrderRequired").replace("{amount}", formatCurrencyPrice(coupon.minOrderAmount, currency)));
+      setDiscountError(t("Minimum order of {amount} required.").replace("{amount}", formatCurrencyPrice(coupon.minOrderAmount, currency)));
       setDiscount(0);
       return;
     }
@@ -609,7 +608,7 @@ export default function CartPage() {
     }
 
     setDiscount(discountVal);
-    setDiscountSuccess(t("couponSuccess").replace("{code}", coupon.code));
+    setDiscountSuccess(t("Coupon '{code}' applied successfully!").replace("{code}", coupon.code));
   };
 
   const handleCheckoutRedirect = () => {
@@ -640,9 +639,9 @@ export default function CartPage() {
         
         {/* Title */}
         <div className="mb-12">
-          <span className="text-xs font-bold tracking-widest text-gold uppercase">{t("yourCollection")}</span>
-          <h1 className="font-serif text-4xl font-extrabold mt-1">{t("shoppingBag")}</h1>
-          <p className="text-sm text-muted mt-2">{t("bagDescription")}</p>
+          <span className="text-xs font-bold tracking-widest text-gold uppercase">{t("Your Collection")}</span>
+          <h1 className="font-serif text-4xl font-extrabold mt-1">{t("Shopping Bag")}</h1>
+          <p className="text-sm text-muted mt-2">{t("Review your selected pieces and reserve allocation")}</p>
         </div>
 
         {cartItems.length === 0 ? (
@@ -650,15 +649,15 @@ export default function CartPage() {
             <div className="rounded-full bg-gold/10 p-6 text-gold">
               <ShoppingBag className="h-12 w-12" />
             </div>
-            <h2 className="font-serif text-2xl font-bold">{t("yourBagIsEmpty")}</h2>
+            <h2 className="font-serif text-2xl font-bold">{t("Your Bag is Empty")}</h2>
             <p className="text-sm text-muted max-w-md font-light leading-relaxed">
-              {t("emptyBagDesc")}
+              {t("You haven't reserved any luxury designs yet. Browse our collections to add rings, garments, and digital assets.")}
             </p>
             <Link
               href="/products"
               className="inline-flex h-12 items-center justify-center rounded bg-foreground px-8 font-semibold text-background hover:bg-gold hover:text-luxury-white transition-all shadow-md uppercase tracking-wider text-xs"
             >
-              {t("continueExploring")}
+              {t("Continue Exploring")}
             </Link>
           </div>
         ) : (
@@ -668,13 +667,13 @@ export default function CartPage() {
             <div className="lg:col-span-2 flex flex-col gap-6">
               <div className="flex justify-between items-center pb-4 border-b border-card-border">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  {totalItems === 1 ? t("itemReserved") : t("itemsReserved").replace("{count}", totalItems.toString())}
+                  {totalItems === 1 ? t("1 Item Reserved") : t("{count} Items Reserved").replace("{count}", totalItems.toString())}
                 </span>
                 <button
                   onClick={handleClearCart}
                   className="text-xs font-semibold text-error hover:text-error/80 uppercase tracking-wider transition-colors"
                 >
-                  {t("clearBag")}
+                  {t("Clear Bag")}
                 </button>
               </div>
 
@@ -699,7 +698,7 @@ export default function CartPage() {
                         </div>
                         <div>
                           <span className="text-[10px] font-bold tracking-widest text-gold uppercase">
-                            {productObj.brand || t("designerCollection")}
+                            {productObj.brand || t("Designer Collection")}
                           </span>
                           <Link
                             href={productObj.slug ? `/product/${productObj.slug}` : `/products/${productObj._id}`}
@@ -714,7 +713,7 @@ export default function CartPage() {
                           )}
                           {productObj.isDigital && (
                             <span className="inline-flex items-center gap-1 rounded bg-gold/10 text-[9px] font-bold text-gold px-1.5 py-0.5 uppercase tracking-wider mt-1.5">
-                              {t("digitalDownload")}
+                              {t("Digital Download")}
                             </span>
                           )}
                         </div>
@@ -763,7 +762,7 @@ export default function CartPage() {
                             onClick={() => handleRemoveItem(productObj._id, item.variantSku)}
                             disabled={isRemoving}
                             className="p-2 text-muted hover:text-error transition-all rounded hover:bg-error/10"
-                            aria-label={t("removeItem")}
+                            aria-label={t("Remove item")}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -780,24 +779,24 @@ export default function CartPage() {
             <div className="flex flex-col gap-6">
               <div className="luxury-card p-6 flex flex-col gap-6 shadow-md border-gold/20">
                 <h3 className="font-serif font-bold text-lg border-b border-card-border pb-3">
-                  {t("reservationSummary")}
+                  {t("Reservation Summary")}
                 </h3>
 
                 {/* Subtotals list */}
                 <div className="flex flex-col gap-3.5 text-sm">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted font-light">{t("subtotal")}</span>
+                    <span className="text-muted font-light">{t("Subtotal")}</span>
                     <span className="font-semibold">{formatCurrencyPrice(subtotal, currency)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted font-light">{t("vat")}</span>
+                    <span className="text-muted font-light">{t("VAT (14% EG)")}</span>
                     <span className="font-semibold">{formatCurrencyPrice(vat, currency)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted font-light">{t("shipping")}</span>
+                    <span className="text-muted font-light">{t("Shipping")}</span>
                     <span className="font-semibold">
                       {shipping === 0 ? (
-                        <span className="text-success font-bold uppercase tracking-wider text-xs">{t("free")}</span>
+                        <span className="text-success font-bold uppercase tracking-wider text-xs">{t("Free")}</span>
                       ) : (
                         formatCurrencyPrice(shipping, currency)
                       )}
@@ -806,13 +805,13 @@ export default function CartPage() {
 
                   {discount > 0 && (
                     <div className="flex justify-between items-center text-success font-semibold">
-                      <span className="flex items-center gap-1"><Sparkles className="h-3.5 w-3.5" /> {t("discount")}</span>
+                      <span className="flex items-center gap-1"><Sparkles className="h-3.5 w-3.5" /> {t("Discount")}</span>
                       <span>-{formatCurrencyPrice(discount, currency)}</span>
                     </div>
                   )}
 
                   <div className="border-t border-card-border pt-4 mt-2 flex justify-between items-end">
-                    <span className="font-serif font-bold text-base">{t("estimatedTotal")}</span>
+                    <span className="font-serif font-bold text-base">{t("Estimated Total")}</span>
                     <span className="font-serif font-extrabold text-xl text-gold">
                       {formatCurrencyPrice(total, currency)}
                     </span>
@@ -822,7 +821,7 @@ export default function CartPage() {
                 {/* Coupon form */}
                 <form onSubmit={handleApplyPromo} className="flex flex-col gap-2 pt-2 border-t border-card-border">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
-                    {t("vipCouponLabel")}
+                    {t("VIP Coupon / Referral")}
                   </label>
                   <div className="flex gap-2">
                     <div className="relative flex-grow flex items-center">
@@ -839,7 +838,7 @@ export default function CartPage() {
                       type="submit"
                       className="bg-foreground hover:bg-gold hover:text-luxury-white text-background px-4 rounded text-xs font-semibold uppercase tracking-wider transition-all"
                     >
-                      {t("apply")}
+                      {t("Apply")}
                     </button>
                   </div>
                   {discountError && (
@@ -856,12 +855,12 @@ export default function CartPage() {
                   onClick={handleCheckoutRedirect}
                   className="w-full h-14 rounded bg-foreground font-semibold text-background hover:bg-gold hover:text-luxury-white transition-all flex items-center justify-center gap-2 uppercase tracking-wider text-sm shadow-md"
                 >
-                  {t("proceedToCheckout")} <ArrowRight className="h-4 w-4" />
+                  {t("Proceed to Checkout")} <ArrowRight className="h-4 w-4" />
                 </button>
 
                 <div className="flex items-center justify-center gap-2 text-[10px] text-muted font-light pt-2">
                   <ShieldCheck className="h-4 w-4 text-gold" />
-                  <span>{t("secureEscrow")}</span>
+                  <span>{t("Escrow system activated. Your transactions are secure.")}</span>
                 </div>
               </div>
             </div>

@@ -27,6 +27,7 @@ import {
   useGetMyApplicationStatusQuery,
 } from "../../lib/api";
 import { useToast } from "../components/Toast";
+import { useTranslation } from "react-i18next";
 import {
   TrendingUp,
   Package,
@@ -71,6 +72,7 @@ export default function SellerDashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
   const { showToast } = useToast();
+  const { t: translate } = useTranslation();
   const [mounted, setMounted] = useState(false);
 
   // Active Tab: "analytics" | "products" | "orders" | "wallet" | "settings" | "articles"
@@ -498,7 +500,7 @@ export default function SellerDashboardPage() {
         <div className="flex-grow flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
-            <span className="text-xs text-muted font-light tracking-widest uppercase">Loading Portal...</span>
+            <span className="text-xs text-muted font-light tracking-widest uppercase">{translate("Loading Portal...", "Loading Portal...")}</span>
           </div>
         </div>
         <Footer />
@@ -532,15 +534,15 @@ export default function SellerDashboardPage() {
               <span className={`text-[10px] font-bold tracking-[0.3em] uppercase block mb-2 ${
                 isPending ? "text-gold" : "text-error"
               }`}>
-                {isPending ? "Application Under Review" : "Application Not Approved"}
+                {isPending ? translate("Application Under Review", "Application Under Review") : translate("Application Not Approved", "Application Not Approved")}
               </span>
               <h1 className="font-serif text-2xl font-bold mb-3">
-                {isPending ? "Your Store Is Being Reviewed" : "Application Rejected"}
+                {isPending ? translate("Your Store Is Being Reviewed", "Your Store Is Being Reviewed") : translate("Application Rejected", "Application Rejected")}
               </h1>
               <p className="text-sm text-muted font-light leading-relaxed mb-6">
                 {isPending
-                  ? "Our admin team is reviewing your seller application. You will receive a notification once a decision is made."
-                  : "Your seller application was reviewed and could not be approved at this time."
+                  ? translate("Our admin team is reviewing your seller application. You will receive a notification once a decision is made.", "Our admin team is reviewing your seller application. You will receive a notification once a decision is made.")
+                  : translate("Your seller application was reviewed and could not be approved at this time.", "Your seller application was reviewed and could not be approved at this time.")
                 }
               </p>
 
@@ -548,7 +550,7 @@ export default function SellerDashboardPage() {
               <div className="rounded border border-card-border bg-background/50 p-4 text-left mb-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-[10px] text-muted uppercase tracking-wider block">Store Name</span>
+                    <span className="text-[10px] text-muted uppercase tracking-wider block">{translate("Store Name", "Store Name")}</span>
                     <span className="font-bold text-foreground">{appReq.storeName}</span>
                   </div>
                   <span className={`inline-flex font-bold px-3 py-1 rounded-full text-[9px] uppercase tracking-wider ${
@@ -558,16 +560,16 @@ export default function SellerDashboardPage() {
                   </span>
                 </div>
                 <div className="mt-3">
-                  <span className="text-[10px] text-muted uppercase tracking-wider block">Description</span>
+                  <span className="text-[10px] text-muted uppercase tracking-wider block">{translate("Description", "Description")}</span>
                   <span className="text-xs text-foreground/80 leading-relaxed">{appReq.storeDescription}</span>
                 </div>
                 <div className="mt-3">
-                  <span className="text-[10px] text-muted uppercase tracking-wider block">Submitted</span>
+                  <span className="text-[10px] text-muted uppercase tracking-wider block">{translate("Submitted", "Submitted")}</span>
                   <span className="text-xs text-muted">{new Date(appReq.createdAt).toLocaleDateString()}</span>
                 </div>
                 {appReq.adminNotes && (
                   <div className="mt-3 p-3 bg-error/10 border border-error/20 rounded">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-error block mb-1">Admin Feedback</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-error block mb-1">{translate("Admin Feedback", "Admin Feedback")}</span>
                     <span className="text-xs text-error/80 leading-relaxed">{appReq.adminNotes}</span>
                   </div>
                 )}
@@ -577,10 +579,10 @@ export default function SellerDashboardPage() {
               {isPending && (
                 <div className="flex items-center justify-center gap-2 mb-6">
                   {[
-                    { label: "Applied", done: true },
-                    { label: "Under Review", done: false, active: true },
-                    { label: "Decision", done: false },
-                    { label: "Launch", done: false },
+                    { label: translate("Applied", "Applied"), done: true },
+                    { label: translate("Under Review", "Under Review"), done: false, active: true },
+                    { label: translate("Decision", "Decision"), done: false },
+                    { label: translate("Launch", "Launch"), done: false },
                   ].map((step, i) => (
                     <React.Fragment key={i}>
                       <div className="flex flex-col items-center gap-1">
@@ -606,14 +608,14 @@ export default function SellerDashboardPage() {
                   href="/dashboard"
                   className="px-6 py-2.5 border border-card-border rounded font-semibold text-xs uppercase tracking-wider hover:border-gold transition-all text-center"
                 >
-                  Back to Dashboard
+                  {translate("Back to Dashboard", "Back to Dashboard")}
                 </a>
                 {!isPending && (
                   <a
                     href="/dashboard"
                     className="px-6 py-2.5 bg-gold hover:bg-gold-hover text-luxury-black rounded font-bold text-xs uppercase tracking-wider transition-all text-center"
                   >
-                    Resubmit Application
+                    {translate("Resubmit Application", "Resubmit Application")}
                   </a>
                 )}
               </div>
@@ -666,15 +668,15 @@ export default function SellerDashboardPage() {
             <span className="text-[10px] font-bold tracking-widest text-gold uppercase flex items-center gap-1.5 mb-1.5">
               <Activity className="h-3.5 w-3.5" /> Seller Central Dashboard
             </span>
-            <h1 className="font-serif text-3xl font-bold">Manage Store Operations</h1>
-            <p className="text-xs text-muted mt-1 font-light">Configure inventory listings, track customer order logistics, and request payouts.</p>
+            <h1 className="font-serif text-3xl font-bold">{translate("Manage Store Operations", "Manage Store Operations")}</h1>
+            <p className="text-xs text-muted mt-1 font-light">{translate("Configure inventory listings, track customer order logistics, and request payouts.", "Configure inventory listings, track customer order logistics, and request payouts.")}</p>
           </div>
           
           <button
             onClick={openAddModal}
             className="inline-flex h-11 items-center justify-center gap-2 rounded bg-gold hover:bg-gold-hover text-luxury-white px-5 text-xs font-semibold uppercase tracking-wider transition-all"
           >
-            <Plus className="h-4.5 w-4.5" /> Add Product Listing
+            <Plus className="h-4.5 w-4.5" /> {translate("Add Product Listing", "Add Product Listing")}
           </button>
         </div>
 
@@ -691,7 +693,7 @@ export default function SellerDashboardPage() {
                 activeTab === "analytics" ? "bg-foreground text-background" : "hover:bg-muted-light"
               }`}
             >
-              <TrendingUp className="h-4 w-4" /> Store Analytics
+              <TrendingUp className="h-4 w-4" /> {translate("Store Analytics", "Store Analytics")}
             </button>
 
             <button
@@ -703,7 +705,7 @@ export default function SellerDashboardPage() {
                 activeTab === "products" ? "bg-foreground text-background" : "hover:bg-muted-light"
               }`}
             >
-              <Package className="h-4 w-4" /> Products Catalog ({products.length})
+              <Package className="h-4 w-4" /> {translate("Products Catalog", "Products Catalog")} ({products.length})
             </button>
 
             <button
@@ -715,7 +717,7 @@ export default function SellerDashboardPage() {
                 activeTab === "orders" ? "bg-foreground text-background" : "hover:bg-muted-light"
               }`}
             >
-              <ShoppingBag className="h-4 w-4" /> Fulfillment Orders ({orders.length})
+              <ShoppingBag className="h-4 w-4" /> {translate("Fulfillment Orders", "Fulfillment Orders")} ({orders.length})
             </button>
 
             <button
@@ -727,7 +729,7 @@ export default function SellerDashboardPage() {
                 activeTab === "wallet" ? "bg-foreground text-background" : "hover:bg-muted-light"
               }`}
             >
-              <Wallet className="h-4 w-4" /> Store Balance Wallet
+              <Wallet className="h-4 w-4" /> {translate("Store Balance Wallet", "Store Balance Wallet")}
             </button>
 
             <button
@@ -739,7 +741,7 @@ export default function SellerDashboardPage() {
                 activeTab === "settings" ? "bg-foreground text-background" : "hover:bg-muted-light"
               }`}
             >
-              <Settings className="h-4 w-4" /> Store Settings
+              <Settings className="h-4 w-4" /> {translate("Store Settings", "Store Settings")}
             </button>
 
             <button
@@ -751,7 +753,7 @@ export default function SellerDashboardPage() {
                 activeTab === "articles" ? "bg-foreground text-background" : "hover:bg-muted-light"
               }`}
             >
-              <FileText className="h-4 w-4" /> Editorial Articles ({myArticlesData?.articles?.length || 0})
+              <FileText className="h-4 w-4" /> {translate("Editorial Articles", "Editorial Articles")} ({myArticlesData?.articles?.length || 0})
             </button>
           </div>
 
@@ -764,34 +766,34 @@ export default function SellerDashboardPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {/* Revenue Card */}
                   <div className="luxury-card p-5 bg-card-bg">
-                    <span className="text-[10px] text-muted uppercase tracking-wider block font-semibold">Total Revenue</span>
+                    <span className="text-[10px] text-muted uppercase tracking-wider block font-semibold">{translate("Total Revenue", "Total Revenue")}</span>
                     <span className="text-2xl font-serif font-bold text-gold mt-1 block">
                       {stats.totalEarnings.toFixed(2)} EGP
                     </span>
-                    <span className="text-[9px] text-success font-semibold mt-1.5 block">From delivered fulfillments</span>
+                    <span className="text-[9px] text-success font-semibold mt-1.5 block">{translate("From delivered fulfillments", "From delivered fulfillments")}</span>
                   </div>
 
                   {/* Active Orders */}
                   <div className="luxury-card p-5 bg-card-bg">
-                    <span className="text-[10px] text-muted uppercase tracking-wider block font-semibold">Active Orders</span>
+                    <span className="text-[10px] text-muted uppercase tracking-wider block font-semibold">{translate("Active Orders", "Active Orders")}</span>
                     <span className="text-2xl font-serif font-bold text-foreground mt-1 block">
                       {stats.activeOrdersCount}
                     </span>
-                    <span className="text-[9px] text-muted font-light mt-1.5 block">Awaiting shipping status</span>
+                    <span className="text-[9px] text-muted font-light mt-1.5 block">{translate("Awaiting shipping status", "Awaiting shipping status")}</span>
                   </div>
 
                   {/* Listed Products */}
                   <div className="luxury-card p-5 bg-card-bg">
-                    <span className="text-[10px] text-muted uppercase tracking-wider block font-semibold">Listed Products</span>
+                    <span className="text-[10px] text-muted uppercase tracking-wider block font-semibold">{translate("Listed Products", "Listed Products")}</span>
                     <span className="text-2xl font-serif font-bold text-foreground mt-1 block">
                       {stats.totalProducts}
                     </span>
-                    <span className="text-[9px] text-muted font-light mt-1.5 block">Total items in catalog</span>
+                    <span className="text-[9px] text-muted font-light mt-1.5 block">{translate("Total items in catalog", "Total items in catalog")}</span>
                   </div>
 
                   {/* Stock Alert */}
                   <div className="luxury-card p-5 bg-card-bg">
-                    <span className="text-[10px] text-muted uppercase tracking-wider block font-semibold">Out Of Stock</span>
+                    <span className="text-[10px] text-muted uppercase tracking-wider block font-semibold">{translate("Out Of Stock", "Out Of Stock")}</span>
                     <span className={`text-2xl font-serif font-bold mt-1 block ${stats.outOfStockCount > 0 ? "text-error" : "text-success"}`}>
                       {stats.outOfStockCount}
                     </span>
@@ -801,7 +803,7 @@ export default function SellerDashboardPage() {
 
                 {/* Sales Chart */}
                 <div className="luxury-card p-6">
-                  <h3 className="font-serif font-bold text-lg mb-6">Store Performance Chart</h3>
+                  <h3 className="font-serif font-bold text-lg mb-6">{translate("Store Performance Chart", "Store Performance Chart")}</h3>
                   <div className="h-[250px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chartSales} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -829,12 +831,12 @@ export default function SellerDashboardPage() {
             {activeTab === "products" && (
               <div className="luxury-card p-6">
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="font-serif font-bold text-lg">My Product Listings</h3>
+                  <h3 className="font-serif font-bold text-lg">{translate("My Product Listings", "My Product Listings")}</h3>
                   <button
                     onClick={openAddModal}
                     className="h-9 inline-flex items-center justify-center gap-1 bg-foreground text-background hover:bg-gold hover:text-luxury-white px-4 rounded text-xs font-semibold uppercase tracking-wider transition-all"
                   >
-                    <Plus className="h-4 w-4" /> Add Product
+                    <Plus className="h-4 w-4" /> {translate("Add Product", "Add Product")}
                   </button>
                 </div>
 
@@ -842,18 +844,18 @@ export default function SellerDashboardPage() {
                   <table className="w-full text-xs text-left">
                     <thead>
                       <tr className="border-b border-card-border">
-                        <th className="py-3 px-3 font-semibold text-muted uppercase tracking-wider">Product Info</th>
-                        <th className="py-3 px-3 font-semibold text-muted uppercase tracking-wider">SKU</th>
-                        <th className="py-3 px-3 font-semibold text-muted uppercase tracking-wider">Price (EGP)</th>
-                        <th className="py-3 px-3 font-semibold text-muted uppercase tracking-wider">Stock</th>
-                        <th className="py-3 px-3 font-semibold text-muted uppercase tracking-wider">Status</th>
-                        <th className="py-3 px-3 font-semibold text-muted uppercase tracking-wider text-right">Actions</th>
+                        <th className="py-3 px-3 font-semibold text-muted uppercase tracking-wider">{translate("Product Info", "Product Info")}</th>
+                        <th className="py-3 px-3 font-semibold text-muted uppercase tracking-wider">{translate("SKU", "SKU")}</th>
+                        <th className="py-3 px-3 font-semibold text-muted uppercase tracking-wider">{translate("Price (EGP)", "Price (EGP)")}</th>
+                        <th className="py-3 px-3 font-semibold text-muted uppercase tracking-wider">{translate("Stock", "Stock")}</th>
+                        <th className="py-3 px-3 font-semibold text-muted uppercase tracking-wider">{translate("Status", "Status")}</th>
+                        <th className="py-3 px-3 font-semibold text-muted uppercase tracking-wider text-right">{translate("Actions", "Actions")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {products.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="py-8 text-center text-muted font-light">No products listed. Add your first product catalog above.</td>
+                          <td colSpan={6} className="py-8 text-center text-muted font-light">{translate("No products listed. Add your first product catalog above.", "No products listed. Add your first product catalog above.")}</td>
                         </tr>
                       ) : (
                         products.map((prod: any) => (
@@ -883,7 +885,7 @@ export default function SellerDashboardPage() {
                                   prod.isPublished ? "bg-success/10 text-success" : "bg-muted-light/20 text-muted"
                                 }`}
                               >
-                                {prod.isPublished ? "Published" : "Draft"}
+                                {prod.isPublished ? translate("Published", "Published") : translate("Draft", "Draft")}
                               </button>
                             </td>
                             <td className="py-4 px-3 text-right">
@@ -916,11 +918,11 @@ export default function SellerDashboardPage() {
             {/* 3. FULFILLMENT ORDERS */}
             {activeTab === "orders" && (
               <div className="flex flex-col gap-6">
-                <h3 className="font-serif font-bold text-lg">Store Fulfillment Shipments</h3>
+                <h3 className="font-serif font-bold text-lg">{translate("Store Fulfillment Shipments", "Store Fulfillment Shipments")}</h3>
 
                 {orders.length === 0 ? (
                   <div className="text-center py-16 border border-dashed border-card-border rounded p-6 text-muted text-sm font-light bg-card-bg">
-                    No customer orders have been routed to your store catalog yet.
+                    {translate("No customer orders have been routed to your store catalog yet.", "No customer orders have been routed to your store catalog yet.")}
                   </div>
                 ) : (
                   orders.map((order: any) => (
@@ -928,25 +930,25 @@ export default function SellerDashboardPage() {
                       {/* Meta info */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-card-border">
                         <div>
-                          <span className="text-[10px] text-muted uppercase tracking-wider block">Order ID</span>
+                          <span className="text-[10px] text-muted uppercase tracking-wider block">{translate("Order ID", "Order ID")}</span>
                           <span className="font-mono text-xs text-foreground font-semibold">{order._id}</span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-muted uppercase tracking-wider block">Ship To</span>
+                          <span className="text-[10px] text-muted uppercase tracking-wider block">{translate("Ship To", "Ship To")}</span>
                           <span className="text-xs text-foreground font-semibold">{order.shippingAddress?.fullName}</span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-muted uppercase tracking-wider block">My Store Subtotal</span>
+                          <span className="text-[10px] text-muted uppercase tracking-wider block">{translate("My Store Subtotal", "My Store Subtotal")}</span>
                           <span className="text-sm font-bold text-gold">{order.sellerSubtotal?.toFixed(2)} EGP</span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-muted uppercase tracking-wider block">Status</span>
+                          <span className="text-[10px] text-muted uppercase tracking-wider block">{translate("Status", "Status")}</span>
                           <span className="inline-flex items-center gap-1.5">
-                            {order.orderStatus === "pending" && <span className="text-[9px] font-bold text-gold bg-gold/10 px-2 py-0.5 rounded uppercase tracking-wider">Pending</span>}
-                            {order.orderStatus === "processing" && <span className="text-[9px] font-bold text-success bg-success/10 px-2 py-0.5 rounded uppercase tracking-wider">Processing</span>}
-                            {order.orderStatus === "shipped" && <span className="text-[9px] font-bold text-success bg-success/15 px-2 py-0.5 rounded uppercase tracking-wider"><Truck className="h-3 w-3" /> Shipped</span>}
-                            {order.orderStatus === "delivered" && <span className="text-[9px] font-bold text-success bg-success/20 px-2 py-0.5 rounded uppercase tracking-wider">Delivered</span>}
-                            {order.orderStatus === "cancelled" && <span className="text-[9px] font-bold text-error bg-error/10 px-2 py-0.5 rounded uppercase tracking-wider">Cancelled</span>}
+                            {order.orderStatus === "pending" && <span className="text-[9px] font-bold text-gold bg-gold/10 px-2 py-0.5 rounded uppercase tracking-wider">{translate("Pending", "Pending")}</span>}
+                            {order.orderStatus === "processing" && <span className="text-[9px] font-bold text-success bg-success/10 px-2 py-0.5 rounded uppercase tracking-wider">{translate("Processing", "Processing")}</span>}
+                            {order.orderStatus === "shipped" && <span className="text-[9px] font-bold text-success bg-success/15 px-2 py-0.5 rounded uppercase tracking-wider"><Truck className="h-3 w-3" /> {translate("Shipped", "Shipped")}</span>}
+                            {order.orderStatus === "delivered" && <span className="text-[9px] font-bold text-success bg-success/20 px-2 py-0.5 rounded uppercase tracking-wider">{translate("Delivered", "Delivered")}</span>}
+                            {order.orderStatus === "cancelled" && <span className="text-[9px] font-bold text-error bg-error/10 px-2 py-0.5 rounded uppercase tracking-wider">{translate("Cancelled", "Cancelled")}</span>}
                           </span>
                         </div>
                       </div>
@@ -970,13 +972,13 @@ export default function SellerDashboardPage() {
                       {/* Shipping Logistics and Actions */}
                       <div className="flex flex-col sm:flex-row gap-4 pt-3 border-t border-card-border mt-1 justify-between items-start sm:items-center">
                         <div className="text-xs text-muted font-light leading-relaxed">
-                          <span className="font-semibold text-foreground uppercase block text-[9px] tracking-wider mb-0.5">Shipping Address:</span>
+                          <span className="font-semibold text-foreground uppercase block text-[9px] tracking-wider mb-0.5">{translate("Shipping Address:", "Shipping Address:")}</span>
                           {order.shippingAddress?.street}, {order.shippingAddress?.city}, Egypt. Phone: {order.shippingAddress?.phone}
                         </div>
 
                         {order.orderStatus !== "delivered" && order.orderStatus !== "cancelled" && (
                           <div className="flex items-center gap-2 self-end">
-                            <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">Update Status:</span>
+                            <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">{translate("Update Status:", "Update Status:")}</span>
                             <select
                               value={order.orderStatus}
                               disabled={isUpdatingStatus}
@@ -1006,7 +1008,7 @@ export default function SellerDashboardPage() {
                   <div className="luxury-card p-6 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-gold/5 via-card-bg to-card-bg border-gold/10">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <span className="text-[10px] text-muted uppercase tracking-wider block font-semibold">Store Wallet Balance</span>
+                        <span className="text-[10px] text-muted uppercase tracking-wider block font-semibold">{translate("Store Wallet Balance", "Store Wallet Balance")}</span>
                         <span className="text-3xl font-serif font-bold text-gold mt-1 block">
                           {(meData?.user?.walletBalance || 0).toFixed(2)} EGP
                         </span>
@@ -1016,16 +1018,16 @@ export default function SellerDashboardPage() {
                       </div>
                     </div>
                     <p className="text-[10px] text-muted font-light leading-relaxed">
-                      Earnings are added to wallet balance once an order's fulfillment status is updated to "Delivered".
+                      {translate("Earnings are added to wallet balance once an order's fulfillment status is updated to \"Delivered\".", "Earnings are added to wallet balance once an order's fulfillment status is updated to \"Delivered\".")}
                     </p>
                   </div>
 
                   {/* Payout Form */}
                   <div className="luxury-card p-6">
-                    <h3 className="font-serif font-bold text-base mb-4">Withdraw Store Funds</h3>
+                    <h3 className="font-serif font-bold text-base mb-4">{translate("Withdraw Store Funds", "Withdraw Store Funds")}</h3>
                     <form onSubmit={handlePayoutRequest} className="flex flex-col gap-3">
                       <div>
-                        <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Amount to Withdraw (EGP)</label>
+                        <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">{translate("Amount to Withdraw (EGP)", "Amount to Withdraw (EGP)")}</label>
                         <input
                           type="number"
                           required
@@ -1042,7 +1044,7 @@ export default function SellerDashboardPage() {
                         disabled={isRequestingPayout || !payoutAmount}
                         className="w-full h-9 bg-gold text-luxury-white hover:bg-gold-hover rounded text-xs font-semibold uppercase tracking-wider transition-all"
                       >
-                        {isRequestingPayout ? "Requesting Withdrawal..." : "Withdraw Funds"}
+                        {isRequestingPayout ? translate("Requesting Withdrawal...", "Requesting Withdrawal...") : translate("Withdraw Funds", "Withdraw Funds")}
                       </button>
                     </form>
                   </div>
@@ -1050,21 +1052,21 @@ export default function SellerDashboardPage() {
 
                 {/* Ledger Log */}
                 <div className="luxury-card p-6">
-                  <h3 className="font-serif font-bold text-base mb-4">Earning Logs & Payout History</h3>
+                  <h3 className="font-serif font-bold text-base mb-4">{translate("Earning Logs & Payout History", "Earning Logs & Payout History")}</h3>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left">
                       <thead>
                         <tr className="border-b border-card-border">
-                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">Ledger Action</th>
-                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">Details</th>
-                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider text-right">Timestamp</th>
+                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">{translate("Ledger Action", "Ledger Action")}</th>
+                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">{translate("Details", "Details")}</th>
+                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider text-right">{translate("Timestamp", "Timestamp")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {activities.filter((act: any) => act.action.includes("earnings") || act.action.includes("payout")).length === 0 ? (
                           <tr>
                             <td colSpan={3} className="py-8 text-center text-muted font-light">
-                              No financial logs recorded.
+                              {translate("No financial logs recorded.", "No financial logs recorded.")}
                             </td>
                           </tr>
                         ) : (
@@ -1102,8 +1104,8 @@ export default function SellerDashboardPage() {
               <div className="luxury-card p-6 bg-card-bg">
                 <div className="flex justify-between items-start mb-6">
                   <div>
-                    <h2 className="font-serif text-xl font-bold">Store Branding & Details</h2>
-                    <p className="text-xs text-muted mt-1 font-light">Customize how your store appears to customers on the marketplace.</p>
+                    <h2 className="font-serif text-xl font-bold">{translate("Store Branding & Details", "Store Branding & Details")}</h2>
+                    <p className="text-xs text-muted mt-1 font-light">{translate("Customize how your store appears to customers on the marketplace.", "Customize how your store appears to customers on the marketplace.")}</p>
                   </div>
                   {meData?.user?.storeSlug && (
                     <a
@@ -1112,7 +1114,7 @@ export default function SellerDashboardPage() {
                       rel="noopener noreferrer"
                       className="inline-flex h-9 items-center justify-center gap-1.5 rounded border border-gold hover:bg-gold/10 text-gold px-4 text-xs font-semibold uppercase tracking-wider transition-all"
                     >
-                      <Eye className="h-3.5 w-3.5" /> View Live Store
+                      <Eye className="h-3.5 w-3.5" /> {translate("View Live Store", "View Live Store")}
                     </a>
                   )}
                 </div>
@@ -1121,7 +1123,7 @@ export default function SellerDashboardPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Store Name */}
                     <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Store Name</label>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">{translate("Store Name", "Store Name")}</label>
                       <input
                         type="text"
                         required
@@ -1134,7 +1136,7 @@ export default function SellerDashboardPage() {
 
                     {/* Brand Name */}
                     <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Brand / Company Name</label>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">{translate("Brand / Company Name", "Brand / Company Name")}</label>
                       <input
                         type="text"
                         required
@@ -1147,7 +1149,7 @@ export default function SellerDashboardPage() {
 
                     {/* Country */}
                     <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Country / Headquarters</label>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">{translate("Country / Headquarters", "Country / Headquarters")}</label>
                       <input
                         type="text"
                         required
@@ -1160,7 +1162,7 @@ export default function SellerDashboardPage() {
 
                     {/* Response Time */}
                     <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Average Customer Response Time</label>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">{translate("Average Customer Response Time", "Average Customer Response Time")}</label>
                       <select
                         value={responseTime}
                         onChange={(e) => setResponseTime(e.target.value)}
@@ -1178,7 +1180,7 @@ export default function SellerDashboardPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 border border-card-border/40 rounded-2xl bg-card-bg/40 backdrop-blur-sm">
                     {/* Logo Upload Card */}
                     <div className="flex flex-col gap-3">
-                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Store Logo</label>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted">{translate("Store Logo", "Store Logo")}</label>
                       <div className="flex items-center gap-5 p-4 rounded-xl border border-dashed border-card-border bg-background/50 hover:border-gold/50 transition-all duration-300">
                         <div className="relative h-20 w-20 rounded-full border-2 border-gold bg-background overflow-hidden shadow-md shrink-0 group">
                           <img
@@ -1194,10 +1196,10 @@ export default function SellerDashboardPage() {
                         </div>
                         <div className="flex flex-col gap-2">
                           <p className="text-[11px] text-muted leading-relaxed font-light">
-                            Recommend square shape (PNG/JPG). Max 2MB.
+                            {translate("Recommend square shape (PNG/JPG). Max 2MB.", "Recommend square shape (PNG/JPG). Max 2MB.")}
                           </p>
                           <label className="inline-flex items-center justify-center gap-1.5 h-8 rounded border border-gold hover:bg-gold/10 text-gold px-4 text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors max-w-max">
-                            <Upload className="h-3 w-3" /> Upload Logo
+                            <Upload className="h-3 w-3" /> {translate("Upload Logo", "Upload Logo")}
                             <input
                               type="file"
                               accept="image/*"
@@ -1212,7 +1214,7 @@ export default function SellerDashboardPage() {
 
                     {/* Cover Upload Card */}
                     <div className="flex flex-col gap-3">
-                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Store Cover Banner</label>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted">{translate("Store Cover Banner", "Store Cover Banner")}</label>
                       <div className="flex flex-col gap-3 p-4 rounded-xl border border-dashed border-card-border bg-background/50 hover:border-gold/50 transition-all duration-300 justify-between min-h-[114px]">
                         <div className="relative h-14 w-full rounded-lg border border-card-border bg-background overflow-hidden group">
                           <img
@@ -1228,10 +1230,10 @@ export default function SellerDashboardPage() {
                         </div>
                         <div className="flex items-center justify-between gap-4">
                           <p className="text-[11px] text-muted font-light leading-none">
-                            Aspect ratio 3:1 recommended. Max 5MB.
+                            {translate("Aspect ratio 3:1 recommended. Max 5MB.", "Aspect ratio 3:1 recommended. Max 5MB.")}
                           </p>
                           <label className="inline-flex items-center justify-center gap-1.5 h-8 rounded border border-gold hover:bg-gold/10 text-gold px-4 text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors shrink-0">
-                            <Upload className="h-3 w-3" /> Upload Cover
+                            <Upload className="h-3 w-3" /> {translate("Upload Cover", "Upload Cover")}
                             <input
                               type="file"
                               accept="image/*"
@@ -1247,13 +1249,13 @@ export default function SellerDashboardPage() {
 
                   {/* Store Description */}
                   <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Store Description</label>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">{translate("Store Description", "Store Description")}</label>
                     <textarea
                       value={storeDescription}
                       onChange={(e) => setStoreDescription(e.target.value)}
                       rows={4}
                       className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold resize-none"
-                      placeholder="Tell customers about your store, brands, specialties and values..."
+                      placeholder={translate("Tell customers about your store, brands, specialties and values...", "Tell customers about your store, brands, specialties and values...")}
                     />
                   </div>
 
@@ -1263,7 +1265,7 @@ export default function SellerDashboardPage() {
                       disabled={isUpdatingProfile}
                       className="inline-flex h-11 items-center justify-center rounded bg-gold hover:bg-gold-hover text-luxury-white px-8 text-xs font-semibold uppercase tracking-wider transition-all disabled:opacity-50"
                     >
-                      {isUpdatingProfile ? "Saving Settings..." : "Save Settings"}
+                      {isUpdatingProfile ? translate("Saving Settings...", "Saving Settings...") : translate("Save Settings", "Save Settings")}
                     </button>
                   </div>
                 </form>
@@ -1275,14 +1277,14 @@ export default function SellerDashboardPage() {
               <div className="flex flex-col gap-6 animate-in fade-in duration-200">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h2 className="font-serif text-xl font-bold">Your Editorial Articles</h2>
-                    <p className="text-xs text-muted mt-1 font-light">Compose lifestyle blogs, storyboards, and editorial listings to promote your brand.</p>
+                    <h2 className="font-serif text-xl font-bold">{translate("Your Editorial Articles", "Your Editorial Articles")}</h2>
+                    <p className="text-xs text-muted mt-1 font-light">{translate("Compose lifestyle blogs, storyboards, and editorial listings to promote your brand.", "Compose lifestyle blogs, storyboards, and editorial listings to promote your brand.")}</p>
                   </div>
                   <button
                     onClick={openCreateArticleModal}
                     className="inline-flex h-9 items-center justify-center gap-2 rounded bg-gold hover:bg-gold-hover text-luxury-white px-4 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer"
                   >
-                    <Plus className="h-4 w-4" /> Create Article
+                    <Plus className="h-4 w-4" /> {translate("Create Article", "Create Article")}
                   </button>
                 </div>
 
@@ -1291,18 +1293,18 @@ export default function SellerDashboardPage() {
                     <table className="w-full text-xs text-left">
                       <thead>
                         <tr className="border-b border-card-border">
-                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">Article Title</th>
-                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">Category</th>
-                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">Status</th>
-                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">Performance</th>
-                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider text-right">Actions</th>
+                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">{translate("Article Title", "Article Title")}</th>
+                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">{translate("Category", "Category")}</th>
+                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">{translate("Status", "Status")}</th>
+                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider">{translate("Performance", "Performance")}</th>
+                          <th className="py-2.5 px-3 font-semibold text-muted uppercase tracking-wider text-right">{translate("Actions", "Actions")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {!myArticlesData?.articles || myArticlesData.articles.length === 0 ? (
                           <tr>
                             <td colSpan={5} className="py-8 text-center text-muted font-light animate-pulse">
-                              You haven't composed any articles yet. Click "Create Article" to write your first brand story.
+                              {translate("You haven't composed any articles yet. Click \"Create Article\" to write your first brand story.", "You haven't composed any articles yet. Click \"Create Article\" to write your first brand story.")}
                             </td>
                           </tr>
                         ) : (
@@ -1310,7 +1312,7 @@ export default function SellerDashboardPage() {
                             <tr key={art._id} className="border-b border-card-border/50 hover:bg-muted-light/10 transition-colors">
                               <td className="py-4 px-3">
                                 <span className="font-bold text-foreground block truncate max-w-[200px]">{art.title}</span>
-                                <span className="text-[9px] text-muted block italic mt-0.5">{art.subtitle || "No subtitle"}</span>
+                                <span className="text-[9px] text-muted block italic mt-0.5">{art.subtitle || translate("No subtitle", "No subtitle")}</span>
                               </td>
                               <td className="py-4 px-3 text-muted">{art.category}</td>
                               <td className="py-4 px-3">
@@ -1334,8 +1336,8 @@ export default function SellerDashboardPage() {
                                 )}
                               </td>
                               <td className="py-4 px-3 text-muted">
-                                <span className="block font-semibold">{art.views || 0} Views</span>
-                                <span className="text-[10px] block mt-0.5">{art.likes?.length || 0} Likes</span>
+                                <span className="block font-semibold">{art.views || 0} {translate("Views", "Views")}</span>
+                                <span className="text-[10px] block mt-0.5">{art.likes?.length || 0} {translate("Likes", "Likes")}</span>
                               </td>
                               <td className="py-4 px-3 text-right">
                                 <div className="flex justify-end gap-2.5">

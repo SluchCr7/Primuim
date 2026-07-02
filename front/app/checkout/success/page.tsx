@@ -9,13 +9,14 @@ import { CheckCircle2, FileText, ShoppingBag, ArrowRight } from "lucide-react";
 import { useAppSelector } from "../../../lib/store";
 import { API_BASE_URL } from "../../../lib/api";
 import { useToast } from "../../components/Toast";
+import { useTranslation } from "react-i18next";
 
 export default function CheckoutSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const fawryRef = searchParams.get("fawryRef");
-
+  const {t} = useTranslation();
   const { accessToken } = useAppSelector((state) => state.auth);
   const { showToast } = useToast();
   const [downloading, setDownloading] = useState(false);
@@ -64,25 +65,25 @@ export default function CheckoutSuccessPage() {
           </div>
 
           <div>
-            <span className="text-[10px] font-bold tracking-widest text-gold uppercase">Payment Confirmed</span>
-            <h1 className="font-serif text-3xl font-bold mt-1">Transaction Successful</h1>
+            <span className="text-[10px] font-bold tracking-widest text-gold uppercase">{t("Payment Confirmed")}</span>
+            <h1 className="font-serif text-3xl font-bold mt-1">{t("Transaction Successful")}</h1>
             <p className="text-xs text-muted mt-2 max-w-sm mx-auto leading-relaxed">
-              Your allocations have been locked. An email verification with summary billing receipts has been sent.
+              {t("Your allocations have been locked. An email verification with summary billing receipts has been sent.")}
             </p>
           </div>
 
           {orderId && (
             <div className="w-full bg-background p-4 rounded border border-card-border flex justify-between items-center text-xs">
-              <span className="text-muted uppercase tracking-wider font-semibold">Order ID</span>
+              <span className="text-muted uppercase tracking-wider font-semibold">{t("Order ID")}</span>
               <span className="font-mono font-semibold text-gold">{orderId}</span>
             </div>
           )}
 
           {fawryRef && (
             <div className="w-full rounded bg-gold/10 border border-gold/20 p-5 text-left flex flex-col gap-2">
-              <span className="text-xs font-bold tracking-widest text-gold uppercase">Fawry Reference Code</span>
+              <span className="text-xs font-bold tracking-widest text-gold uppercase">{t("Fawry Reference Code")}</span>
               <p className="text-xs font-light text-muted">
-                Please complete payment at any retail kiosk within 24 hours using the code:
+                {t("Please complete payment at any retail kiosk within 24 hours using the code:")}
               </p>
               <div className="text-center font-mono text-2xl font-extrabold tracking-widest bg-background py-2.5 rounded border border-card-border text-foreground">
                 {fawryRef}
@@ -97,14 +98,14 @@ export default function CheckoutSuccessPage() {
                 disabled={downloading}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded border border-gold hover:bg-gold/10 px-5 text-gold font-semibold text-xs uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer"
               >
-                <FileText className="h-4 w-4" /> {downloading ? "Downloading..." : "Download PDF Invoice"}
+                <FileText className="h-4 w-4" /> {downloading ? t("Downloading...") : t("Download PDF Invoice")}
               </button>
             )}
             <Link
               href="/dashboard"
               className="inline-flex h-11 items-center justify-center gap-2 rounded bg-foreground px-6 text-background hover:bg-gold hover:text-luxury-white font-semibold text-xs uppercase tracking-wider transition-all shadow-md"
             >
-              Order Status <ArrowRight className="h-4 w-4" />
+              {t("Order Status")} <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>

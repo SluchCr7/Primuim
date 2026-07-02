@@ -13,7 +13,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { CardSkeleton } from "../components/Skeletons";
-import { useAppSelector } from "../../lib/store";
+import { useAppSelector, type RootState } from "../../lib/store";
 import {
   useGetAdvancedSearchQuery,
   useGetSearchSuggestionsQuery,
@@ -23,6 +23,7 @@ import {
   useToggleWishlistMutation,
   useGetWishlistQuery,
 } from "../../lib/api";
+import { useTranslation } from "react-i18next";
 import {
   Search,
   Star,
@@ -278,6 +279,7 @@ function ProductCard({
   onWishlist: (id: string) => void;
   onAddToCart: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const discount =
     product.comparePrice && product.comparePrice > product.price
       ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)
@@ -339,7 +341,7 @@ function ProductCard({
                     ? "border-error bg-error/10 text-error"
                     : "border-card-border hover:border-error hover:text-error"
                 }`}
-                aria-label="Toggle wishlist"
+                aria-label={t("Toggle wishlist", "Toggle wishlist")}
               >
                 <Heart className={`h-3.5 w-3.5 ${wishlisted ? "fill-current" : ""}`} />
               </button>
@@ -348,7 +350,7 @@ function ProductCard({
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-foreground text-background hover:bg-gold text-xs font-semibold tracking-wide transition-all duration-200"
               >
                 <ShoppingCart className="h-3.5 w-3.5" />
-                Add to Cart
+                {t("Add to Cart", "Add to Cart")}
               </button>
             </div>
           </div>
@@ -379,7 +381,7 @@ function ProductCard({
         {/* Out of stock */}
         {product.stock === 0 && (
           <span className="absolute top-2.5 right-2.5 bg-muted text-white text-[10px] font-semibold px-2 py-0.5 rounded-md">
-            Sold Out
+            {t("Sold Out", "Sold Out")}
           </span>
         )}
 
@@ -390,7 +392,7 @@ function ProductCard({
             className="flex-1 flex items-center justify-center gap-1.5 bg-background/95 backdrop-blur-sm py-2.5 rounded-lg text-xs font-bold tracking-wider uppercase hover:bg-gold hover:text-white transition-all duration-200 border border-card-border"
           >
             <ShoppingCart className="h-3.5 w-3.5" />
-            Add to Cart
+            {t("Add to Cart", "Add to Cart")}
           </button>
           <button
             onClick={() => onWishlist(product._id)}
@@ -399,7 +401,7 @@ function ProductCard({
                 ? "bg-error/90 border-error text-white"
                 : "bg-background/95 border-card-border hover:bg-error/10 hover:border-error hover:text-error"
             }`}
-            aria-label="Toggle wishlist"
+            aria-label={t("Toggle wishlist", "Toggle wishlist")}
           >
             <Heart className={`h-3.5 w-3.5 ${wishlisted ? "fill-current" : ""}`} />
           </button>
@@ -434,7 +436,7 @@ function ProductCard({
             href={`/product/${product.slug || product._id}`}
             className="text-[10px] text-muted hover:text-gold font-semibold uppercase tracking-wider transition-colors"
           >
-            View →
+            {t("View", "View")} →
           </Link>
         </div>
       </div>
@@ -459,9 +461,10 @@ function SidebarSkeleton() {
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────
 export default function ProfessionalSearchPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated } = useAppSelector((state: RootState) => state.auth);
 
   // ── URL-synced params ─────────────────────────────────
   const urlQ        = searchParams.get("q") || "";
@@ -943,10 +946,10 @@ export default function ProfessionalSearchPage() {
           <div className="relative max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 mb-4 px-3 py-1.5 rounded-full border border-card-border bg-card-bg text-[10px] font-bold text-gold uppercase tracking-widest">
               <Sparkles className="h-3 w-3" />
-              Smart Search Engine
+              {t("Smart Search Engine", "Smart Search Engine")}
             </div>
             <h1 className="font-serif text-4xl md:text-5xl font-extrabold mb-3 leading-tight">
-              Find What You
+              {t("Find What You", "Find What You")}
               <span
                 className="block"
                 style={{
@@ -959,7 +962,7 @@ export default function ProfessionalSearchPage() {
               </span>
             </h1>
             <p className="text-sm text-muted mb-8 max-w-md mx-auto">
-              Search across thousands of premium products with AI-powered filtering and real-time suggestions.
+              {t("Search across thousands of premium products with AI-powered filtering and real-time suggestions.", "Search across thousands of premium products with AI-powered filtering and real-time suggestions.")}
             </p>
 
             {/* Search bar */}
@@ -985,7 +988,7 @@ export default function ProfessionalSearchPage() {
                     ref={searchBarRef}
                     id="main-search-input"
                     type="text"
-                    placeholder="Search products, brands, categories..."
+                    placeholder={t("Search products, brands, categories...", "Search products, brands, categories...")}
                     value={inputValue}
                     onChange={(e) => {
                       setInputValue(e.target.value);
@@ -1014,7 +1017,7 @@ export default function ProfessionalSearchPage() {
                     type="submit"
                     className="shrink-0 px-5 py-2 rounded-xl bg-foreground text-background hover:bg-gold text-xs font-bold uppercase tracking-wider transition-all duration-200"
                   >
-                    Search
+                    {t("Search", "Search")}
                   </button>
                 </div>
               </form>
@@ -1031,7 +1034,7 @@ export default function ProfessionalSearchPage() {
                     <div>
                       <div className="px-4 pt-3 pb-1 text-[9px] font-bold text-gold tracking-widest uppercase flex items-center gap-1.5">
                         <Package className="h-3 w-3" />
-                        Products
+                        {t("Products", "Products")}
                       </div>
                       {suggestions.products.map((p: any) => (
                         <button
@@ -1070,7 +1073,7 @@ export default function ProfessionalSearchPage() {
                     <div className="border-t border-card-border">
                       <div className="px-4 pt-2.5 pb-1 text-[9px] font-bold text-gold tracking-widest uppercase flex items-center gap-1.5">
                         <Search className="h-3 w-3" />
-                        Suggestions
+                        {t("Suggestions", "Suggestions")}
                       </div>
                       <div className="flex flex-wrap gap-1.5 px-4 pb-3">
                         {suggestions.keywords.map((k: any) => (
@@ -1092,7 +1095,7 @@ export default function ProfessionalSearchPage() {
                     <div>
                       <div className="px-4 pt-3 pb-1 text-[9px] font-bold text-muted tracking-widest uppercase flex items-center gap-1.5">
                         <Clock className="h-3 w-3" />
-                        Recent Searches
+                        {t("Recent Searches", "Recent Searches")}
                       </div>
                       {recentSearches.map((term) => (
                         <div key={term} className="flex items-center px-4 py-2 hover:bg-muted-light group">
@@ -1125,7 +1128,7 @@ export default function ProfessionalSearchPage() {
                     <div className="border-t border-card-border">
                       <div className="px-4 pt-3 pb-1 text-[9px] font-bold text-muted tracking-widest uppercase flex items-center gap-1.5">
                         <TrendingUp className="h-3 w-3 text-gold" />
-                        Trending Now
+                        {t("Trending Now", "Trending Now")}
                       </div>
                       <div className="flex flex-wrap gap-1.5 px-4 pb-3">
                         {trendingTerms.slice(0, 8).map((t: any) => (
@@ -1149,7 +1152,7 @@ export default function ProfessionalSearchPage() {
             {trendingTerms.length > 0 && !showDropdown && (
               <div className="flex flex-wrap justify-center gap-2 mt-4">
                 <span className="text-[10px] text-muted flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3 text-gold" /> Trending:
+                  <TrendingUp className="h-3 w-3 text-gold" /> {t("Trending:", "Trending:")}
                 </span>
                 {trendingTerms.slice(0, 6).map((t: any) => (
                   <button
@@ -1168,14 +1171,14 @@ export default function ProfessionalSearchPage() {
         {/* ── MAIN CONTENT ────────────────────────────── */}
         <div className="max-w-screen-xl mx-auto px-4 md:px-6 py-8">
           <div className="mb-4">
-            <Breadcrumbs items={[{ label: "Search", url: "/search" }]} />
+            <Breadcrumbs items={[{ label: t("Search", "Search"), url: "/search" }]} />
           </div>
 
           {/* ── ACTIVE FILTER CHIPS ───────────────────── */}
           {activeFilterCount > 0 && (
             <div className="flex flex-wrap items-center gap-2 mb-5 p-3 rounded-xl bg-muted-light border border-card-border">
               <span className="text-[10px] font-bold text-muted uppercase tracking-wider shrink-0">
-                Active Filters:
+                {t("Active Filters:", "Active Filters:")}
               </span>
               {urlCategory && categoriesData?.categories && (
                 <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold font-medium">
@@ -1237,7 +1240,7 @@ export default function ProfessionalSearchPage() {
                 onClick={handleClearFilters}
                 className="ml-auto text-[10px] text-error hover:underline font-semibold uppercase tracking-wider"
               >
-                Clear All
+                {t("Clear All", "Clear All")}
               </button>
             </div>
           )}
@@ -1287,7 +1290,7 @@ export default function ProfessionalSearchPage() {
                     ) : (
                       <p className="text-sm text-muted">
                         <span className="font-bold text-foreground">{totalProducts.toLocaleString()}</span>{" "}
-                        results{urlQ ? <> for <span className="font-bold text-gold">"{urlQ}"</span></> : ""}
+                        {t("results", "results")}{urlQ ? <> {t("for", "for")} <span className="font-bold text-gold">"{urlQ}"</span></> : ""}
                       </p>
                     )}
                   </div>
@@ -1306,12 +1309,12 @@ export default function ProfessionalSearchPage() {
                     }}
                     className="h-9 rounded-xl border border-card-border bg-card-bg px-3 text-xs font-medium outline-none focus:border-gold cursor-pointer"
                   >
-                    <option value="relevance">Most Relevant</option>
-                    <option value="newest">Newest First</option>
-                    <option value="price-asc">Price: Low → High</option>
-                    <option value="price-desc">Price: High → Low</option>
-                    <option value="rating">Top Rated</option>
-                    <option value="popular">Most Popular</option>
+                    <option value="relevance">{t("Most Relevant", "Most Relevant")}</option>
+                    <option value="newest">{t("Newest First", "Newest First")}</option>
+                    <option value="price-asc">{t("Price: Low → High", "Price: Low → High")}</option>
+                    <option value="price-desc">{t("Price: High → Low", "Price: High → Low")}</option>
+                    <option value="rating">{t("Top Rated", "Top Rated")}</option>
+                    <option value="popular">{t("Most Popular", "Most Popular")}</option>
                   </select>
 
                   {/* View toggle */}
@@ -1364,25 +1367,25 @@ export default function ProfessionalSearchPage() {
                   >
                     <Search className="h-10 w-10 text-muted" />
                   </div>
-                  <h3 className="font-serif text-xl font-bold mb-2">No Results Found</h3>
+                  <h3 className="font-serif text-xl font-bold mb-2">{t("No Results Found", "No Results Found")}</h3>
                   <p className="text-sm text-muted max-w-sm mb-6 leading-relaxed">
-                    We couldn't find anything matching{" "}
-                    {urlQ ? <strong className="text-gold">"{urlQ}"</strong> : "your filters"}.
-                    Try adjusting your search or clearing filters.
+                    {t("We couldn't find anything matching", "We couldn't find anything matching")}{" "}
+                    {urlQ ? <strong className="text-gold">"{urlQ}"</strong> : t("your filters", "your filters")}.
+                    {t("Try adjusting your search or clearing filters.", "Try adjusting your search or clearing filters.")}
                   </p>
                   {activeFilterCount > 0 && (
                     <button
                       onClick={handleClearFilters}
                       className="px-6 py-2.5 rounded-xl bg-foreground text-background hover:bg-gold text-xs font-bold uppercase tracking-wider transition-all duration-200"
                     >
-                      Clear Filters
+                      {t("Clear Filters", "Clear Filters")}
                     </button>
                   )}
                   {/* Trending */}
                   {trendingTerms.length > 0 && (
                     <div className="mt-8">
                       <p className="text-xs text-muted font-semibold uppercase tracking-wider mb-3">
-                        Try these trending searches:
+                        {t("Try these trending searches:", "Try these trending searches:")}
                       </p>
                       <div className="flex flex-wrap justify-center gap-2">
                         {trendingTerms.slice(0, 5).map((t: any) => (

@@ -8,9 +8,11 @@ import { useGetProductsQuery, useAddToCartMutation } from "../../lib/api";
 import { CardSkeleton } from "../components/Skeletons";
 import { useAppSelector } from "../../lib/store";
 import { Star, Gift, ShieldAlert } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function OffersPage() {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const {t} = useTranslation()
   // Fetch products that might have a comparePrice (offers)
   const { data: productsData, isLoading } = useGetProductsQuery({ limit: 8 });
   const [addToCart] = useAddToCartMutation();
@@ -42,10 +44,10 @@ export default function OffersPage() {
 
         <div className="mb-12">
           <span className="text-xs font-bold tracking-widest text-gold uppercase flex items-center gap-1.5">
-            <Gift className="h-4 w-4" /> VIP Invitations
+            <Gift className="h-4 w-4" /> {t("VIP Invitations")}
           </span>
-          <h1 className="font-serif text-4xl font-extrabold mt-1">Exclusive Offers</h1>
-          <p className="text-sm text-muted mt-2">Reserved pricing rates on select seasonal designs</p>
+          <h1 className="font-serif text-4xl font-extrabold mt-1">{t("Exclusive Offers")}</h1>
+          <p className="text-sm text-muted mt-2">{t("Reserved pricing rates on select seasonal designs")}</p>
         </div>
 
         {isLoading ? (
@@ -57,9 +59,9 @@ export default function OffersPage() {
         ) : offerItems.length === 0 ? (
           <div className="text-center py-20 luxury-card max-w-md mx-auto">
             <Gift className="h-10 w-10 text-gold/30 mx-auto mb-3" />
-            <h3 className="font-serif text-xl font-bold">No active offers</h3>
+            <h3 className="font-serif text-xl font-bold">{t("No active offers")}</h3>
             <p className="text-xs text-muted mt-1.5 font-light leading-relaxed">
-              All luxury designs are currently at standard collection rates. Check back soon for VIP promotions.
+              {t("All luxury designs are currently at standard collection rates. Check back soon for VIP promotions.")}
             </p>
           </div>
         ) : (
@@ -73,7 +75,7 @@ export default function OffersPage() {
                 >
                   <div className="relative aspect-square overflow-hidden bg-muted-light">
                     <span className="absolute top-3 left-3 bg-error text-luxury-white font-bold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded z-10">
-                      Save {savePercent}%
+                      {t("Save")} {savePercent}%
                     </span>
                     <img
                       src={product.images?.[0]?.url || "https://placehold.co/400x400"}
@@ -84,7 +86,7 @@ export default function OffersPage() {
                       onClick={() => handleQuickAdd(product._id)}
                       className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur-sm py-2 rounded text-xs font-semibold tracking-wider uppercase opacity-0 group-hover:opacity-100 hover:bg-gold hover:text-luxury-white transition-all duration-300 border border-card-border"
                     >
-                      Quick Add
+                      {t("Quick Add")}
                     </button>
                   </div>
                   <div className="flex flex-col p-4 flex-grow">

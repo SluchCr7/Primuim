@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRegisterMutation, useUploadImageMutation } from "../../lib/api";
+import { useTranslation } from "react-i18next";
 import {
   UserPlus,
   Sparkles,
@@ -153,6 +154,7 @@ function ImageDropZone({ label, hint, aspectRatio, value, onUpload, onClear, isU
 
 // ─── Main Register Page ───────────────────────────────────────────────────────
 export default function RegisterPage() {
+  const { t } = useTranslation();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [accountType, setAccountType] = useState<"customer" | "seller">("customer");
@@ -246,7 +248,7 @@ export default function RegisterPage() {
       } catch (err) {
         setLogoUploading(false);
         setCoverUploading(false);
-        setErrorMsg("Image upload failed. Please try again or skip the images.");
+        setErrorMsg(t("Image upload failed. Please try again or skip the images.", "Image upload failed. Please try again or skip the images."));
         return;
       }
     }
@@ -254,12 +256,12 @@ export default function RegisterPage() {
     try {
       await registerCall(payload).unwrap();
       if (payload.role === "seller") {
-        setSuccessMsg("Seller profile registered! Admin approval is required. Please check your email for verification.");
+        setSuccessMsg(t("Seller profile registered! Admin approval is required. Please check your email for verification.", "Seller profile registered! Admin approval is required. Please check your email for verification."));
       } else {
-        setSuccessMsg("VIP Profile created! We sent a verification link to your email. Please check your inbox.");
+        setSuccessMsg(t("VIP Profile created! We sent a verification link to your email. Please check your inbox.", "VIP Profile created! We sent a verification link to your email. Please check your inbox."));
       }
     } catch (err: any) {
-      setErrorMsg(err.data?.message || "Registration failed. Email might already be registered.");
+      setErrorMsg(err.data?.message || t("Registration failed. Email might already be registered.", "Registration failed. Email might already be registered."));
     }
   };
 
@@ -283,9 +285,9 @@ export default function RegisterPage() {
             <div className="p-8">
               {/* Header */}
               <div className="text-center mb-8">
-                <span className="text-xs font-bold tracking-widest text-gold uppercase">VIP Sign Up</span>
-                <h1 className="font-serif text-3xl font-bold mt-1 text-foreground">Create Profile</h1>
-                <p className="text-sm text-muted mt-2">Choose your account type and enter credentials</p>
+                <span className="text-xs font-bold tracking-widest text-gold uppercase">{t("VIP Sign Up", "VIP Sign Up")}</span>
+                <h1 className="font-serif text-3xl font-bold mt-1 text-foreground">{t("Create Profile", "Create Profile")}</h1>
+                <p className="text-sm text-muted mt-2">{t("Choose your account type and enter credentials", "Choose your account type and enter credentials")}</p>
               </div>
 
               {/* Role Toggle */}
@@ -297,7 +299,7 @@ export default function RegisterPage() {
                     accountType === "customer" ? "bg-foreground text-background shadow-sm" : "text-muted hover:text-foreground"
                   }`}
                 >
-                  <User className="h-3.5 w-3.5" /> Customer
+                  <User className="h-3.5 w-3.5" /> {t("Customer", "Customer")}
                 </button>
                 <button
                   type="button"
@@ -306,7 +308,7 @@ export default function RegisterPage() {
                     accountType === "seller" ? "bg-gold text-luxury-black shadow-sm" : "text-muted hover:text-foreground"
                   }`}
                 >
-                  <Store className="h-3.5 w-3.5" /> Seller / Store
+                  <Store className="h-3.5 w-3.5" /> {t("Seller / Store", "Seller / Store")}
                 </button>
               </div>
 
@@ -327,7 +329,7 @@ export default function RegisterPage() {
                     href="/login"
                     className="w-full rounded-xl bg-foreground py-2.5 text-center font-semibold text-background hover:bg-gold hover:text-luxury-black transition-all text-xs uppercase tracking-widest"
                   >
-                    Proceed to Sign In
+                    {t("Proceed to Sign In", "Proceed to Sign In")}
                   </Link>
                 </div>
               ) : (
@@ -339,7 +341,7 @@ export default function RegisterPage() {
                     {/* Username */}
                     <div className={accountType === "seller" ? "sm:col-span-2" : ""}>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">
-                        Full Name / Username
+                        {t("Full Name / Username", "Full Name / Username")}
                       </label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted/50" />
@@ -355,7 +357,7 @@ export default function RegisterPage() {
 
                     {/* Email */}
                     <div className={accountType === "seller" ? "" : ""}>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Email Address</label>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">{t("Email Address", "Email Address")}</label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted/50" />
                         <input
@@ -370,7 +372,7 @@ export default function RegisterPage() {
 
                     {/* Password */}
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Password</label>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">{t("Password", "Password")}</label>
                       <div className="relative">
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted/50" />
                         <input
@@ -393,7 +395,7 @@ export default function RegisterPage() {
                     {/* Phone (seller only) */}
                     {accountType === "seller" && (
                       <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Phone Number</label>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">{t("Phone Number", "Phone Number")}</label>
                         <div className="relative">
                           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted/50" />
                           <input
@@ -414,7 +416,7 @@ export default function RegisterPage() {
                       <div className="relative flex items-center gap-3 my-1">
                         <div className="flex-1 h-px bg-card-border" />
                         <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold flex items-center gap-1.5 whitespace-nowrap">
-                          <Store className="h-3 w-3" /> Store Identity
+                          <Store className="h-3 w-3" /> {t("Store Identity", "Store Identity")}
                         </span>
                         <div className="flex-1 h-px bg-card-border" />
                       </div>
@@ -422,7 +424,7 @@ export default function RegisterPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* Brand Name */}
                         <div>
-                          <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Brand Name *</label>
+                          <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">{t("Brand Name *", "Brand Name *")}</label>
                           <input
                             type="text"
                             {...register("brandName")}
@@ -434,7 +436,7 @@ export default function RegisterPage() {
 
                         {/* Store Name */}
                         <div>
-                          <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Store Name *</label>
+                          <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">{t("Store Name *", "Store Name *")}</label>
                           <input
                             type="text"
                             {...register("storeName")}
@@ -446,7 +448,7 @@ export default function RegisterPage() {
 
                         {/* Country */}
                         <div>
-                          <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Country *</label>
+                          <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">{t("Country *", "Country *")}</label>
                           <div className="relative">
                             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted/50" />
                             <input
@@ -461,7 +463,7 @@ export default function RegisterPage() {
 
                         {/* Store Description */}
                         <div className="sm:col-span-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Store Description</label>
+                          <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">{t("Store Description", "Store Description")}</label>
                           <div className="relative">
                             <FileText className="absolute left-3 top-3 h-4 w-4 text-muted/50" />
                             <textarea
@@ -486,7 +488,7 @@ export default function RegisterPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* Logo Upload */}
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Store Logo</label>
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted">{t("Store Logo", "Store Logo")}</label>
                           <div
                             className={`relative h-36 rounded-xl border-2 border-dashed cursor-pointer overflow-hidden transition-all duration-300 group
                               ${logoPreview ? "border-success/50 bg-success/5" : "border-card-border bg-background hover:border-gold/60 hover:bg-gold/5"}`}
@@ -508,8 +510,8 @@ export default function RegisterPage() {
                                   <div className="h-12 w-12 rounded-full border-2 border-dashed border-muted/30 flex items-center justify-center mb-1">
                                     <Upload className="h-5 w-5 text-muted" />
                                   </div>
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted text-center px-3">Upload Logo</span>
-                                  <span className="text-[9px] text-muted/50">Square · PNG or JPG · Max 5MB</span>
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted text-center px-3">{t("Upload Logo", "Upload Logo")}</span>
+                                  <span className="text-[9px] text-muted/50">{t("Square · PNG or JPG · Max 5MB", "Square · PNG or JPG · Max 5MB")}</span>
                                 </>
                               )}
                             </div>
@@ -522,12 +524,12 @@ export default function RegisterPage() {
                           </div>
                           <input id="logoInput" type="file" accept="image/*" className="hidden"
                             onChange={(e) => { const f = e.target.files?.[0]; if (f) { logoFileRef.current = f; setLogoPreview(URL.createObjectURL(f)); }}} />
-                          <span className="text-[9px] text-muted/60">Recommended: 400×400px square image</span>
+                          <span className="text-[9px] text-muted/60">{t("Recommended: 400×400px square image", "Recommended: 400×400px square image")}</span>
                         </div>
 
                         {/* Cover Upload */}
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Store Cover Banner</label>
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted">{t("Store Cover Banner", "Store Cover Banner")}</label>
                           <div
                             className={`relative h-36 rounded-xl border-2 border-dashed cursor-pointer overflow-hidden transition-all duration-300 group
                               ${coverPreview ? "border-success/50 bg-success/5" : "border-card-border bg-background hover:border-gold/60 hover:bg-gold/5"}`}
@@ -549,8 +551,8 @@ export default function RegisterPage() {
                                   <div className="h-10 w-20 rounded border-2 border-dashed border-muted/30 flex items-center justify-center mb-1">
                                     <ImageIcon className="h-5 w-5 text-muted" />
                                   </div>
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted text-center px-3">Upload Cover Banner</span>
-                                  <span className="text-[9px] text-muted/50">Landscape · PNG or JPG · Max 5MB</span>
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted text-center px-3">{t("Upload Cover Banner", "Upload Cover Banner")}</span>
+                                  <span className="text-[9px] text-muted/50">{t("Landscape · PNG or JPG · Max 5MB", "Landscape · PNG or JPG · Max 5MB")}</span>
                                 </>
                               )}
                             </div>
@@ -563,7 +565,7 @@ export default function RegisterPage() {
                           </div>
                           <input id="coverInput" type="file" accept="image/*" className="hidden"
                             onChange={(e) => { const f = e.target.files?.[0]; if (f) { coverFileRef.current = f; setCoverPreview(URL.createObjectURL(f)); }}} />
-                          <span className="text-[9px] text-muted/60">Recommended: 1200×400px landscape banner</span>
+                          <span className="text-[9px] text-muted/60">{t("Recommended: 1200×400px landscape banner", "Recommended: 1200×400px landscape banner")}</span>
                         </div>
                       </div>
 
@@ -583,7 +585,7 @@ export default function RegisterPage() {
                             </div>
                           </div>
                           <div className="pt-7 pb-3 px-4">
-                            <span className="text-[10px] text-muted uppercase tracking-widest block">Store preview</span>
+                            <span className="text-[10px] text-muted uppercase tracking-widest block">{t("Store preview", "Store preview")}</span>
                           </div>
                         </div>
                       )}
@@ -594,7 +596,7 @@ export default function RegisterPage() {
                   {accountType === "customer" && (
                     <div>
                       <div className="flex items-center gap-1 mb-2">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-muted">Referral Code (Optional)</label>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-muted">{t("Referral Code (Optional)", "Referral Code (Optional)")}</label>
                         <Sparkles className="h-3.5 w-3.5 text-gold animate-pulse" />
                       </div>
                       <input
@@ -620,20 +622,20 @@ export default function RegisterPage() {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        {logoUploading ? "Uploading Logo..." : coverUploading ? "Uploading Cover..." : "Creating Account..."}
+                        {logoUploading ? t("Uploading Logo...", "Uploading Logo...") : coverUploading ? t("Uploading Cover...", "Uploading Cover...") : t("Creating Account...", "Creating Account...")}
                       </>
                     ) : (
                       <>
                         <UserPlus className="h-4 w-4" />
-                        {accountType === "seller" ? "Submit Store Application" : "Request Invitation"}
+                        {accountType === "seller" ? t("Submit Store Application", "Submit Store Application") : t("Request Invitation", "Request Invitation")}
                       </>
                     )}
                   </button>
 
                   <div className="text-center pt-4 border-t border-card-border text-sm text-muted">
-                    Already have a profile?{" "}
+                    {t("Already have a profile?", "Already have a profile?")} {" "}
                     <Link href="/login" className="text-gold font-semibold hover:underline">
-                      Sign In
+                      {t("Sign In", "Sign In")}
                     </Link>
                   </div>
                 </form>

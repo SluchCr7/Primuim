@@ -7,6 +7,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useVerifyAccountMutation } from "../../lib/api"; // استيراد الـ Hook الجديد
 import { CheckCircle2, XCircle, Loader2, ArrowRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function VerifyEmailPage() {
   const searchParams = useSearchParams();
@@ -34,7 +35,7 @@ export default function VerifyEmailPage() {
     }
     return "Could not connect to verification server. Please try again later.";
   };
-
+  const {t} = useTranslation();
   // لتحديد ما إذا كنا في حالة خطأ (إما فشل الطلب أو غياب الرموز الأساسية من الرابط)
   const isError = !id || !token || !!error;
 
@@ -49,15 +50,15 @@ export default function VerifyEmailPage() {
         <div className="w-full max-w-md backdrop-blur-md bg-card-bg/80 border border-card-border/80 p-8 shadow-2xl rounded-[32px] text-center luxury-shadow">
           
           <div className="mb-6">
-            <span className="text-xs font-bold tracking-widest text-gold uppercase">Profile Validation</span>
-            <h1 className="font-serif text-3xl font-bold mt-1 text-foreground">Email Verification</h1>
+            <span className="text-xs font-bold tracking-widest text-gold uppercase">{t("Profile Validation")}</span>
+            <h1 className="font-serif text-3xl font-bold mt-1 text-foreground">{t("Email Verification")}</h1>
           </div>
 
           {/* حالة التحميل والانتظار */}
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-10 gap-4">
               <Loader2 className="h-10 w-10 text-gold animate-spin" />
-              <p className="text-sm text-muted font-light">Verifying credentials with secure directory...</p>
+              <p className="text-sm text-muted font-light">{t("Verifying credentials with secure directory...")}</p>
             </div>
           ) : isSuccess ? (
             /* حالة النجاح */
@@ -66,13 +67,13 @@ export default function VerifyEmailPage() {
                 <CheckCircle2 className="h-10 w-10" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">Account Verified</h3>
+                <h3 className="text-lg font-semibold text-foreground">{t("Account Verified")}</h3>
                 <p className="text-sm text-muted font-light mt-2 px-2 leading-relaxed">
-                  Thank you! Your profile has been validated. You can now access all marketplace features.
+                  {t("Thank you! Your profile has been validated. You can now access all marketplace features.")}
                 </p>
               </div>
               <Link href="/login" className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-foreground px-6 text-xs font-semibold uppercase tracking-wider text-background hover:bg-gold-hover hover:shadow-lg hover:shadow-gold/10 transition-all">
-                Sign In To Account <ArrowRight className="h-4 w-4" />
+                {t("Sign In To Account")} <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           ) : isError ? (
@@ -82,13 +83,13 @@ export default function VerifyEmailPage() {
                 <XCircle className="h-10 w-10" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">Verification Failed</h3>
+                <h3 className="text-lg font-semibold text-foreground">{t("Verification Failed")}</h3>
                 <p className="text-sm text-error font-light mt-2 px-2 leading-relaxed">
                   {getErrorMessage()}
                 </p>
               </div>
               <Link href="/login" className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-card-border bg-background px-6 text-xs font-semibold uppercase tracking-wider text-muted hover:border-gold hover:text-gold transition-all">
-                Back to Login
+                {t("Back to Login")}
               </Link>
             </div>
           ) : null}
