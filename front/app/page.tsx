@@ -770,8 +770,13 @@ export default function Home() {
                     <div className="inline-flex rounded-2xl bg-gold/10 p-3 text-gold">
                       <Icon className="h-6 w-6" />
                     </div>
-                    <h3 className="mt-5 font-serif text-2xl font-semibold">(t{point.title})</h3>
-                    <p className="mt-3 text-sm leading-7 text-muted">(t{point.description})</p>
+                    {/* التصحيح هنا */}
+                    <h3 className="mt-5 font-serif text-2xl font-semibold">
+                      {t(point.title)}
+                    </h3>
+                    <p className="mt-3 text-sm leading-7 text-muted">
+                      {t(point.description)}
+                    </p>
                   </div>
                 );
               })}
@@ -1359,8 +1364,8 @@ export default function Home() {
                         {item.step}
                       </div>
                       <div>
-                        <h3 className="font-serif text-xl font-semibold">(t{item.title})</h3>
-                        <p className="mt-2 text-sm leading-7 text-muted">(t{item.description})</p>
+                        <h3 className="font-serif text-xl font-semibold">{t(item.title)}</h3>
+                        <p className="mt-2 text-sm leading-7 text-muted">{t(item.description)}</p>
                       </div>
                     </div>
                   </div>
@@ -1396,7 +1401,7 @@ export default function Home() {
                 {displayTestimonials.map((item: any) => (
                   <figure key={item.name} className="luxury-card p-6 shadow-sm">
                     <QuoteMark />
-                    <blockquote className="mt-4 text-base leading-8 text-foreground">{item.quote}</blockquote>
+                    <blockquote className="mt-4 text-base leading-8 text-foreground">{t(item.quote)}</blockquote>
                     <figcaption className="mt-5 flex items-center gap-3 text-sm">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/10 font-semibold text-gold">
                         {item.name.charAt(0)}
@@ -1419,8 +1424,8 @@ export default function Home() {
               <div className="mt-8 space-y-5">
                 {faqs.map((faq) => (
                   <div key={faq.question} className="rounded-2xl border border-card-border bg-card-bg/80 p-5">
-                    <div className="font-semibold">(t{faq.question})</div>
-                    <p className="mt-2 text-sm leading-7 text-muted">(t{faq.answer})</p>
+                    <div className="font-semibold">{t(faq.question)}</div>
+                    <p className="mt-2 text-sm leading-7 text-muted">{t(faq.answer)}</p>
                   </div>
                 ))}
               </div>

@@ -111,7 +111,7 @@ export function StatCard({ value, label , t }) {
           text-muted
         "
       >
-        (t{label})
+        {t(label)}
       </p>
 
       {/* Corner Border */}
