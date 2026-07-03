@@ -1512,5 +1512,83 @@
     "Mark all as read" : "قمت بقراءة كل الرسائل",
     "No notifications yet" : "لا يوجد اي اشعارات",
     "View All Notifications" : "كل الاشعارات",
-    "Search catalog, luxury designers..." : "ابحث في الكتالوج، المصممين الفاخرين..."
+    "Search catalog, luxury designers..." : "ابحث في الكتالوج، المصممين الفاخرين...",
+
+    "_comment_footer_new": "── Footer (new version) translations ──────────────────────────────────",
+
+    "Site Footer": "تذييل الموقع",
+
+    "Curating the world's finest collections — where luxury meets precision engineering, bespoke design, and uncompromising quality.": "تنسيق أرقى مجموعات العالم — حيث تلتقي الفخامة بالهندسة الدقيقة والتصميم المخصص والجودة التي لا تساوم.",
+
+    "Maadi, Cairo, Egypt — Global Shipping Available": "المعادي، القاهرة، مصر — الشحن الدولي متاح",
+
+    "Follow Our World": "تابع عالمنا",
+
+    "Secure Payments": "مدفوعات آمنة",
+    "256-bit SSL encryption on every transaction": "تشفير SSL بـ 256 بت على كل معاملة",
+
+    "Free Global Shipping": "شحن دولي مجاني",
+    "On all orders above $150": "على جميع الطلبات التي تتجاوز 150 دولار",
+
+    "30-Day Returns": "إرجاع خلال 30 يوماً",
+    "Hassle-free return & exchange policy": "سياسة إرجاع واستبدال بدون متاعب",
+
+    "24/7 Concierge": "كونسيرج على مدار الساعة",
+    "Dedicated luxury support team": "فريق دعم فاخر متخصص",
+
+    "Authenticity Guaranteed": "أصالة مضمونة",
+    "Every item curated & verified": "كل قطعة منتقاة ومعتمدة",
+
+    "Collections navigation": "التنقل في المجموعات",
+
+    "Flash Sales": "تخفيضات مجنونة",
+    "All Products": "جميع المنتجات",
+    "All Brands": "جميع العلامات التجارية",
+
+    "Company navigation": "التنقل في الشركة",
+
+    "Company": "الشركة",
+
+    "About Us": "من نحن",
+    "Our Stores": "متاجرنا",
+    "Blog & Articles": "المدونة والمقالات",
+    "Become a Seller": "كن بائعاً",
+    "Careers": "الوظائف",
+    "Sustainability": "الاستدامة",
+
+    "Support navigation": "التنقل في الدعم",
+
+    "Support": "الدعم",
+
+    "Help Center": "مركز المساعدة",
+    "Track Your Order": "تتبع طلبك",
+    "Returns & Refunds": "الإرجاع والمبالغ المستردة",
+    "Size Guide": "دليل المقاسات",
+    "Terms of Service": "شروط الخدمة",
+
+    "Private Circle": "الدائرة الخاصة",
+    "Join our exclusive inner circle for first access to limited drops, private sale events, and curated style edits.": "انضم إلى دائرتنا الداخلية الحصرية للحصول على أولوية الوصول إلى الإصدارات المحدودة وفعاليات البيع الخاصة والتحريرات الأسلوبية المنتقاة.",
+
+    "Welcome to the circle. We'll be in touch.": "مرحباً بك في الدائرة. سنكون على تواصل معك.",
+
+    "Your email address": "عنوان بريدك الإلكتروني",
+
+    "Join the Inner Circle": "انضم إلى الدائرة الداخلية",
+
+    "No spam, ever. Unsubscribe anytime.": "لا رسائل غير مرغوب فيها، أبداً. إلغاء الاشتراك في أي وقت.",
+
+    "Download the App": "حمّل التطبيق",
+    "Download on the": "حمّل من",
+    "Get it on": "احصل عليه من",
+
+    "© {{year}} Shop Premium Inc. — All rights reserved. Crafted with ♥ in Cairo, Egypt.": "© {{year}} شركة Shop Premium. — جميع الحقوق محفوظة. صُنع بـ ♥ في القاهرة، مصر.",
+
+    "We accept": "نقبل",
+
+    "Legal navigation": "التنقل القانوني",
+
+    "Privacy": "الخصوصية",
+    "Terms": "الشروط",
+    "Cookies": "ملفات تعريف الارتباط",
+    "Sitemap": "خريطة الموقع"
   }
