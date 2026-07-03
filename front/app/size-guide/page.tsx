@@ -1,22 +1,5 @@
 ﻿"use client";
 
-/**
- * /app/size-guide/page.tsx
- * -----------------------------------------------------------------------
- * Smart Fit & Size Guide — Multi-Step Wizard
- *
- * Step 1 → Category selection (Clothing | Footwear)
- * Step 2 → Interactive measurement inputs (sliders + fit preference)
- * Step 3 → Animated size reveal + Save to Profile CTA
- *
- * Design language:
- *   - Luxury minimalist: gold (#C5A880), Outfit + Playfair Display fonts
- *   - Dark/light adaptive via CSS custom properties
- *   - Framer Motion step transitions
- *   - Fully responsive (mobile-first)
- * -----------------------------------------------------------------------
- */
-
 import React, { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

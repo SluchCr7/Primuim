@@ -523,10 +523,10 @@ export const Header: React.FC = () => {
                 <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-card-border bg-card-bg p-2 shadow-2xl z-50 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="flex items-center justify-between px-3 py-2 border-b border-card-border/40">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-serif text-sm font-bold text-foreground">{t('dashboard.notifications', 'Notifications')}</span>
+                      <span className="font-serif text-sm font-bold text-foreground">{t('Notifications')}</span>
                       <span className={`inline-block h-1.5 w-1.5 rounded-full ${socketConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
                       <span className="text-[9px] uppercase tracking-wider text-muted font-sans font-semibold">
-                        {socketConnected ? "Live" : "Offline"}
+                        {socketConnected ? t("Live") : t("Offline")}
                       </span>
                     </div>
                     {unreadNotificationsCount > 0 && (
@@ -540,7 +540,7 @@ export const Header: React.FC = () => {
                         }}
                         className="text-[10px] font-bold text-gold hover:underline cursor-pointer"
                       >
-                        {t('dashboard.mark_all_read', 'Mark all as read')}
+                        {t('Mark all as read')}
                       </button>
                     )}
                   </div>
@@ -548,7 +548,7 @@ export const Header: React.FC = () => {
                   <div className="max-h-80 overflow-y-auto py-1">
                     {notifications.length === 0 ? (
                       <div className="text-center py-8 text-xs text-muted">
-                        {t('dashboard.no_notifications', 'No notifications yet')}
+                        {t('No notifications yet')}
                       </div>
                     ) : (
                       <div className="divide-y divide-card-border/20">
@@ -625,7 +625,7 @@ export const Header: React.FC = () => {
                       onClick={() => setShowNotificationsDropdown(false)}
                       className="flex w-full items-center justify-center py-2 text-xs font-bold text-foreground hover:text-gold hover:bg-foreground/5 rounded-xl transition-all"
                     >
-                      {t('dashboard.view_all_notifications', 'View All Notifications')}
+                      {t('View All Notifications')}
                     </LinkNext>
                   </div>
                 </div>
@@ -656,7 +656,7 @@ export const Header: React.FC = () => {
                       className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-foreground hover:bg-foreground/5 transition-all"
                     >
                       <User className="h-4 w-4 text-muted" />
-                      {t('header.dashboard', 'My Dashboard')}
+                      {t('My Dashboard')}
                     </LinkNext>
                     {user?.role === "admin" && (
                       <LinkNext
@@ -665,7 +665,7 @@ export const Header: React.FC = () => {
                         className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-gold bg-gold/5 hover:bg-gold/10 transition-all font-bold"
                       >
                         <Sliders className="h-4 w-4" />
-                        {t('header.admin_panel', 'Admin Panel')}
+                        {t('Admin Panel')}
                       </LinkNext>
                     )}
                     <hr className="border-card-border/40 my-1.5" />
@@ -677,7 +677,7 @@ export const Header: React.FC = () => {
                       className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-destructive hover:bg-destructive/5 transition-all text-left font-medium"
                     >
                       <LogOut className="h-4 w-4" />
-                      {t('header.logout', 'Sign Out')}
+                      {t('Sign Out')}
                     </button>
                   </div>
                 )}
