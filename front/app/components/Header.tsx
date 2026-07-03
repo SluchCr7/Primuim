@@ -520,7 +520,7 @@ export const Header: React.FC = () => {
               </button>
 
               {showNotificationsDropdown && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-card-border bg-card-bg p-2 shadow-2xl z-50 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className={`absolute ${i18n.language == 'en' ? 'right-0' : 'left-0'} mt-2 w-80 sm:w-96 rounded-2xl border border-card-border bg-card-bg p-2 shadow-2xl z-50 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200`}>
                   <div className="flex items-center justify-between px-3 py-2 border-b border-card-border/40">
                     <div className="flex items-center gap-1.5">
                       <span className="font-serif text-sm font-bold text-foreground">{t('Notifications')}</span>
