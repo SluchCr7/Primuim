@@ -7,6 +7,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ToastProvider } from "./components/Toast";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import LanguageWrapper from "./components/LanguageWrapper";
 
 export const metadata: Metadata = {
   title: "Shop Premium | Bespoke Luxury E-Commerce Portal",
@@ -35,17 +36,19 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground antialiased font-sans">
         <ReduxProvider>
           <ThemeProvider>
-            <ErrorBoundary>
-              <ToastProvider>
-                <SessionInitializer>
-                    <Header />
-                    <main className="flex-grow flex flex-col">
-                      {children}
-                    </main>
-                    <Footer />
-                  </SessionInitializer>
-              </ToastProvider>
-            </ErrorBoundary>
+            <LanguageWrapper>
+              <ErrorBoundary>
+                <ToastProvider>
+                  <SessionInitializer>
+                      <Header />
+                      <main className="flex-grow flex flex-col">
+                        {children}
+                      </main>
+                      <Footer />
+                    </SessionInitializer>
+                </ToastProvider>
+              </ErrorBoundary>
+            </LanguageWrapper>
           </ThemeProvider>
         </ReduxProvider>
       </body>
