@@ -233,7 +233,7 @@ export const Header: React.FC = () => {
           <div className="relative flex items-center">
             <input
               type="text"
-              placeholder={t('header.search_placeholder', 'Search catalog, luxury designers...')}
+              placeholder={t('Search catalog, luxury designers...')}
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
