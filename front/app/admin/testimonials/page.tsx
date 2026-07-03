@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -18,8 +18,6 @@ import {
   Lock,
   ArrowLeft
 } from "lucide-react";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
 import { useToast } from "../../components/Toast";
 import { useAppSelector } from "../../../lib/store";
 import { API_BASE_URL } from "../../../lib/api";
@@ -234,12 +232,10 @@ export default function AdminTestimonialsPage() {
   if (!mounted || !isAuthenticated || user?.role !== "admin") {
     return (
       <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <Header />
         <div className="flex-grow flex flex-col items-center justify-center gap-4 py-20">
           <Lock className="h-12 w-12 text-gold animate-pulse" />
           <h2 className="text-xl font-serif tracking-widest text-muted uppercase">Verifying Authorization...</h2>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -249,7 +245,6 @@ export default function AdminTestimonialsPage() {
       {/* Premium ambient light effect */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(197,168,128,0.08),_transparent_45%)] pointer-events-none" />
       
-      <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12 relative z-10">
         {/* Breadcrumb / Back Navigation */}
@@ -490,7 +485,6 @@ export default function AdminTestimonialsPage() {
         )}
       </main>
 
-      <Footer />
 
       {/* Confirmation Modal */}
       <AnimatePresence>

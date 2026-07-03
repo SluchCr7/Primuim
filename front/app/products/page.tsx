@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "react-i18next"; // استدعاء مكتبة الترجمة
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import { useGetProductsQuery, useGetCategoriesQuery, useAddToCartMutation } from "../../lib/api";
 import { useAppSelector } from "../../lib/store";
 import { formatPrice as formatCurrencyPrice } from "../../lib/currencyUtils";
@@ -125,7 +123,6 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#fcfcfd] text-slate-900 selection:bg-gold/20">
-      <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-4 sm:px-6 py-10">
         
@@ -445,7 +442,6 @@ export default function ProductsPage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

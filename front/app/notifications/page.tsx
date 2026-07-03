@@ -1,9 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next"; // استدعاء hook الترجمة
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import {
   useGetNotificationsQuery,
   useMarkNotificationAsReadMutation,
@@ -155,7 +153,6 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow max-w-5xl w-full mx-auto px-4 py-12 sm:px-6 lg:px-8">
         {/* Page Header */}
@@ -449,7 +446,6 @@ export default function NotificationsPage() {
         )}
       </main>
 
-      <Footer />
     </div>
   );
 }

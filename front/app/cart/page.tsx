@@ -1,10 +1,8 @@
-// "use client";
+﻿// "use client";
 
 // import React, { useState, useEffect } from "react";
 // import Link from "next/link";
 // import { useRouter } from "next/navigation";
-// import Header from "../components/Header";
-// import Footer from "../components/Footer";
 // import { useAppSelector } from "../../lib/store";
 // import { formatPrice as formatCurrencyPrice } from "../../lib/currencyUtils";
 // import {
@@ -187,18 +185,15 @@
 //   if (isAuthenticated && isCartLoading) {
 //     return (
 //       <div className="min-h-screen flex flex-col bg-background">
-//         <Header />
 //         <div className="flex-grow flex items-center justify-center">
 //           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
 //         </div>
-//         <Footer />
 //       </div>
 //     );
 //   }
 
 //   return (
 //     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
-//       <Header />
 
 //       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12 md:py-20">
         
@@ -435,7 +430,6 @@
 
 //       </main>
 
-//       <Footer />
 //     </div>
 //   );
 // }
@@ -445,8 +439,6 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import { useAppSelector } from "../../lib/store";
 import { formatPrice as formatCurrencyPrice } from "../../lib/currencyUtils";
 import {
@@ -622,18 +614,15 @@ export default function CartPage() {
   if (isAuthenticated && isCartLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
         <div className="flex-grow flex items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
-      <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12 md:py-20">
         
@@ -870,7 +859,6 @@ export default function CartPage() {
 
       </main>
 
-      <Footer />
     </div>
   );
 }

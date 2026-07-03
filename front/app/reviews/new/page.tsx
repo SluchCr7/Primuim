@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -12,8 +12,6 @@ import {
   Loader2,
   Lock
 } from "lucide-react";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
 import { useToast } from "../../components/Toast";
 import { useTranslation } from "react-i18next";
 import { useAppSelector, type RootState } from "../../../lib/store";
@@ -79,19 +77,16 @@ export default function NewReviewPage() {
   if (!mounted || !isAuthenticated) {
     return (
       <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <Header />
         <div className="flex-grow flex flex-col items-center justify-center gap-4 py-20">
           <Lock className="h-12 w-12 text-gold animate-pulse" />
           <h2 className="text-xl font-serif tracking-widest text-muted uppercase">{t("Redirecting to Login...", "Redirecting to Login...")}</h2>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-sans">
-      <Header />
 
       <main className="flex-grow flex items-center justify-center px-6 py-16 relative overflow-hidden">
         {/* Background Decorative Gradients - Adapted dynamically using your theme gold/muted variables */}
@@ -254,7 +249,6 @@ export default function NewReviewPage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

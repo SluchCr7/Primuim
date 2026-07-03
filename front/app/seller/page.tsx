@@ -1,9 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import { useAppSelector } from "../../lib/store";
 import {
   useGetSellerStatsQuery,
@@ -496,14 +494,12 @@ export default function SellerDashboardPage() {
   if (!mounted || appStatusLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
         <div className="flex-grow flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
             <span className="text-xs text-muted font-light tracking-widest uppercase">{translate("Loading Portal...", "Loading Portal...")}</span>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -517,7 +513,6 @@ export default function SellerDashboardPage() {
     const isPending = appReq.status === "pending";
     return (
       <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <Header />
         <main className="flex-grow flex items-center justify-center px-6 py-20">
           <div className="max-w-lg w-full">
             {/* Status Card */}
@@ -622,7 +617,6 @@ export default function SellerDashboardPage() {
             </div>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -659,7 +653,6 @@ export default function SellerDashboardPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12 md:py-16">
         {/* Banner Section */}
@@ -1747,7 +1740,6 @@ export default function SellerDashboardPage() {
         </div>
       )}
 
-      <Footer />
     </div>
   );
 }

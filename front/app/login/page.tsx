@@ -1,10 +1,8 @@
-// "use client";
+﻿// "use client";
 
 // import React, { useState } from "react";
 // import Link from "next/link";
 // import { useRouter } from "next/navigation";
-// import Header from "../components/Header";
-// import Footer from "../components/Footer";
 // import { useForm } from "react-hook-form";
 // import { zodResolver } from "@hookform/resolvers/zod";
 // import * as z from "zod";
@@ -93,7 +91,6 @@
 //       {/* Premium ambient light effect adapted dynamically using theme variables */}
 //       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(197,168,128,0.12),_transparent_45%)] pointer-events-none" />
       
-//       <Header />
 
 //       <main className="flex-grow flex items-center justify-center py-20 px-6 relative z-10">
 //         <div className="w-full max-w-md backdrop-blur-md bg-card-bg/80 border border-card-border/80 p-8 shadow-2xl rounded-[32px] luxury-shadow">
@@ -193,7 +190,6 @@
 //         </div>
 //       </main>
 
-//       <Footer />
 //     </div>
 //   );
 // }
@@ -203,8 +199,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next"; // استدعاء hook الترجمة
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -302,7 +296,6 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col bg-background text-foreground relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(197,168,128,0.12),_transparent_45%)] pointer-events-none" />
       
-      <Header />
 
       <main className="flex-grow flex items-center justify-center py-20 px-6 relative z-10">
         <div className="w-full max-w-md backdrop-blur-md bg-card-bg/80 border border-card-border/80 p-8 shadow-2xl rounded-[32px] luxury-shadow">
@@ -412,7 +405,6 @@ export default function LoginPage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

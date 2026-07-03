@@ -1,10 +1,8 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import { useVerifyAccountMutation } from "../../lib/api"; // استيراد الـ Hook الجديد
 import { CheckCircle2, XCircle, Loader2, ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -44,7 +42,6 @@ export default function VerifyEmailPage() {
       {/* Premium ambient light effect */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(197,168,128,0.08),_transparent_45%)] pointer-events-none" />
       
-      <Header />
 
       <main className="flex-grow flex items-center justify-center py-20 px-6 relative z-10">
         <div className="w-full max-w-md backdrop-blur-md bg-card-bg/80 border border-card-border/80 p-8 shadow-2xl rounded-[32px] text-center luxury-shadow">
@@ -97,7 +94,6 @@ export default function VerifyEmailPage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

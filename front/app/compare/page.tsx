@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 /**
  * /app/compare/page.tsx
@@ -12,8 +12,6 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next"; // استدعاء الـ hook
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import {
   useGetProductsQuery,
   useAddToCartMutation,
@@ -475,7 +473,6 @@ export default function ComparePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow w-full mx-auto max-w-[1400px] px-4 sm:px-6 py-10 lg:py-14">
 
@@ -969,7 +966,6 @@ export default function ComparePage() {
         )}
       </AnimatePresence>
 
-      <Footer />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, {
   useState,
@@ -9,8 +9,6 @@ import React, {
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { CardSkeleton } from "../components/Skeletons";
 import { useAppSelector, type RootState } from "../../lib/store";
@@ -45,6 +43,7 @@ import {
   Tag,
   BadgePercent,
 } from "lucide-react";
+import Image from "next/image";
 
 // ─────────────────────────────────────────────────────────
 // Types
@@ -289,7 +288,9 @@ function ProductCard({
     return (
       <div className="flex gap-4 luxury-card p-4 hover:shadow-md transition-all duration-300 group">
         <div className="relative w-32 h-32 shrink-0 overflow-hidden rounded-lg bg-muted-light">
-          <img
+          <Image
+            width={500}
+            height={500}
             src={product.images?.[0]?.url || "https://placehold.co/200x200/f5f5f3/C5A880?text=Product"}
             alt={product.title}
             className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -363,7 +364,9 @@ function ProductCard({
   return (
     <div className="group flex flex-col luxury-card overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5">
       <div className="relative aspect-square overflow-hidden bg-muted-light">
-        <img
+        <Image
+          width={500}
+          height={500}
           src={product.images?.[0]?.url || "https://placehold.co/400x400/f5f5f3/C5A880?text=Product"}
           alt={product.title}
           className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
@@ -922,7 +925,6 @@ export default function ProfessionalSearchPage() {
   // ─────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow">
         {/* ── HERO SEARCH SECTION ─────────────────────── */}
@@ -1045,7 +1047,7 @@ export default function ProfessionalSearchPage() {
                         >
                           <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted-light shrink-0">
                             {p.image ? (
-                              <img src={p.image} alt={p.title} className="w-full h-full object-cover" />
+                              <Image width={40} height={40} src={p.image} alt={p.title} className="w-full h-full object-cover" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-muted">
                                 <Package className="h-4 w-4" />
@@ -1517,7 +1519,6 @@ export default function ProfessionalSearchPage() {
         }
       `}</style>
 
-      <Footer />
     </div>
   );
 }

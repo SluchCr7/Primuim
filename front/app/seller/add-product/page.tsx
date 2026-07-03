@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -9,8 +9,6 @@ import {
   Tag, Upload, Check, Loader2, AlertCircle, Cpu, Layers,
   ShoppingBag, Image as ImageIcon, Sparkles,
 } from "lucide-react";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
 import {
   useCreateProductMutation,
   useGetCategoriesQuery,
@@ -829,7 +827,6 @@ export default function AddProductPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow mx-auto w-full max-w-3xl px-4 py-12">
         {/* Page header */}
@@ -906,7 +903,6 @@ export default function AddProductPage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

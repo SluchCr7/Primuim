@@ -1,16 +1,15 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import Link from "next/link";
-import Header from "./components/Header";
-import Footer from "./components/Footer";
 import { motion } from "framer-motion";
 import { Compass, ArrowLeft, Home, Search, ShoppingBag, MessageSquare } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function NotFound() {
+  const {t} = useTranslation()
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow flex items-center justify-center py-20 px-6 relative overflow-hidden bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gold/5 via-background to-background">
         {/* Animated Background Elements */}
@@ -42,7 +41,7 @@ export default function NotFound() {
               transition={{ delay: 0.2, duration: 0.6 }}
               className="text-xs font-bold tracking-widest text-gold uppercase"
             >
-              Error 404 &bull; Lost in Splendor
+              {t("Error 404 &bull; Lost in Splendor")}
             </motion.span>
             
             <motion.h1
@@ -51,7 +50,7 @@ export default function NotFound() {
               transition={{ delay: 0.3, duration: 0.6 }}
               className="font-serif text-4xl md:text-5xl font-extrabold tracking-tight"
             >
-              The Page Has <span className="italic text-gold">Vanished</span>
+              {t("The Page Has")} <span className="italic text-gold">{t("Vanished")}</span>
             </motion.h1>
 
             <motion.p
@@ -60,7 +59,7 @@ export default function NotFound() {
               transition={{ delay: 0.4, duration: 0.6 }}
               className="text-sm text-muted max-w-md mx-auto mt-2 leading-relaxed font-light"
             >
-              Like a limited-edition run, the salon or showcase you are seeking is either temporary, relocated, or no longer exists.
+              {t("Like a limited-edition run, the salon or showcase you are seeking is either temporary, relocated, or no longer exists.")}
             </motion.p>
           </div>
 
@@ -79,8 +78,8 @@ export default function NotFound() {
                 <Home className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-serif font-bold text-sm">Main Lobby</h3>
-                <p className="text-[11px] text-muted mt-0.5">Return to the editorial homepage</p>
+                <h3 className="font-serif font-bold text-sm">{t("Main Lobby")}</h3>
+                <p className="text-[11px] text-muted mt-0.5">{t("Return to the editorial homepage")}</p>
               </div>
             </Link>
 
@@ -92,8 +91,8 @@ export default function NotFound() {
                 <Search className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-serif font-bold text-sm">Browse Catalog</h3>
-                <p className="text-[11px] text-muted mt-0.5">Explore our curated collections</p>
+                <h3 className="font-serif font-bold text-sm">{t("Browse Catalog")}</h3>
+                <p className="text-[11px] text-muted mt-0.5">{t("Explore our curated collections")}</p>
               </div>
             </Link>
 
@@ -105,8 +104,8 @@ export default function NotFound() {
                 <ShoppingBag className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-serif font-bold text-sm">Shopping Cart</h3>
-                <p className="text-[11px] text-muted mt-0.5">Review items in your private bag</p>
+                <h3 className="font-serif font-bold text-sm">{t("Shopping Cart")}</h3>
+                <p className="text-[11px] text-muted mt-0.5">{t("Review items in your private bag")}</p>
               </div>
             </Link>
 
@@ -118,8 +117,8 @@ export default function NotFound() {
                 <MessageSquare className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-serif font-bold text-sm">Support Concierge</h3>
-                <p className="text-[11px] text-muted mt-0.5">Speak with a client assistant</p>
+                <h3 className="font-serif font-bold text-sm">{t("Support Concierge")}</h3>
+                <p className="text-[11px] text-muted mt-0.5">{t("Speak with a client assistant")}</p>
               </div>
             </Link>
           </motion.div>
@@ -135,14 +134,13 @@ export default function NotFound() {
               onClick={() => window.history.back()}
               className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted hover:text-gold transition-colors"
             >
-              <ArrowLeft className="h-3.5 w-3.5" /> Return to previous page
+              <ArrowLeft className="h-3.5 w-3.5" /> {t("Return to previous page")}
             </button>
           </motion.div>
 
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

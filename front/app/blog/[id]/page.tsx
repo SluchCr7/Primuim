@@ -1,9 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { useAppSelector } from "../../../lib/store";
 import {
@@ -83,11 +81,9 @@ export default function BlogDetailPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
         <div className="flex-grow flex items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -95,7 +91,6 @@ export default function BlogDetailPage() {
   if (!article) {
     return (
       <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <Header />
         <div className="flex-grow flex flex-col items-center justify-center gap-4">
           <h2 className="font-serif text-2xl font-bold">{t("Editorial Not Found")}</h2>
           <button
@@ -105,7 +100,6 @@ export default function BlogDetailPage() {
             <ArrowLeft className="h-4 w-4" /> {t("Back to Blog")}
           </button>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -114,7 +108,6 @@ export default function BlogDetailPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow mx-auto max-w-3xl w-full px-6 py-12">
         <Breadcrumbs
@@ -242,7 +235,6 @@ export default function BlogDetailPage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

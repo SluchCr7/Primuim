@@ -1,9 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next"; // استدعاء الـ hook الخاص بالترجمة
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { useGetProductsQuery, useAddToCartMutation } from "../../lib/api";
 import { CardSkeleton } from "../components/Skeletons";
@@ -57,7 +55,6 @@ export default function FlashSalesPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12">
         <Breadcrumbs items={[{ label: t("Flash Sales"), url: "/flash-sales" }]} />
@@ -150,7 +147,6 @@ export default function FlashSalesPage() {
         )}
       </main>
 
-      <Footer />
     </div>
   );
 }

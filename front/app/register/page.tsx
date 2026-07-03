@@ -1,9 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -273,7 +271,6 @@ export default function RegisterPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(197,168,128,0.12),_transparent_45%)] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_rgba(197,168,128,0.05),_transparent_50%)] pointer-events-none" />
 
-      <Header />
 
       <main className="flex-grow flex items-start justify-center py-16 px-4 relative z-10">
         <div className={`w-full transition-all duration-500 ${accountType === "seller" ? "max-w-2xl" : "max-w-md"}`}>
@@ -645,7 +642,6 @@ export default function RegisterPage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

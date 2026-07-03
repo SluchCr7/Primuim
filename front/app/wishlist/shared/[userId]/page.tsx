@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import Header from "../../../components/Header";
-import Footer from "../../../components/Footer";
 import Breadcrumbs from "../../../components/Breadcrumbs";
 import { useGetSharedWishlistQuery, useAddToCartMutation } from "../../../../lib/api";
 import { useAppSelector } from "../../../../lib/store";
@@ -49,11 +47,9 @@ export default function SharedWishlistPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
         <div className="flex-grow flex items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -61,7 +57,6 @@ export default function SharedWishlistPage() {
   if (!targetUser) {
     return (
       <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <Header />
         <div className="flex-grow flex flex-col items-center justify-center gap-4">
           <h2 className="font-serif text-2xl font-bold">{t("Wishlist Not Found")}</h2>
           <Link
@@ -71,14 +66,12 @@ export default function SharedWishlistPage() {
             {t("Return to Homepage")}
           </Link>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12">
         <Breadcrumbs
@@ -159,7 +152,6 @@ export default function SharedWishlistPage() {
         )}
       </main>
 
-      <Footer />
     </div>
   );
 }

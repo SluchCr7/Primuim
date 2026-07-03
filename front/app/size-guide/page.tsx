@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 /**
  * /app/size-guide/page.tsx
@@ -20,8 +20,6 @@
 import React, { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import { useAppSelector } from "../../lib/store";
 import {
   useUpdateSizeProfileMutation,
@@ -335,7 +333,6 @@ export default function SizeGuidePage() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow w-full mx-auto max-w-2xl px-5 py-14 sm:py-20">
 
@@ -720,7 +717,6 @@ export default function SizeGuidePage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

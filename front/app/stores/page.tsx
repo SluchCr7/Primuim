@@ -1,10 +1,8 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next"; // أو من الإطار المعتمد لديك مثل next-i18next
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import { useGetApprovedSellersQuery, useFollowSellerMutation, useGetMeQuery, useGetCategoriesQuery } from "../../lib/api";
 import { useAppSelector } from "../../lib/store";
 import { useToast } from "../components/Toast";
@@ -93,7 +91,6 @@ export default function StoresDirectoryPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
-      <Header />
 
       {/* Hero Banner Section */}
       <div className="relative py-20 px-6 overflow-hidden border-b border-card-border/50 bg-gradient-to-b from-gold/5 via-transparent to-transparent">
@@ -350,7 +347,6 @@ export default function StoresDirectoryPage() {
         )}
       </main>
 
-      <Footer />
     </div>
   );
 }

@@ -1,10 +1,8 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
 import {
   useGetProductByIdQuery,
   useAddToCartMutation,
@@ -97,11 +95,9 @@ export default function ProductDetailsPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
         <div className="flex-grow flex items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -110,11 +106,9 @@ export default function ProductDetailsPage() {
   if (!product) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
         <div className="flex-grow flex items-center justify-center font-serif text-xl">
           Product not found or unavailable.
         </div>
-        <Footer />
       </div>
     );
   }
@@ -122,7 +116,6 @@ export default function ProductDetailsPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
@@ -344,7 +337,6 @@ export default function ProductDetailsPage() {
 
       </main>
 
-      <Footer />
     </div>
   );
 }

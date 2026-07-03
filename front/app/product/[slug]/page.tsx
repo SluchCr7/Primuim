@@ -1,10 +1,8 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
 import AttributeSelector from "../../components/product/AttributeSelector";
 import {
   useGetProductBySlugQuery,
@@ -327,11 +325,9 @@ export default function ProductDetailsBySlugPage() {
   if (isProductLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
         <div className="flex-grow flex items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -339,7 +335,6 @@ export default function ProductDetailsBySlugPage() {
   if (!product) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
         <div className="flex-grow flex flex-col items-center justify-center py-20 px-6 text-center">
           <h2 className="font-serif text-3xl font-bold mb-4">Design Not Found</h2>
           <p className="text-muted text-sm max-w-sm mb-6 font-light">The requested product slug is invalid or the item has been archived.</p>
@@ -347,7 +342,6 @@ export default function ProductDetailsBySlugPage() {
             Return to Collections
           </Link>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -377,7 +371,6 @@ export default function ProductDetailsBySlugPage() {
   const { t } = useTranslation()
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
-      <Header />
 
       {/* BREADCRUMB NAVIGATION */}
       <div className="border-b border-card-border bg-card-bg/40 backdrop-blur-sm">
@@ -961,7 +954,6 @@ export default function ProductDetailsBySlugPage() {
 
       </main>
 
-      <Footer />
     </div>
   );
 }

@@ -1,10 +1,8 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Header from "../components/Header";
 import Link from "next/link"
-import Footer from "../components/Footer";
 import { useAppSelector } from "../../lib/store";
 import {
   useGetAdminDashboardQuery,
@@ -502,11 +500,9 @@ export default function AdminPage() {
   if (user?.role !== "admin" || !mounted) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
         <div className="flex-grow flex items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -543,7 +539,6 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12">
         {/* Page Title */}
@@ -2158,7 +2153,6 @@ export default function AdminPage() {
 
       </main>
 
-      <Footer />
     </div>
   );
 }

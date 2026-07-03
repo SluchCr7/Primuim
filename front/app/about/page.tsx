@@ -1,8 +1,6 @@
-"use client";
+﻿"use client";
 
 import React from "react";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { Sparkles, Heart, Shield, Gem, ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -12,7 +10,6 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-gold/20">
-      <Header />
 
       <main className="flex-grow">
         {/* Breadcrumbs Container */}
@@ -140,7 +137,6 @@ export default function AboutPage() {
         </section>
       </main>
 
-      <Footer />
     </div>
   );
 }

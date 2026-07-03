@@ -1,10 +1,8 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Header from "./Header";
-import Footer from "./Footer";
 import Breadcrumbs from "./Breadcrumbs";
 import {
   useGetCategoryByIdQuery,
@@ -199,14 +197,12 @@ export default function CategoryView({ id, slug }: CategoryViewProps) {
   if (categoryLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <Header />
         <div className="flex-grow flex items-center justify-center py-20">
           <div className="flex flex-col items-center gap-3">
             <div className="h-10 w-10 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
             <p className="text-xs text-muted tracking-widest uppercase font-semibold">{t("loading_catalog")}</p>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -214,7 +210,6 @@ export default function CategoryView({ id, slug }: CategoryViewProps) {
   if (categoryError || !currentCategory) {
     return (
       <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <Header />
         <div className="flex-grow flex flex-col items-center justify-center gap-4 text-center py-24 px-6">
           <div className="luxury-card p-8 max-w-md bg-card-bg/25 border border-card-border/60">
             <h2 className="font-serif text-2xl font-bold mb-2">{t("category_not_found")}</h2>
@@ -227,14 +222,12 @@ export default function CategoryView({ id, slug }: CategoryViewProps) {
             </button>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-gold/20">
-      <Header />
 
       <main className="flex-grow mx-auto max-w-[1400px] w-full px-4 sm:px-6 py-8">
         <Breadcrumbs items={breadcrumbItems} />
@@ -636,7 +629,6 @@ export default function CategoryView({ id, slug }: CategoryViewProps) {
         </div>
       )}
 
-      <Footer />
     </div>
   );
 }

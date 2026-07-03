@@ -1,9 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { useGetArticlesQuery } from "../../lib/api";
 import { Sparkles, Calendar, User, ArrowRight, Search } from "lucide-react";
@@ -31,7 +29,6 @@ export default function BlogListingPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12">
         <Breadcrumbs items={[{ label: t("Atelier Blog"), url: "/blog" }]} />
@@ -140,7 +137,6 @@ export default function BlogListingPage() {
         )}
       </main>
 
-      <Footer />
     </div>
   );
 }

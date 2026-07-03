@@ -1,10 +1,8 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
 import { CheckCircle2, FileText, ShoppingBag, ArrowRight } from "lucide-react";
 import { useAppSelector } from "../../../lib/store";
 import { API_BASE_URL } from "../../../lib/api";
@@ -56,7 +54,6 @@ export default function CheckoutSuccessPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-16 flex items-center justify-center">
         <div className="w-full max-w-lg luxury-card p-8 text-center flex flex-col items-center gap-6 shadow-xl border-gold/30">
@@ -111,7 +108,6 @@ export default function CheckoutSuccessPage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

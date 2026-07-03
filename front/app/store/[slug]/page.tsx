@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
 import { 
   useGetPublicStoreBySlugQuery, 
   useFollowSellerMutation, 
@@ -92,11 +90,9 @@ export default function PublicStorePage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
         <div className="flex-grow flex items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -104,7 +100,6 @@ export default function PublicStorePage() {
   if (!seller) {
     return (
       <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <Header />
         <div className="flex-grow flex flex-col items-center justify-center py-20 px-6 text-center">
           <h2 className="font-serif text-3xl font-bold mb-4">{t("Store Not Found")}</h2>
           <p className="text-muted text-sm max-w-sm mb-6 font-light">{t("The requested store profile does not exist or has been suspended.")}</p>
@@ -112,7 +107,6 @@ export default function PublicStorePage() {
             {t("Browse All Stores")}
           </Link>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -216,7 +210,6 @@ export default function PublicStorePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
-      <Header />
 
       {/* Hero Banner Section with Blur Overlay */}
       <div className="h-[280px] md:h-[380px] relative w-full overflow-hidden border-b border-card-border">
@@ -720,7 +713,6 @@ export default function PublicStorePage() {
 
       </main>
       
-      <Footer />
     </div>
   );
 }

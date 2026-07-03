@@ -1,10 +1,8 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
 import { AlertCircle, RefreshCw, PhoneCall } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -14,7 +12,6 @@ export default function CheckoutFailurePage() {
   const {t} = useTranslation(); 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-16 flex items-center justify-center">
         <div className="w-full max-w-lg luxury-card p-8 text-center flex flex-col items-center gap-6 shadow-xl border-error/20">
@@ -51,7 +48,6 @@ export default function CheckoutFailurePage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

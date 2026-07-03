@@ -5,6 +5,8 @@ import { ThemeProvider } from "./context/ThemeContext";
 import SessionInitializer from "./components/SessionInitializer";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ToastProvider } from "./components/Toast";
+import Header from "./components/Header";
+import Footer from "./components/Footer";
 
 export const metadata: Metadata = {
   title: "Shop Premium | Bespoke Luxury E-Commerce Portal",
@@ -36,8 +38,12 @@ export default function RootLayout({
             <ErrorBoundary>
               <ToastProvider>
                 <SessionInitializer>
-                  {children}
-                </SessionInitializer>
+                    <Header />
+                    <main className="flex-grow flex flex-col">
+                      {children}
+                    </main>
+                    <Footer />
+                  </SessionInitializer>
               </ToastProvider>
             </ErrorBoundary>
           </ThemeProvider>

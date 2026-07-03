@@ -1,9 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next"; // استدعاء hook الترجمة
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { Plus, Minus, HelpCircle } from "lucide-react";
 
@@ -41,7 +39,6 @@ export default function FAQPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header />
 
       <main className="flex-grow mx-auto max-w-3xl w-full px-6 py-12">
         <Breadcrumbs items={[{ label: t("Support FAQ"), url: "/faq" }]} />
@@ -87,7 +84,6 @@ export default function FAQPage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }
