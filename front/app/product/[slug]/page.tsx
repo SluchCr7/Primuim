@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -42,6 +42,7 @@ export default function ProductDetailsBySlugPage() {
   const { slug } = useParams();
   const router = useRouter();
   const { showToast } = useToast();
+  const { t } = useTranslation();
   const { isAuthenticated, user: currentUser, currency } = useAppSelector((state) => state.auth);
 
   const [selectedImage, setSelectedImage] = useState(0);
@@ -121,15 +122,22 @@ export default function ProductDetailsBySlugPage() {
   const { data: wishlistData, refetch: refetchWishlist } = useGetWishlistQuery(undefined, { skip: !isAuthenticated });
   const [toggleWishlist] = useToggleWishlistMutation();
 
-  // Set default variant if available (legacy: no attributes array)
-  useEffect(() => {
-    if (product?.variants && product.variants.length > 0 && (!product.attributes || product.attributes.length === 0)) {
-      setSelectedVariant(product.variants[0]);
-    }
-    // Reset attribute selection when product changes
-    setAttrSelection({});
-  }, [product]);
+  // Stable primitive ID — used as the sole dependency for product-change effects
+  // to avoid referential instability of the full `product` object from RTK Query.
+  const productId = product?._id;
+  const productVariants = product?.variants;
+  const productAttributes = product?.attributes;
 
+  useEffect(() => {
+    if (!productId) return;
+    // Only set default variant for legacy products (no attribute axes)
+    if (productVariants && productVariants.length > 0 && (!productAttributes || productAttributes.length === 0)) {
+      setSelectedVariant(productVariants[0]);
+    }
+    // Always reset attribute selection when navigating to a new product
+    setAttrSelection({});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId]); // ✅ Only runs when the product ID actually changes
   // ── Smart Fit: fetch the logged-in user's full profile (including sizeProfile)
   // Skip if not authenticated to avoid unnecessary API calls.
   const { data: meData } = useGetMeQuery(undefined, { skip: !isAuthenticated });
@@ -178,20 +186,21 @@ export default function ProductDetailsBySlugPage() {
     return null;
   })();
 
-  // Log recently viewed product
+  // Log recently viewed product — depends only on the stable ID primitive,
+  // NOT the full product object, to prevent an infinite re-render loop.
   useEffect(() => {
-    if (product?._id) {
-      try {
-        const stored = localStorage.getItem("recently_viewed");
-        const list: string[] = stored ? JSON.parse(stored) : [];
-        const filtered = list.filter((pid) => pid !== product._id);
-        filtered.unshift(product._id);
-        localStorage.setItem("recently_viewed", JSON.stringify(filtered.slice(0, 8)));
-      } catch (err) {
-        console.error("Recently viewed error:", err);
-      }
+    if (!productId) return;
+    try {
+      const stored = localStorage.getItem("recently_viewed");
+      const list: string[] = stored ? JSON.parse(stored) : [];
+      const filtered = list.filter((pid) => pid !== productId);
+      filtered.unshift(productId);
+      localStorage.setItem("recently_viewed", JSON.stringify(filtered.slice(0, 8)));
+    } catch (err) {
+      console.error("Recently viewed error:", err);
     }
-  }, [product]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId]); // ✅ Only runs when the product ID actually changes
 
   const productSellerId = product?.seller?._id || product?.seller;
   const isOwner = currentUser && productSellerId && productSellerId.toString() === currentUser.id;
@@ -368,7 +377,6 @@ export default function ProductDetailsBySlugPage() {
   const displayPrice = activeVariant ? activeVariant.price : product.price;
   const comparePriceVal = product.comparePrice;
   const discountPercent = comparePriceVal ? Math.round(((comparePriceVal - displayPrice) / comparePriceVal) * 100) : 0;
-  const { t } = useTranslation()
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
 
