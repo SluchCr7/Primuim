@@ -443,7 +443,9 @@ export default function Home() {
                       transition={{ duration: 0.6 }}
                       className="absolute inset-0"
                     >
-                      <img
+                      <Image
+                        width={500}
+                        height={500}
                         src={heroSlides[activeSlide].image}
                         alt={heroSlides[activeSlide].title}
                         className="h-full w-full object-cover opacity-75"
@@ -458,8 +460,8 @@ export default function Home() {
                       <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-black/65 p-5 text-white backdrop-blur-md z-10">
                         <div className="flex flex-col gap-2">
                           <div className="text-xs uppercase tracking-[0.28em] text-white/60">{t("Featured collection")}</div>
-                          <h2 className="font-serif text-2xl">{heroSlides[activeSlide].title}</h2>
-                          <p className="text-xs text-white/80 font-light leading-relaxed">{heroSlides[activeSlide].description}</p>
+                          <h2 className="font-serif text-2xl">{t(heroSlides[activeSlide].title)}</h2>
+                          <p className="text-xs text-white/80 font-light leading-relaxed">{t(heroSlides[activeSlide].description)}</p>
                           <Link href={heroSlides[activeSlide].link} className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.25em] text-gold hover:text-gold-hover transition-colors">
                             {t("View Collection")} <ArrowRight className="h-3.5 w-3.5" />
                           </Link>
