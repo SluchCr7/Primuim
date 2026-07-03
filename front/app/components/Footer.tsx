@@ -25,10 +25,10 @@ export const Footer: React.FC = () => {
           {/* BRAND COLUMN */}
           <div className="flex flex-col gap-4">
             <span className="font-serif text-xl font-bold tracking-widest text-gold uppercase">
-              {t("footer.brand_name", "Shop Premium")}
+              {t("Shop Premium")}
             </span>
             <p className="text-sm text-muted leading-relaxed">
-              {t("footer.brand_tagline", "Curating the world's finest collections with unmatched luxury design, enterprise-grade security, and absolute execution speed.")}
+              {t("Curating the world's finest collections with unmatched luxury design, enterprise-grade security, and absolute execution speed.")}
             </p>
             <div className="flex items-center gap-4 text-muted mt-2">
               <a href="#" className="hover:text-gold transition-colors" aria-label={t("footer.social_instagram", "Instagram")}>
@@ -52,48 +52,48 @@ export const Footer: React.FC = () => {
           {/* QUICK LINKS */}
           <div>
             <h4 className="text-sm font-semibold tracking-widest uppercase text-gold mb-4">
-              {t("footer.collections_title", "Collections")}
+              {t("Collections")}
             </h4>
             <ul className="flex flex-col gap-3 text-sm text-muted">
-              <li><Link href="/new-arrivals" className="hover:text-gold transition-colors">{t("footer.new_arrivals", "New Arrivals")}</Link></li>
-              <li><Link href="/best-sellers" className="hover:text-gold transition-colors">{t("footer.best_sellers", "Best Sellers")}</Link></li>
-              <li><Link href="/products?isDigital=true" className="hover:text-gold transition-colors">{t("footer.digital_goods", "Digital Goods")}</Link></li>
-              <li><Link href="/products?isBundle=true" className="hover:text-gold transition-colors">{t("footer.bundled_deals", "Bundled Deals")}</Link></li>
+              <li><Link href="/new-arrivals" className="hover:text-gold transition-colors">{t("New Arrivals")}</Link></li>
+              <li><Link href="/best-sellers" className="hover:text-gold transition-colors">{t("Best Sellers")}</Link></li>
+              <li><Link href="/products?isDigital=true" className="hover:text-gold transition-colors">{t("Digital Goods")}</Link></li>
+              <li><Link href="/products?isBundle=true" className="hover:text-gold transition-colors">{t("Bundled Deals")}</Link></li>
             </ul>
           </div>
 
           {/* INFORMATION & HELP */}
           <div>
             <h4 className="text-sm font-semibold tracking-widest uppercase text-gold mb-4">
-              {t("footer.support_title", "SupportDesk")}
+              {t("SupportDesk")}
             </h4>
             <ul className="flex flex-col gap-3 text-sm text-muted">
-              <li><Link href="/faq" className="hover:text-gold transition-colors">{t("footer.faq", "FAQ & Support")}</Link></li>
-              <li><Link href="/reviews/new" className="hover:text-gold transition-colors">{t("footer.add_review", "Add Your Review")}</Link></li>
-              <li><Link href="/contact" className="hover:text-gold transition-colors">{t("footer.contact", "Contact Us")}</Link></li>
-              <li><Link href="/policies/terms" className="hover:text-gold transition-colors">{t("footer.terms", "Terms of Use")}</Link></li>
-              <li><Link href="/policies/privacy" className="hover:text-gold transition-colors">{t("footer.privacy", "Privacy Policy")}</Link></li>
+              <li><Link href="/faq" className="hover:text-gold transition-colors">{t("FAQ & Support")}</Link></li>
+              <li><Link href="/reviews/new" className="hover:text-gold transition-colors">{t("Add Your Review")}</Link></li>
+              <li><Link href="/contact" className="hover:text-gold transition-colors">{t("Contact Us")}</Link></li>
+              <li><Link href="/policies/terms" className="hover:text-gold transition-colors">{t("Terms of Use")}</Link></li>
+              <li><Link href="/policies/privacy" className="hover:text-gold transition-colors">{t("Privacy Policy")}</Link></li>
             </ul>
           </div>
 
           {/* NEWSLETTER */}
           <div className="flex flex-col gap-4">
             <h4 className="text-sm font-semibold tracking-widest uppercase text-gold">
-              {t("footer.mailing_list_title", "Mailing List")}
+              {t("Mailing List")}
             </h4>
             <p className="text-sm text-muted leading-relaxed">
-              {t("footer.newsletter_desc", "Subscribe to receive private invitations to exclusive collections and seasonal promotions.")}
+              {t("Subscribe to receive private invitations to exclusive collections and seasonal promotions.")}
             </p>
             
             {subscribed ? (
               <div className="rounded border border-gold/30 bg-gold/10 px-4 py-3 text-sm text-gold">
-                {t("footer.subscribed_msg", "Thank you! You are now subscribed to our private list.")}
+                {t("Thank you! You are now subscribed to our private list.")}
               </div>
             ) : (
               <form onSubmit={handleSubscribe} className="flex flex-col gap-2">
                 <input
                   type="email"
-                  placeholder={t("footer.email_placeholder", "Enter your email address")}
+                  placeholder={t("Enter your email address")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -103,7 +103,7 @@ export const Footer: React.FC = () => {
                   type="submit"
                   className="rounded bg-foreground py-2.5 text-sm font-semibold text-background hover:bg-gold hover:text-luxury-white transition-all cursor-pointer"
                 >
-                  {t("footer.join_btn", "Join Invitation List")}
+                  {t("Join Invitation List")}
                 </button>
               </form>
             )}
@@ -114,11 +114,11 @@ export const Footer: React.FC = () => {
         {/* BOTTOM METADATA */}
         <div className="border-t border-card-border mt-16 pt-8 flex flex-col items-center justify-between gap-4 sm:flex-row text-xs text-muted">
           <div>
-            {t("footer.copyright", "© {{year}} Shop Premium Inc. All rights reserved.", { year: new Date().getFullYear() })}
+            {t("© {{year}} Shop Premium Inc. All rights reserved.", { year: new Date().getFullYear() })}
           </div>
           <div className="flex gap-6">
-            <span>{t("footer.location", "Cairo, Egypt")}</span>
-            <span>{t("footer.ssl", "Secure SSL Encryption")}</span>
+            <span>{t("Cairo, Egypt")}</span>
+            <span>{t("Secure SSL Encryption")}</span>
           </div>
         </div>
       </div>

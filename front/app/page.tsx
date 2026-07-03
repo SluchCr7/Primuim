@@ -463,7 +463,7 @@ export default function Home() {
           <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-24">
             <div className="relative z-10 flex flex-col gap-8">
               <div className="inline-flex w-fit items-center gap-2 rounded-full border border-card-border bg-card-bg/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-gold shadow-sm backdrop-blur">
-                <Sparkles className="h-3.5 w-3.5" />{t(" Premium storefront, rebuilt as a brand experience")}
+                <Sparkles className="h-3.5 w-3.5" />{t("Premium storefront, rebuilt as a brand experience")}
               </div>
 
               <div className="flex flex-col gap-5">
@@ -770,8 +770,8 @@ export default function Home() {
                     <div className="inline-flex rounded-2xl bg-gold/10 p-3 text-gold">
                       <Icon className="h-6 w-6" />
                     </div>
-                    <h3 className="mt-5 font-serif text-2xl font-semibold">{point.title}</h3>
-                    <p className="mt-3 text-sm leading-7 text-muted">{point.description}</p>
+                    <h3 className="mt-5 font-serif text-2xl font-semibold">(t{point.title})</h3>
+                    <p className="mt-3 text-sm leading-7 text-muted">(t{point.description})</p>
                   </div>
                 );
               })}
@@ -1320,7 +1320,7 @@ export default function Home() {
                     <div>
                       <div className="flex items-center justify-between text-xs text-muted mb-3">
                         <span className="font-semibold uppercase tracking-[0.15em] text-gold">{article.author?.storeName || article.author?.username || "Editorial Staff"}</span>
-                        <span>{article.readTime || 5} min read</span>
+                        <span>{article.readTime || 5} {t("min read")}</span>
                       </div>
                       <Link href={`/article/${article._id}`} className="block font-serif text-xl font-semibold leading-snug text-foreground hover:text-gold transition-colors line-clamp-2">
                         {article.title}
@@ -1359,8 +1359,8 @@ export default function Home() {
                         {item.step}
                       </div>
                       <div>
-                        <h3 className="font-serif text-xl font-semibold">{item.title}</h3>
-                        <p className="mt-2 text-sm leading-7 text-muted">{item.description}</p>
+                        <h3 className="font-serif text-xl font-semibold">(t{item.title})</h3>
+                        <p className="mt-2 text-sm leading-7 text-muted">(t{item.description})</p>
                       </div>
                     </div>
                   </div>
@@ -1379,6 +1379,7 @@ export default function Home() {
                   key={stat.label}
                   value={stat.value}
                   label={stat.label}
+                  t={t}
                 />
               ))}
             </div>
@@ -1418,8 +1419,8 @@ export default function Home() {
               <div className="mt-8 space-y-5">
                 {faqs.map((faq) => (
                   <div key={faq.question} className="rounded-2xl border border-card-border bg-card-bg/80 p-5">
-                    <div className="font-semibold">{faq.question}</div>
-                    <p className="mt-2 text-sm leading-7 text-muted">{faq.answer}</p>
+                    <div className="font-semibold">(t{faq.question})</div>
+                    <p className="mt-2 text-sm leading-7 text-muted">(t{faq.answer})</p>
                   </div>
                 ))}
               </div>

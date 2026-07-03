@@ -2,7 +2,7 @@ import CountUp from "react-countup";
 import { useInView } from "react-intersection-observer";
 import { motion } from "framer-motion";
 
-export function StatCard({ value, label }) {
+export function StatCard({ value, label , t }) {
   const { ref, inView } = useInView({
     triggerOnce: true,
     threshold: 0.25,
@@ -111,7 +111,7 @@ export function StatCard({ value, label }) {
           text-muted
         "
       >
-        {label}
+        (t{label})
       </p>
 
       {/* Corner Border */}
