@@ -256,13 +256,13 @@ export const Footer: React.FC = () => {
                   style={{ background: "linear-gradient(135deg, var(--primary), var(--accent))" }}
                   aria-hidden="true"
                 >
-                  <span className="text-xs font-black" style={{ color: "var(--luxury-black, #0B0B0A)" }}>SP</span>
+                  <span className="text-xs font-black" style={{ color: "var(--luxury-black, #0B0B0A)" }}>SL</span>
                 </div>
                 <span
                   className="font-serif text-xl font-bold tracking-widest uppercase"
                   style={{ color: "var(--primary)" }}
                 >
-                  {t("Shop Premium")}
+                  {t("Shop LUMIXA")}
                 </span>
               </div>
               <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
@@ -275,7 +275,7 @@ export const Footer: React.FC = () => {
             {/* Contact Info */}
             <div className="flex flex-col gap-2.5">
               <a
-                href="mailto:concierge@shoppremium.com"
+                href="mailto:concierge@shoplumixa.com"
                 className="flex items-center gap-2.5 text-sm group transition-colors duration-200"
                 style={{ color: "var(--muted)" }}
                 onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--primary)")}

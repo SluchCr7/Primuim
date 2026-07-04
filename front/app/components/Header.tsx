@@ -48,6 +48,7 @@ import {
 import { getGuestCartTotals } from "../../lib/cartUtils";
 import Flag from 'react-world-flags';
 import { languages } from "@/lib/data";
+import Image from "next/image";
 
 export const Header: React.FC = () => {
   const router = useRouter();
@@ -222,9 +223,10 @@ export const Header: React.FC = () => {
         
         {/* LOGO */}
         <LinkNext href="/" className="flex items-center gap-2.5 shrink-0">
-          <img src="/luxury_store_logo.png" alt="PREMIUM Logo" className="h-8 w-8 object-contain rounded-md border border-gold/30" />
+          {/* <Image width={500} height={500} src="/luxury_store_logo.png" alt="PREMIUM Logo" className="h-8 w-8 object-contain rounded-md border border-gold/30" /> */}
+          <Image width={500} height={500} src="/logo_wbg.png" alt="LUMIXA Logo" className="h-8 w-8 object-contain rounded-md border border-gold/30" />
           <span className="font-serif text-2xl sm:text-3xl font-black tracking-[0.25em] text-gold hover:opacity-90 transition-opacity">
-            PREMIUM
+            LUMIXA
           </span>
         </LinkNext>
 

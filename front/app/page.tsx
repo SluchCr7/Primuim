@@ -530,8 +530,8 @@ export default function Home() {
                   <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/75 backdrop-blur-md">
                     <Camera className="h-3.5 w-3.5 text-gold" /> {t("Featured collection")}
                   </div>
-                  <h3 className="font-serif text-xl font-semibold">{category.name}</h3>
-                  <p className="mt-2 line-clamp-1 text-xs leading-6 text-white/75">{category.description || t("A curated edit built to feel premium, tactile, and easy to browse.")}</p>
+                  <h3 className="font-serif text-xl font-semibold">{t(category.name)}</h3>
+                  <p className="mt-2 line-clamp-1 text-xs leading-6 text-white/75">{t(category.description || t("A curated edit built to feel premium, tactile, and easy to browse."))}</p>
                   <div className="mt-5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-gold transition-colors group-hover:text-gold-hover">
                     {t("Open collection")} <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                   </div>
