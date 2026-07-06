@@ -61,7 +61,7 @@ const baseQueryWithReauth: BaseQueryFn<
 export const ecommerceApi = createApi({
   reducerPath: "ecommerceApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["User", "Product", "Category", "Cart", "Checkout", "Order", "Review", "Payment", "Coupon", "Article", "SellerRequest", "Testimonial", "Notification", "SystemSettings", "MediaAsset"], 
+  tagTypes: ["User", "Product", "Category", "Cart", "Checkout", "Order", "Review", "Payment", "Coupon", "Article", "SellerRequest", "Testimonial", "Notification", "SystemSettings", "MediaAsset", "Loyalty", "WarehouseInventory"], 
   endpoints: (builder) => ({
     // --- AUTHENTICATION ---
     login: builder.mutation({
@@ -365,6 +365,57 @@ export const ecommerceApi = createApi({
     getCheckoutState: builder.query({
       query: () => "/checkout/state",
       providesTags: ["Checkout"],
+    }),
+
+    // --- LOYALTY ---
+    getLoyaltyWallet: builder.query({
+      query: () => "/loyalty/wallet",
+      providesTags: ["Loyalty"],
+    }),
+    getLoyaltyTransactions: builder.query({
+      query: () => "/loyalty/transactions",
+      providesTags: ["Loyalty"],
+    }),
+
+    // --- INVENTORY ---
+    createWarehouse: builder.mutation({
+      query: (warehouseData) => ({
+        url: "/inventory/warehouses",
+        method: "POST",
+        body: warehouseData,
+      }),
+      invalidatesTags: ["WarehouseInventory"],
+    }),
+    adjustStock: builder.mutation({
+      query: (adjustmentData) => ({
+        url: "/inventory/stock-adjustment",
+        method: "POST",
+        body: adjustmentData,
+      }),
+      invalidatesTags: ["WarehouseInventory", "Product"],
+    }),
+    getTurnoverReport: builder.query<any, { startDate?: string; endDate?: string } | void>({
+      query: (params) => ({
+        url: "/inventory/turnover-report",
+        params: params || {},
+      }),
+      providesTags: ["WarehouseInventory"],
+    }),
+    reserveCartStock: builder.mutation({
+      query: (reservationData) => ({
+        url: "/inventory/reserve",
+        method: "POST",
+        body: reservationData,
+      }),
+      invalidatesTags: ["WarehouseInventory"],
+    }),
+    processReturn: builder.mutation({
+      query: (returnData) => ({
+        url: "/orders/return",
+        method: "POST",
+        body: returnData,
+      }),
+      invalidatesTags: ["Order", "WarehouseInventory", "Product"],
     }),
 
     // --- ORDERS & PAYMENTS ---
@@ -893,6 +944,13 @@ export const {
   useGetOrderByIdQuery,
   useCancelOrderMutation,
   useCreatePaymentMutation,
+  useGetLoyaltyWalletQuery,
+  useGetLoyaltyTransactionsQuery,
+  useCreateWarehouseMutation,
+  useAdjustStockMutation,
+  useGetTurnoverReportQuery,
+  useReserveCartStockMutation,
+  useProcessReturnMutation,
   useGetProductReviewsQuery,
   useCreateReviewMutation,
   useVoteHelpfulMutation,

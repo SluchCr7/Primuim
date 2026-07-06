@@ -42,6 +42,8 @@ const checkoutRoutes = require("./Routers/checkoutRoutes");
 const reviewRoutes = require("./Routers/reviewRoutes");
 const analyticsRoutes = require("./Routers/analyticsRoutes");
 const currencyRoutes = require("./Routers/currencyRoutes");
+const loyaltyRoutes = require("./Routers/loyaltyRoutes");
+const inventoryRoutes = require("./Routers/inventoryRoutes");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -117,6 +119,8 @@ app.use("/api/checkout", checkoutRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/currency", currencyRoutes);
+app.use("/api/loyalty", loyaltyRoutes);
+app.use("/api/inventory", inventoryRoutes);
 app.use("/api/articles" , require("./Routers/ArticleRoute"));
 app.use("/api/sellers", require("./Routers/sellerRoutes"));
 app.use("/api/superadmin", require("./Routers/superAdminRoutes"));
@@ -142,6 +146,19 @@ const startServer = async () => {
         // 3. تهيئة Socket.io
         const socketUtil = require("./utils/socket");
         socketUtil.init(server);
+
+        // 4. Start Background Cleanups for Inventory Reservations & Expired Loyalty Points
+        const { releaseExpiredReservations } = require("./utils/inventoryService");
+        const { processExpiredPoints } = require("./utils/loyaltyService");
+        
+        setInterval(async () => {
+            try {
+                await releaseExpiredReservations();
+                await processExpiredPoints();
+            } catch (err) {
+                console.error("Error running background inventory/loyalty cleanups:", err.message);
+            }
+        }, 60 * 1000);
     } catch (error) {
         console.error("Failed to start the server due to DB connection error:", error);
         process.exit(1); // إنهاء العملية إذا فشل الاتصال الحرج

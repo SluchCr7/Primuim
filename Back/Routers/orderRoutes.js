@@ -7,8 +7,11 @@ const {
   getOrderById,
   cancelOrder,
   downloadInvoice,
+  processReturn
 } = require("../Controllers/OrderController");
-const { verifyToken } = require("../Middelwares/verifyToken");
+const { verifyToken, verifyAdmin } = require("../Middelwares/verifyToken");
+
+router.post("/return", verifyToken, verifyAdmin, processReturn);
 
 /**
  * @swagger

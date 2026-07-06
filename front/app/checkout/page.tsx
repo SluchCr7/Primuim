@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -13,6 +13,7 @@ import {
   useCreateOrderMutation,
   useCreatePaymentMutation,
   useStartCheckoutMutation,
+  useGetLoyaltyWalletQuery,
   API_BASE_URL,
 } from "../../lib/api";
 import {
@@ -74,9 +75,16 @@ export default function CheckoutPage() {
   const [createdOrder, setCreatedOrder] = useState<any>(null);
   const [paymentResponse, setPaymentResponse] = useState<any>(null);
 
+  // Loyalty points redemption state
+  const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
+  const [pointsRedeemedApplied, setPointsRedeemedApplied] = useState<number>(0);
+
   // RTK Queries & Mutations
   const { data: cartData, isLoading: isCartLoading } = useGetCartQuery(undefined, { skip: !isAuthenticated });
   const { data: userData } = useGetMeQuery(undefined, { skip: !isAuthenticated });
+  const { data: loyaltyWalletData } = useGetLoyaltyWalletQuery(undefined, { skip: !isAuthenticated });
+  const loyaltyWallet = loyaltyWalletData?.wallet;
+  const availablePoints = loyaltyWallet?.balance || 0;
 
   const [validateAddress] = useValidateAddressMutation();
   const [saveShipping] = useSaveShippingMutation();
@@ -186,6 +194,8 @@ export default function CheckoutPage() {
         paymentMethod: paymentMethod === "cod" ? "cod" : paymentMethod === "card" ? "card" : "paypal",
         shippingPrice,
         taxPrice,
+        redeemPoints: pointsRedeemedApplied,
+        coordinates: [31.2357, 30.0444] // default Cairo coords for proximity routing fallback
       }).unwrap();
 
       const order = orderRes.order;
@@ -236,7 +246,7 @@ export default function CheckoutPage() {
   const cartPrice = cartData?.cart?.totalPrice || 0;
   const shippingPrice = shippingMethod === "exp" ? 150 : cartPrice > 10000 ? 0 : 250;
   const taxPrice = Math.round(cartPrice * 0.14 * 100) / 100;
-  const total = cartPrice + shippingPrice + taxPrice;
+  const total = Math.max(0, cartPrice + shippingPrice + taxPrice - pointsRedeemedApplied);
 
   if (isCartLoading) {
     return (
@@ -572,9 +582,78 @@ export default function CheckoutPage() {
 
             {/* RIGHT COLUMN: BILLING SIDE SUMMARY */}
             <div className="flex flex-col gap-6">
+              
+              {/* Loyalty Wallet Widget */}
+              {availablePoints > 0 && (
+                <div className="luxury-card p-6 border border-gold/30 bg-gold/5 flex flex-col gap-3">
+                  <h3 className="font-serif font-bold text-sm border-b border-card-border pb-2 flex items-center gap-1.5 text-gold">
+                    <Sparkles className="h-4 w-4" /> {t("Redeem Loyalty Points")}
+                  </h3>
+                  <div className="text-xs flex flex-col gap-2.5">
+                    <p className="font-light">
+                      {t("You have")} <strong className="font-semibold text-gold">{availablePoints}</strong> {t("loyalty points available")} ({t(loyaltyWallet?.tier || "Bronze")} {t("Tier")}).
+                    </p>
+                    <p className="text-[10px] text-muted font-light">
+                      {t("1 Point = 1.00 EGP discount. Redeemable up to subtotal.")}
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max={Math.min(availablePoints, cartPrice)}
+                        value={pointsToRedeem}
+                        onChange={(e) => setPointsToRedeem(Math.max(0, parseInt(e.target.value) || 0))}
+                        className="w-full rounded border border-card-border bg-background px-3 py-1.5 text-xs outline-none focus:border-gold"
+                        placeholder={t("Points")}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const val = Math.min(pointsToRedeem, availablePoints, cartPrice);
+                          setPointsRedeemedApplied(val);
+                          showToast(t("Applied discount!"), "success");
+                        }}
+                        className="bg-gold text-luxury-white hover:bg-gold/95 px-4 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all"
+                      >
+                        {t("Apply")}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Price Details Breakdown */}
               <div className="luxury-card p-6">
-                <h3 className="font-serif font-bold text-base border-b border-card-border pb-3 mb-4">{t("Delivery Overview")}</h3>
-                <div className="flex flex-col gap-3.5 text-xs">
+                <h3 className="font-serif font-bold text-sm border-b border-card-border pb-2 mb-3">{t("Price Breakdown")}</h3>
+                <div className="flex flex-col gap-3 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted font-light">{t("Subtotal")}</span>
+                    <span className="font-semibold">{cartPrice.toFixed(2)} EGP</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted font-light">{t("VAT (14%)")}</span>
+                    <span className="font-semibold">{taxPrice.toFixed(2)} EGP</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted font-light">{t("Shipping")}</span>
+                    <span className="font-semibold">{shippingPrice === 0 ? t("Free") : `${shippingPrice.toFixed(2)} EGP`}</span>
+                  </div>
+                  {pointsRedeemedApplied > 0 && (
+                    <div className="flex justify-between text-gold font-medium">
+                      <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> {t("Points Discount")}</span>
+                      <span>-{pointsRedeemedApplied.toFixed(2)} EGP</span>
+                    </div>
+                  )}
+                  <div className="border-t border-card-border pt-3 mt-1 flex justify-between items-end font-serif">
+                    <span className="font-bold text-sm">{t("Total")}</span>
+                    <span className="font-extrabold text-base text-gold">{total.toFixed(2)} EGP</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="luxury-card p-6">
+                <h3 className="font-serif font-bold text-sm border-b border-card-border pb-2 mb-3">{t("Delivery Overview")}</h3>
+                <div className="flex flex-col gap-3 text-xs">
                   <p className="font-light leading-relaxed">
                     <strong className="font-semibold block uppercase tracking-wider mb-1 text-[10px] text-muted">{t("Recipient")}</strong>
                     {fullName} <br /> {phone}

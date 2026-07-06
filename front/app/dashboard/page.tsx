@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React, { useReducer, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "../../lib/store";
@@ -20,6 +20,8 @@ import {
   useToggle2FAMutation,
   useApplyAsSellerMutation,
   useGetMyApplicationStatusQuery,
+  useGetLoyaltyWalletQuery,
+  useGetLoyaltyTransactionsQuery,
   API_BASE_URL,
 } from "../../lib/api";
 import { useToast } from "../components/Toast";
@@ -135,6 +137,11 @@ export default function DashboardPage() {
   const { data: ordersData, refetch: refetchOrders } = useGetMyOrdersQuery(undefined, { skip: !isAuthenticated });
   const { data: addressesData, refetch: refetchAddresses } = useGetAddressesQuery(undefined, { skip: !isAuthenticated });
   const { data: wishlistData, refetch: refetchWishlist } = useGetWishlistQuery(undefined, { skip: !isAuthenticated });
+  const { data: loyaltyWalletData } = useGetLoyaltyWalletQuery(undefined, { skip: !isAuthenticated });
+  const { data: loyaltyTxData } = useGetLoyaltyTransactionsQuery(undefined, { skip: !isAuthenticated });
+  const loyaltyWallet = loyaltyWalletData?.wallet;
+  const loyaltyTransactions = loyaltyTxData?.transactions || [];
+  const availablePoints = loyaltyWallet?.balance || 0;
 
   const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation();
   const [cancelOrder] = useCancelOrderMutation();
@@ -370,7 +377,18 @@ export default function DashboardPage() {
   const user = meData?.user;
 
   const walletTransactions: any[] = [];
-  if (user) {
+  if (loyaltyTransactions && loyaltyTransactions.length > 0) {
+    loyaltyTransactions.forEach((tx: any) => {
+      walletTransactions.push({
+        id: tx._id,
+        date: new Date(tx.createdAt).toLocaleDateString(),
+        description: t(tx.description),
+        type: "loyalty",
+        amount: `${tx.amount > 0 ? "+" : ""}${tx.amount} pts`,
+        status: "completed",
+      });
+    });
+  } else if (user) {
     walletTransactions.push({
       id: "tx-signup",
       date: new Date(user.createdAt).toLocaleDateString(),
@@ -400,22 +418,6 @@ export default function DashboardPage() {
             description: log.details || t("Referral invitation reward"),
             type: "points",
             amount: t("+50 pts"),
-            status: "completed",
-          });
-        }
-      });
-    }
-
-    if (ordersData?.orders) {
-      ordersData.orders.forEach((order: any) => {
-        if (order.orderStatus !== "cancelled") {
-          const cashback = order.totalPrice * 0.1;
-          walletTransactions.push({
-            id: `tx-cashback-${order._id}`,
-            date: new Date(order.createdAt).toLocaleDateString(),
-            description: `${t("10% Cashback for Order #")}${order._id.substring(18).toUpperCase()}`,
-            type: "wallet",
-            amount: `+${cashback.toFixed(2)} ${t("EGP")}`,
             status: "completed",
           });
         }
@@ -966,7 +968,7 @@ export default function DashboardPage() {
                       <div>
                         <span className="text-[10px] text-muted uppercase tracking-wider block font-semibold">{t("Loyalty Reward Points")}</span>
                         <span className="text-3xl font-serif font-bold text-foreground mt-1 block">
-                          {user?.loyaltyPoints || 0} <span className="text-xs text-muted font-sans font-medium">{t("pts")}</span>
+                          {availablePoints} <span className="text-xs text-muted font-sans font-medium">{t("pts")}</span>
                         </span>
                       </div>
                       <div className="p-3 bg-gold/10 rounded-full text-gold">
@@ -974,7 +976,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="text-[10px] text-success font-semibold flex items-center gap-1">
-                      <CheckCircle className="h-3.5 w-3.5" /> {t("100 points = 10 EGP Store Credit auto-redemption")}
+                      <CheckCircle className="h-3.5 w-3.5" /> {t("Membership Level")}: <span className="text-gold uppercase font-bold">{loyaltyWallet?.tier || "Bronze"}</span>
                     </div>
                   </div>
                 </div>
