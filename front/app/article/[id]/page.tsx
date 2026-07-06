@@ -14,6 +14,7 @@ import {
 import { useToast } from "../../components/Toast";
 import { Calendar, User, ArrowLeft, Heart, Sparkles, Send, Trash2, Clock, Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import Image from "next/image";
 
 export default function ArticleDetailPage() {
   const { t } = useTranslation();
@@ -164,7 +165,9 @@ export default function ArticleDetailPage() {
 
         {/* Post Cover */}
         <div className="h-[350px] rounded-3xl overflow-hidden border border-card-border mb-10 relative">
-          <img
+          <Image
+            width={500}
+            height={350}
             src={article.image?.url || "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=800"}
             alt={article.title}
             className="h-full w-full object-cover saturate-50 hover:saturate-100 transition-all duration-500"

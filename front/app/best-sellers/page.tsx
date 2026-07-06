@@ -8,6 +8,7 @@ import { useAppSelector } from "../../lib/store";
 import { Star, Award } from "lucide-react";
 import { addGuestCartItem } from "../../lib/cartUtils";
 import { useTranslation } from "react-i18next";
+import Image from "next/image";
 
 export default function BestSellersPage() {
   const { t } = useTranslation();
@@ -75,7 +76,9 @@ export default function BestSellersPage() {
                   <span className="absolute top-3 left-3 bg-gold text-luxury-white font-bold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded z-10">
                     {t("High Demand")}
                   </span>
-                  <img
+                  <Image
+                    width={400}
+                    height={400}
                     src={product.images?.[0]?.url || "https://placehold.co/400x400"}
                     alt={product.title}
                     className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 saturate-50 group-hover:saturate-100"

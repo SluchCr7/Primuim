@@ -7,6 +7,7 @@ import { useGetCategoriesQuery } from "../../lib/api";
 import { CardSkeleton } from "../components/Skeletons";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import Image from "next/image";
 
 export default function CategoriesPage() {
   const { t } = useTranslation();
@@ -49,7 +50,9 @@ export default function CategoriesPage() {
               >
                 {/* Fallback pattern background for premium texture */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/5 z-10" />
-                <img
+                <Image
+                  width={400}
+                  height={400}
                   src={cat.image || "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=600&auto=format&fit=crop"}
                   alt={cat.name}
                   className="absolute inset-0 h-full w-full object-cover saturate-50 group-hover:saturate-100 group-hover:scale-105 transition-all duration-700"

@@ -6,6 +6,7 @@ import Breadcrumbs from "../components/Breadcrumbs";
 import { useGetArticlesQuery } from "../../lib/api";
 import { Sparkles, Calendar, User, ArrowRight, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import Image from "next/image";
 
 export default function BlogListingPage() {
   const { t } = useTranslation();
@@ -87,7 +88,9 @@ export default function BlogListingPage() {
             {data.data.map((post: any) => (
               <div key={post._id} className="group flex flex-col luxury-card overflow-hidden hover:scale-[1.01] transition-all duration-300 bg-card-bg border border-card-border rounded-lg">
                 <div className="relative h-[250px] overflow-hidden bg-muted-light">
-                  <img
+                  <Image
+                    width={500}
+                    height={250}
                     src={post.image?.url || "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=800&auto=format&fit=crop"}
                     alt={post.title}
                     className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-750 saturate-50 group-hover:saturate-100"

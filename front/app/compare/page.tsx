@@ -48,6 +48,7 @@ import {
   BarChart3,
   Sparkles,
 } from "lucide-react";
+import Image from "next/image";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -554,7 +555,9 @@ export default function ComparePage() {
                           exit={{ scale: 0.85, opacity: 0 }}
                           className="flex items-center gap-2 pl-2 pr-1 py-1 bg-gold/10 border border-gold/25 rounded-full"
                         >
-                          <img
+                          <Image
+                            width={24}
+                            height={24}
                             src={p.images?.[0]?.url || "https://placehold.co/24x24"}
                             alt={p.title}
                             className="h-5 w-5 rounded-full object-cover shrink-0"
@@ -623,7 +626,9 @@ export default function ComparePage() {
                               onClick={() => handleAdd(p._id)}
                               className="group flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-card-border hover:border-gold hover:bg-gold/5 transition-all cursor-pointer text-center"
                             >
-                              <img
+                              <Image
+                                width={500}
+                                height={500}
                                 src={p.images?.[0]?.url || "https://placehold.co/60x60"}
                                 alt={p.title}
                                 className="h-10 w-10 object-cover rounded-lg group-hover:scale-105 transition-transform"
@@ -729,7 +734,9 @@ export default function ComparePage() {
                       >
                         <div className="flex flex-col gap-3">
                           <div className="relative">
-                            <img
+                            <Image
+                              width={200}
+                              height={200}
                               src={item.images?.[0]?.url || "https://placehold.co/200x200"}
                               alt={item.title}
                               className="w-full aspect-square object-cover rounded-xl border border-card-border"
@@ -916,7 +923,9 @@ export default function ComparePage() {
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 {comparedItems.map((item) => (
                   <div key={item._id} className="relative shrink-0">
-                    <img
+                    <Image
+                      width={36}
+                      height={36}
                       src={item.images?.[0]?.url || "https://placehold.co/36x36"}
                       alt={item.title}
                       className="h-9 w-9 rounded-lg object-cover border border-card-border"

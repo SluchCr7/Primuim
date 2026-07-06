@@ -77,6 +77,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import Image from "next/image";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -1357,7 +1358,7 @@ export default function AdminPage() {
                   mediaAssetsData.assets.map((media: any) => (
                     <div key={media._id} className="rounded border border-card-border bg-card-bg overflow-hidden flex flex-col justify-between">
                       <div className="relative aspect-video bg-muted-light">
-                        <img src={media.url} alt={media.name} className="h-full w-full object-cover saturate-50 animate-fade-in" />
+                        <Image width={400} height={225} src={media.url} alt={media.name} className="h-full w-full object-cover saturate-50 animate-fade-in" />
                       </div>
                       <div className="p-3">
                         <span className="block text-[10px] font-semibold text-foreground truncate">{media.name}</span>
@@ -1785,7 +1786,7 @@ export default function AdminPage() {
                         <tr key={prod._id} className="border-b border-card-border/50 hover:bg-gold/5 transition-colors">
                           <td className="py-4 px-4 flex items-center gap-3">
                             {prod.images?.[0] && (
-                              <img src={prod.images[0]} alt={prod.title} className="h-9 w-9 object-cover rounded border border-card-border" />
+                              <Image width={36} height={36} src={prod.images[0]} alt={prod.title} className="h-9 w-9 object-cover rounded border border-card-border" />
                             )}
                             <div>
                               <span className="font-semibold block truncate max-w-[150px]">{prod.title}</span>
@@ -2025,7 +2026,7 @@ export default function AdminPage() {
                     <div key={idx} className="flex justify-between items-center gap-4 border border-card-border bg-card-bg p-3 rounded">
                       <div className="flex items-center gap-3">
                         {item.product?.images?.[0] ? (
-                          <img src={item.product.images[0]} alt={item.product.title} className="h-10 w-10 object-cover rounded border border-card-border" />
+                          <Image width={40} height={40} src={item.product.images[0]} alt={item.product.title} className="h-10 w-10 object-cover rounded border border-card-border" />
                         ) : (
                           <div className="h-10 w-10 bg-muted-light/20 border border-card-border rounded" />
                         )}

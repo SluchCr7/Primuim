@@ -777,11 +777,11 @@ export const Header: React.FC = () => {
 
                   <div className="col-span-1 bg-gradient-to-br from-gold/10 to-transparent rounded-2xl p-6 flex flex-col justify-between border border-gold/10">
                     <div>
-                      <h4 className="font-serif text-lg font-bold text-gold tracking-wide">{t('header.seasonal_drop', 'Seasonal Drop')}</h4>
-                      <p className="text-xs text-muted mt-1">{t('header.seasonal_desc', 'Explore carefully tailored artisanal aesthetics.')}</p>
+                      <h4 className="font-serif text-lg font-bold text-gold tracking-wide">{t('Seasonal Drop')}</h4>
+                      <p className="text-xs text-muted mt-1">{t('Explore carefully tailored artisanal aesthetics.')}</p>
                     </div>
                     <LinkNext href="/products" className="text-xs font-bold underline text-foreground hover:text-gold flex items-center gap-1 mt-4">
-                      {t('footer.new_arrivals', 'Shop New Arrivals')} <ArrowRight className="h-3 w-3" />
+                      {t('Shop New Arrivals')} <ArrowRight className="h-3 w-3" />
                     </LinkNext>
                   </div>
                 </div>

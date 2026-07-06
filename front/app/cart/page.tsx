@@ -456,6 +456,7 @@ import {
 } from "../../lib/cartUtils";
 import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Ticket, Sparkles, ShoppingBag } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import Image from "next/image";
 
 export default function CartPage() {
   const { t } = useTranslation();
@@ -679,7 +680,9 @@ export default function CartPage() {
                       {/* Product details thumbnail & titles */}
                       <div className="flex items-center gap-4 w-full sm:w-auto">
                         <div className="h-24 w-24 rounded overflow-hidden border border-card-border bg-muted-light flex-shrink-0">
-                          <img
+                          <Image
+                            width={500}
+                            height={500}
                             src={productObj.images?.[0]?.url || "https://placehold.co/150x150"}
                             alt={productObj.title}
                             className="h-full w-full object-cover saturate-50 hover:saturate-100 transition-all"
