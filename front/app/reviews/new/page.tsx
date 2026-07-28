@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -15,7 +15,7 @@ import {
 import { useToast } from "../../components/Toast";
 import { useTranslation } from "react-i18next";
 import { useAppSelector, type RootState } from "../../../lib/store";
-import { API_BASE_URL } from "../../../lib/api";
+import { API_BASE_URL } from "@/redux/api";
 
 export default function NewReviewPage() {
   const { t } = useTranslation();

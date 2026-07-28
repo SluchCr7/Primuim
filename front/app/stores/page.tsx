@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next"; // أو من الإطار المعتمد لديك مثل next-i18next
-import { useGetApprovedSellersQuery, useFollowSellerMutation, useGetMeQuery, useGetCategoriesQuery } from "../../lib/api";
+import { useGetApprovedSellersQuery, useFollowSellerMutation, useGetMeQuery, useGetCategoriesQuery } from "@/redux/api";
 import { useAppSelector } from "../../lib/store";
 import { useToast } from "../components/Toast";
 import { 

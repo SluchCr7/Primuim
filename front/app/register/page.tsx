@@ -1,11 +1,11 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useRegisterMutation, useUploadImageMutation } from "../../lib/api";
+import { useRegisterMutation, useUploadImageMutation } from "@/redux/api";
 import { useTranslation } from "react-i18next";
 import {
   UserPlus,

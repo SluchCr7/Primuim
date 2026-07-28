@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { API_BASE_URL, useRefreshTokenMutation, ecommerceApi } from "../../lib/api";
+import { API_BASE_URL, useRefreshTokenMutation, ecommerceApi } from "@/redux/api";
 import { useAppDispatch, useAppSelector } from "../../lib/store";
 import { setCredentials, logOut, setSocketConnected } from "../../lib/authSlice";
 import { getSocket, disconnectSocket } from "../../lib/socket";

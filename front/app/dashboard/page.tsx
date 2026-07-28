@@ -23,7 +23,7 @@ import {
   useGetLoyaltyWalletQuery,
   useGetLoyaltyTransactionsQuery,
   API_BASE_URL,
-} from "../../lib/api";
+} from "@/redux/api";
 import { useToast } from "../components/Toast";
 import {
   User,

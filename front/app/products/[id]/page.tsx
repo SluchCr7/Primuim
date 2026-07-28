@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
@@ -10,7 +10,7 @@ import {
   useCreateReviewMutation,
   useVoteHelpfulMutation,
   useGetProductsQuery,
-} from "../../../lib/api";
+} from "@/redux/api";
 import { useAppSelector } from "../../../lib/store";
 import { formatPrice as formatCurrencyPrice } from "../../../lib/currencyUtils";
 import { Star, Shield, HelpCircle, FileText, CheckCircle, Award } from "lucide-react";

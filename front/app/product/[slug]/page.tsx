@@ -14,7 +14,7 @@ import {
   useToggleWishlistMutation,
   useGetWishlistQuery,
   useGetMeQuery,               // Smart Fit — read sizeProfile
-} from "../../../lib/api";
+} from "@/redux/api";
 import { useAppSelector } from "../../../lib/store";
 import { useToast } from "../../components/Toast";
 import { addGuestCartItem } from "../../../lib/cartUtils";

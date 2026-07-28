@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useCallback } from "react";
 import Link from "next/link";
@@ -7,7 +7,7 @@ import { useAppSelector } from "../../lib/store";
 import {
   useUpdateSizeProfileMutation,
   useGetMeQuery,
-} from "../../lib/api";
+} from "@/redux/api";
 import { useToast } from "../components/Toast";
 import {
   Shirt,

@@ -1,4 +1,4 @@
-﻿// "use client";
+// "use client";
 
 // import React, { useState, useEffect } from "react";
 // import Link from "next/link";
@@ -447,7 +447,7 @@ import {
   useRemoveFromCartMutation,
   useClearCartMutation,
   useGetCouponsQuery,
-} from "../../lib/api";
+} from "@/redux/api";
 import {
   getGuestCartTotals,
   updateGuestCartItemQuantity,

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -34,7 +34,7 @@ import {
   useUploadImageMutation,
   useGetSystemSettingsQuery,
   useUpdateSystemSettingsMutation,
-} from "../../lib/api";
+} from "@/redux/api";
 import { useToast } from "../components/Toast";
 import {
   TrendingUp,

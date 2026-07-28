@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Breadcrumbs from "../components/Breadcrumbs";
-import { useGetProductsQuery, useAddToCartMutation } from "../../lib/api";
+import { useGetProductsQuery, useAddToCartMutation } from "@/redux/api";
 import { CardSkeleton } from "../components/Skeletons";
 import { useAppSelector } from "../../lib/store";
 import { Star, Eye, Trash2 } from "lucide-react";

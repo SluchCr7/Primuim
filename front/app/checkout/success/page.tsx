@@ -1,11 +1,11 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, FileText, ShoppingBag, ArrowRight } from "lucide-react";
 import { useAppSelector } from "../../../lib/store";
-import { API_BASE_URL } from "../../../lib/api";
+import { API_BASE_URL } from "@/redux/api";
 import { useToast } from "../../components/Toast";
 import { useTranslation } from "react-i18next";
 

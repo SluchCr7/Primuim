@@ -1,4 +1,4 @@
-﻿// "use client";
+// "use client";
 
 // import React, { useState } from "react";
 // import Link from "next/link";
@@ -202,7 +202,7 @@ import { useTranslation } from "react-i18next"; // استدعاء hook التر�
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useLoginMutation, useSocialLoginMutation, useMergeCartMutation } from "../../lib/api";
+import { useLoginMutation, useSocialLoginMutation, useMergeCartMutation } from "@/redux/api";
 import { useAppDispatch } from "../../lib/store";
 import { setCredentials } from "../../lib/authSlice";
 import { LogIn, Mail, AlertTriangle } from "lucide-react"; 

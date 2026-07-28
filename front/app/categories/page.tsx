@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import Link from "next/link";
 import Breadcrumbs from "../components/Breadcrumbs";
-import { useGetCategoriesQuery } from "../../lib/api";
+import { useGetCategoriesQuery } from "@/redux/api";
 import { CardSkeleton } from "../components/Skeletons";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, {
   useState,
@@ -20,7 +20,7 @@ import {
   useAddToCartMutation,
   useToggleWishlistMutation,
   useGetWishlistQuery,
-} from "../../lib/api";
+} from "@/redux/api";
 import { useTranslation } from "react-i18next";
 import {
   Search,

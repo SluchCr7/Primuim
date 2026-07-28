@@ -1,11 +1,11 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import Breadcrumbs from "../../../components/Breadcrumbs";
-import { useGetSharedWishlistQuery, useAddToCartMutation } from "../../../../lib/api";
+import { useGetSharedWishlistQuery, useAddToCartMutation } from "@/redux/api";
 import { useAppSelector } from "../../../../lib/store";
 import { useToast } from "../../../components/Toast";
 import { addGuestCartItem } from "../../../../lib/cartUtils";

@@ -1,10 +1,10 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "react-i18next"; // استدعاء مكتبة الترجمة
-import { useGetProductsQuery, useGetCategoriesQuery, useAddToCartMutation } from "../../lib/api";
+import { useGetProductsQuery, useGetCategoriesQuery, useAddToCartMutation } from "@/redux/api";
 import { useAppSelector } from "../../lib/store";
 import { formatPrice as formatCurrencyPrice } from "../../lib/currencyUtils";
 import { Star, Search, SlidersHorizontal, ChevronLeft, ChevronRight, ShoppingBag, Store, RotateCcw, GitCompare } from "lucide-react";

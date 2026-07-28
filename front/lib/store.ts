@@ -1,15 +1,15 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
 import authReducer from "./authSlice";
-import { ecommerceApi } from "./api";
+import { baseApi } from "@/redux/api";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
-    [ecommerceApi.reducerPath]: ecommerceApi.reducer,
+    [baseApi.reducerPath]: baseApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(ecommerceApi.middleware),
+    getDefaultMiddleware().concat(baseApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

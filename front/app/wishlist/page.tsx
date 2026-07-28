@@ -1,11 +1,11 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import Breadcrumbs from "../components/Breadcrumbs";
-import { useGetWishlistQuery, useToggleWishlistMutation, useAddToCartMutation } from "../../lib/api";
+import { useGetWishlistQuery, useToggleWishlistMutation, useAddToCartMutation } from "@/redux/api";
 import { useAppSelector } from "../../lib/store";
 import { useToast } from "../components/Toast";
 import { Star, Heart, Trash2, Share2, Clipboard, ArrowRight, Lock } from "lucide-react";

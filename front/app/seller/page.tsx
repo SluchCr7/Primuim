@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -23,7 +23,7 @@ import {
   useUpdateArticleMutation,
   useDeleteArticleMutation,
   useGetMyApplicationStatusQuery,
-} from "../../lib/api";
+} from "@/redux/api";
 import { useToast } from "../components/Toast";
 import { useTranslation } from "react-i18next";
 import {

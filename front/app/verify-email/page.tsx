@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useVerifyAccountMutation } from "../../lib/api"; // استيراد الـ Hook الجديد
+import { useVerifyAccountMutation } from "@/redux/api"; // استيراد الـ Hook الجديد
 import { CheckCircle2, XCircle, Loader2, ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 

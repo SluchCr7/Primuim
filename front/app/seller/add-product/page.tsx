@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -13,7 +13,7 @@ import {
   useCreateProductMutation,
   useGetCategoriesQuery,
   useUploadImageMutation,
-} from "../../../lib/api";
+} from "@/redux/api";
 import { useAppSelector } from "../../../lib/store";
 import { useToast } from "../../components/Toast";
 import { useTranslation } from "react-i18next";

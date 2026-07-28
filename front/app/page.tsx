@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
@@ -15,7 +15,7 @@ import {
   useGetAllTestimonialsQuery,
   useGetSearchSuggestionsQuery,
   useGetTrendingSearchesQuery,
-} from "../lib/api";
+} from "@/redux/api";
 import { useAppSelector } from "../lib/store";
 import { useToast } from "./components/Toast";
 import { addGuestCartItem } from "../lib/cartUtils";

@@ -15,7 +15,7 @@ import {
   useStartCheckoutMutation,
   useGetLoyaltyWalletQuery,
   API_BASE_URL,
-} from "../../lib/api";
+} from "@/redux/api";
 import {
   CreditCard,
   Phone,

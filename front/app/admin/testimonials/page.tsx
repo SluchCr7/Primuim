@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useToast } from "../../components/Toast";
 import { useAppSelector } from "../../../lib/store";
-import { API_BASE_URL } from "../../../lib/api";
+import { API_BASE_URL } from "@/redux/api";
 
 interface TestimonialUser {
   _id: string;

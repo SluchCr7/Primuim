@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 /**
  * /app/compare/page.tsx
@@ -17,7 +17,7 @@ import {
   useAddToCartMutation,
   useToggleWishlistMutation,
   useGetWishlistQuery,
-} from "../../lib/api";
+} from "@/redux/api";
 import { useAppSelector } from "../../lib/store";
 import { useToast } from "../components/Toast";
 import { formatPrice as fmt } from "../../lib/currencyUtils";

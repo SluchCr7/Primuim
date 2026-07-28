@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -10,7 +10,7 @@ import {
   useLikeArticleMutation,
   useCommentArticleMutation,
   useDeleteCommentMutation
-} from "../../../lib/api";
+} from "@/redux/api";
 import { useToast } from "../../components/Toast";
 import { Calendar, User, ArrowLeft, Heart, Sparkles, Send, Trash2, Clock, Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";

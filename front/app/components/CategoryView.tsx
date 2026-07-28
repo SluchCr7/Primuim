@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -11,7 +11,7 @@ import {
   useAddToCartMutation,
   useGetWishlistQuery,
   useToggleWishlistMutation,
-} from "../../lib/api";
+} from "@/redux/api";
 import { CardSkeleton } from "./Skeletons";
 import { useAppSelector } from "../../lib/store";
 import { useToast } from "./Toast";

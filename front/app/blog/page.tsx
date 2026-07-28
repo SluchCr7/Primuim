@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
 import Breadcrumbs from "../components/Breadcrumbs";
-import { useGetArticlesQuery } from "../../lib/api";
+import { useGetArticlesQuery } from "@/redux/api";
 import { Sparkles, Calendar, User, ArrowRight, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import Image from "next/image";

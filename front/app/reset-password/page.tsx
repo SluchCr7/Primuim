@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useResetPasswordMutation } from "../../lib/api";
+import { useResetPasswordMutation } from "@/redux/api";
 import { useTranslation } from "react-i18next";
 import { KeyRound, ShieldCheck, ArrowRight, Loader2 } from "lucide-react";
 

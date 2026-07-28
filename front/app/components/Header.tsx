@@ -19,7 +19,7 @@ import {
   useMarkNotificationAsReadMutation,
   useMarkAllNotificationsAsReadMutation,
   useDeleteNotificationMutation,
-} from "../../lib/api";
+} from "@/redux/api";
 import { useTranslation } from "react-i18next";
 import "../i18next"; // تأكد من ضبط المسار الصحيح لملف i18next.ts الخاص بك
 import {

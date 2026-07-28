@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next"; // استدعاء الـ hook ا
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useForgotPasswordMutation } from "../../lib/api";
+import { useForgotPasswordMutation } from "@/redux/api";
 import { Mail, KeyRound, ArrowLeft } from "lucide-react";
 
 // تم ترك رسالة الخطأ هنا كنص إنجليزي ليكون مفتاحاً ثابتاً في الترجمة عند استخدام التحقق
