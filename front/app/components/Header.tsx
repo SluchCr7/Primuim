@@ -49,6 +49,7 @@ import { getGuestCartTotals } from "../../lib/cartUtils";
 import Flag from 'react-world-flags';
 import { languages } from "@/lib/data";
 import Image from "next/image";
+import { CategoryNavSkeleton, MobileCategoryNavSkeleton } from "./Skeletons";
 
 export const Header: React.FC = () => {
   const router = useRouter();
@@ -67,7 +68,7 @@ export const Header: React.FC = () => {
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
 
-  const { data: categoriesData } = useGetCategoriesQuery({ tree: true });
+  const { data: categoriesData, isLoading: categoriesLoading } = useGetCategoriesQuery({ tree: true });
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -720,7 +721,10 @@ export const Header: React.FC = () => {
               {t('Stores')}
             </LinkNext>
             
-            {categoriesData?.categories &&
+            {categoriesLoading ? (
+              <CategoryNavSkeleton count={5} />
+            ) : (
+              categoriesData?.categories &&
               categoriesData.categories.map((cat: any) => (
                 <div 
                   key={cat._id}
@@ -737,7 +741,8 @@ export const Header: React.FC = () => {
                     )}
                   </LinkNext>
                 </div>
-              ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -910,33 +915,37 @@ export const Header: React.FC = () => {
           {/* Shop Categories (Mobile) */}
           <div>
             <div className="text-xs font-black text-muted uppercase tracking-widest mb-3 px-1">{t('header.all_categories', 'Shop Collections')}</div>
-            <div className="grid grid-cols-2 gap-3">
-              <LinkNext 
-                href="/products" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="p-3.5 rounded-xl bg-card-bg/40 border border-card-border text-sm font-bold hover:border-gold transition-all"
-              >
-                {t('All Products')}
-              </LinkNext>
-              <LinkNext 
-                href="/stores" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="p-3.5 rounded-xl bg-card-bg/40 border border-card-border text-sm font-bold hover:border-gold transition-all"
-              >
-                {t('Stores')}
-              </LinkNext>
-              {categoriesData?.categories &&
-                categoriesData.categories.map((cat: any) => (
-                  <LinkNext
-                    key={cat._id}
-                    href={`/products?category=${cat._id}`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="p-3.5 rounded-xl bg-card-bg/40 border border-card-border text-sm font-semibold hover:border-gold transition-all truncate"
-                  >
-                    (t{cat.name})
-                  </LinkNext>
-                ))}
-            </div>
+            {categoriesLoading ? (
+              <MobileCategoryNavSkeleton count={4} />
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <LinkNext 
+                  href="/products" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-3.5 rounded-xl bg-card-bg/40 border border-card-border text-sm font-bold hover:border-gold transition-all"
+                >
+                  {t('All Products')}
+                </LinkNext>
+                <LinkNext 
+                  href="/stores" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-3.5 rounded-xl bg-card-bg/40 border border-card-border text-sm font-bold hover:border-gold transition-all"
+                >
+                  {t('Stores')}
+                </LinkNext>
+                {categoriesData?.categories &&
+                  categoriesData.categories.map((cat: any) => (
+                    <LinkNext
+                      key={cat._id}
+                      href={`/products?category=${cat._id}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="p-3.5 rounded-xl bg-card-bg/40 border border-card-border text-sm font-semibold hover:border-gold transition-all truncate"
+                    >
+                      {t(cat.name)}
+                    </LinkNext>
+                  ))}
+              </div>
+            )}
           </div>
 
         </div>

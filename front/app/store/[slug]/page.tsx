@@ -14,6 +14,7 @@ import {
 import { useAppSelector } from "../../../lib/store";
 import { useToast } from "../../components/Toast";
 import { addGuestCartItem } from "../../../lib/cartUtils";
+import { StoreProfileSkeleton } from "../../components/Skeletons";
 import { 
   Star, 
   MapPin, 
@@ -88,13 +89,7 @@ export default function PublicStorePage() {
   }, [seller, currentUser]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <div className="flex-grow flex items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
-        </div>
-      </div>
-    );
+    return <StoreProfileSkeleton />;
   }
 
   if (!seller) {

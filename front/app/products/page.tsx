@@ -10,6 +10,7 @@ import { formatPrice as formatCurrencyPrice } from "../../lib/currencyUtils";
 import { Star, Search, SlidersHorizontal, ChevronLeft, ChevronRight, ShoppingBag, Store, RotateCcw, GitCompare } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "../components/Toast";
+import { SidebarCategoriesSkeleton } from "../components/Skeletons";
 
 export default function ProductsPage() {
   const { t } = useTranslation(); // تفعيل دالة الترجمة
@@ -79,7 +80,7 @@ export default function ProductsPage() {
     facets: "true"
   });
 
-  const { data: categoriesData } = useGetCategoriesQuery(undefined);
+  const { data: categoriesData, isLoading: categoriesLoading } = useGetCategoriesQuery(undefined);
 
   const handleApplyFilters = () => {
     const params = new URLSearchParams();
@@ -194,7 +195,10 @@ export default function ProductsPage() {
                       {t("All Categories")}
                     </button>
                   </li>
-                  {categoriesData?.categories &&
+                  {categoriesLoading ? (
+                    <SidebarCategoriesSkeleton count={6} />
+                  ) : (
+                    categoriesData?.categories &&
                     categoriesData.categories.map((cat: any) => {
                       const isCatActive = category === cat._id;
                       return (
@@ -237,7 +241,8 @@ export default function ProductsPage() {
                           )}
                         </li>
                       );
-                    })}
+                    })
+                  )}
                 </ul>
               </div>
 

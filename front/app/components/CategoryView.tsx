@@ -12,7 +12,7 @@ import {
   useGetWishlistQuery,
   useToggleWishlistMutation,
 } from "@/redux/api";
-import { CardSkeleton } from "./Skeletons";
+import { CardSkeleton, CategoryPageSkeleton } from "./Skeletons";
 import { useAppSelector } from "../../lib/store";
 import { useToast } from "./Toast";
 import { addGuestCartItem } from "../../lib/cartUtils";
@@ -195,16 +195,7 @@ export default function CategoryView({ id, slug }: CategoryViewProps) {
   };
 
   if (categoryLoading) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <div className="flex-grow flex items-center justify-center py-20">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-10 w-10 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
-            <p className="text-xs text-muted tracking-widest uppercase font-semibold">{t("loading_catalog")}</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <CategoryPageSkeleton />;
   }
 
   if (categoryError || !currentCategory) {

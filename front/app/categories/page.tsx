@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { useGetCategoriesQuery } from "@/redux/api";
-import { CardSkeleton } from "../components/Skeletons";
+import { CategoryCardSkeleton } from "../components/Skeletons";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import Image from "next/image";
@@ -33,7 +33,7 @@ export default function CategoriesPage() {
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, idx) => (
-              <CardSkeleton key={idx} />
+              <CategoryCardSkeleton key={idx} />
             ))}
           </div>
         ) : categories.length === 0 ? (

@@ -8,6 +8,7 @@ import Breadcrumbs from "../components/Breadcrumbs";
 import { useGetWishlistQuery, useToggleWishlistMutation, useAddToCartMutation } from "@/redux/api";
 import { useAppSelector } from "../../lib/store";
 import { useToast } from "../components/Toast";
+import { CardSkeleton } from "../components/Skeletons";
 import { Star, Heart, Trash2, Share2, Clipboard, ArrowRight, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -73,10 +74,23 @@ export default function WishlistPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <div className="flex-grow flex items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
-        </div>
+      <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
+        <main className="flex-grow mx-auto max-w-7xl w-full px-6 py-12">
+          <div className="flex items-center gap-2 mb-8 animate-pulse">
+            <div className="h-3 w-20 bg-muted-light/60 dark:bg-muted-light/25 rounded-full" />
+            <div className="h-3 w-3 bg-muted-light/40 dark:bg-muted-light/15 rounded-full" />
+            <div className="h-3 w-24 bg-muted-light/60 dark:bg-muted-light/25 rounded-full" />
+          </div>
+          <div className="mb-12 border-b border-card-border/40 pb-8 animate-pulse space-y-3">
+            <div className="h-3 w-32 bg-muted-light/60 dark:bg-muted-light/25 rounded-full" />
+            <div className="h-9 w-64 bg-muted-light/80 dark:bg-muted-light/35 rounded-xl" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
+        </main>
       </div>
     );
   }

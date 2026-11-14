@@ -1,10 +1,10 @@
 const express = require("express");
-const path = require("path");
 const cors = require("cors");
 const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
-require("dotenv").config();
 const cookieParser = require("cookie-parser");
+require("dotenv").config();
+const path = require("path");
+const rateLimit = require("express-rate-limit");
 const connectDB = require("./config/db");
 const morgan = require("morgan");
 const logger = require("./config/logger");

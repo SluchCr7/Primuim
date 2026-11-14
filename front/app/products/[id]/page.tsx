@@ -15,6 +15,7 @@ import { useAppSelector } from "../../../lib/store";
 import { formatPrice as formatCurrencyPrice } from "../../../lib/currencyUtils";
 import { Star, Shield, HelpCircle, FileText, CheckCircle, Award } from "lucide-react";
 import { addGuestCartItem } from "../../../lib/cartUtils";
+import { DetailSkeleton } from "../../components/Skeletons";
 
 export default function ProductDetailsPage() {
   const { id } = useParams();
@@ -95,9 +96,7 @@ export default function ProductDetailsPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <div className="flex-grow flex items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
-        </div>
+        <DetailSkeleton />
       </div>
     );
   }

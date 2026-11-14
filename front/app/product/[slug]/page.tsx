@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { DetailSkeleton } from "../../components/Skeletons";
 
 export default function ProductDetailsBySlugPage() {
   const { slug } = useParams();
@@ -334,9 +335,7 @@ export default function ProductDetailsBySlugPage() {
   if (isProductLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <div className="flex-grow flex items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
-        </div>
+        <DetailSkeleton />
       </div>
     );
   }

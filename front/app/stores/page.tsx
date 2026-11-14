@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next"; // أو من الإطار الم
 import { useGetApprovedSellersQuery, useFollowSellerMutation, useGetMeQuery, useGetCategoriesQuery } from "@/redux/api";
 import { useAppSelector } from "../../lib/store";
 import { useToast } from "../components/Toast";
+import { CategoryPillSkeleton, SellerCardSkeleton } from "../components/Skeletons";
 import { 
   Star, 
   MapPin, 
@@ -40,7 +41,7 @@ export default function StoresDirectoryPage() {
 
   // Queries
   const { data: meData, refetch: refetchMe } = useGetMeQuery(undefined, { skip: !isAuthenticated });
-  const { data: categoriesData } = useGetCategoriesQuery(undefined);
+  const { data: categoriesData, isLoading: categoriesLoading } = useGetCategoriesQuery(undefined);
   const { data: sellersData, isLoading, isFetching, refetch: refetchSellers } = useGetApprovedSellersQuery({
     search: activeSearch,
     sort: sortOption,
@@ -158,42 +159,33 @@ export default function StoresDirectoryPage() {
           >
             {t("All Categories")}
           </button>
-          {categories.map((cat: any) => (
-            <button
-              key={cat._id}
-              onClick={() => {
-                setSelectedCategory(cat._id);
-                setCurrentPage(1);
-              }}
-              className={`px-5 py-2 rounded-full text-xs font-semibold tracking-wide border whitespace-nowrap transition-all duration-300 cursor-pointer ${
-                selectedCategory === cat._id
-                  ? "bg-gold text-white border-gold shadow-lg shadow-gold/10"
-                  : "border-card-border hover:border-gold/50 bg-card-bg text-muted hover:text-foreground"
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
+          {categoriesLoading ? (
+            <CategoryPillSkeleton count={5} />
+          ) : (
+            categories.map((cat: any) => (
+              <button
+                key={cat._id}
+                onClick={() => {
+                  setSelectedCategory(cat._id);
+                  setCurrentPage(1);
+                }}
+                className={`px-5 py-2 rounded-full text-xs font-semibold tracking-wide border whitespace-nowrap transition-all duration-300 cursor-pointer ${
+                  selectedCategory === cat._id
+                    ? "bg-gold text-white border-gold shadow-lg shadow-gold/10"
+                    : "border-card-border hover:border-gold/50 bg-card-bg text-muted hover:text-foreground"
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))
+          )}
         </div>
 
         {/* Loading State */}
         {isLoading || isFetching ? (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, idx) => (
-              <div key={idx} className="luxury-card h-[380px] rounded-3xl border border-card-border/50 bg-card-bg/30 p-6 flex flex-col justify-between animate-pulse">
-                <div className="space-y-4">
-                  <div className="h-28 bg-card-border/20 rounded-2xl" />
-                  <div className="flex gap-4 items-center">
-                    <div className="h-14 w-14 rounded-full bg-card-border/30 shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-card-border/30 rounded w-2/3" />
-                      <div className="h-3 bg-card-border/20 rounded w-1/2" />
-                    </div>
-                  </div>
-                  <div className="h-12 bg-card-border/10 rounded-xl" />
-                </div>
-                <div className="h-10 bg-card-border/20 rounded-full" />
-              </div>
+              <SellerCardSkeleton key={idx} />
             ))}
           </div>
         ) : (

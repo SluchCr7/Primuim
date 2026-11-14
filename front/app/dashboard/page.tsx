@@ -25,6 +25,7 @@ import {
   API_BASE_URL,
 } from "@/redux/api";
 import { useToast } from "../components/Toast";
+import { DashboardSkeleton } from "../components/Skeletons";
 import {
   User,
   ShoppingBag,
@@ -365,13 +366,7 @@ export default function DashboardPage() {
   };
 
   if (meLoading) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <div className="flex-grow flex items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent"></div>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   const user = meData?.user;

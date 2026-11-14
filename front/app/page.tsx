@@ -45,16 +45,20 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useTranslation } from "react-i18next";
-import {fallbackCategories,
-  fallbackProducts,
-  fallbackSellers,
-  fallbackArticles,
+import {
   trustPoints,
   journey,
   testimonials,
   faqs,
   heroSlides
 } from "../lib/data";
+import {
+  CardSkeleton,
+  CategoryCardSkeleton,
+  SellerCardSkeleton,
+  ArticleCardSkeleton,
+  TestimonialSkeleton
+} from "./components/Skeletons";
 import { StoreCategory, StoreProduct } from "@/lib/types";
 
 export default function Home() {
@@ -134,11 +138,11 @@ export default function Home() {
   // Fetch real data
   const { data: trendingData, isLoading: trendingLoading } = useGetProductsQuery({ limit: 4, sort: "sold" });
   const { data: newArrivalsData, isLoading: newArrivalsLoading } = useGetProductsQuery({ limit: 4, sort: "newest" });
-  const { data: categoriesData } = useGetCategoriesQuery(undefined);
+  const { data: categoriesData, isLoading: categoriesLoading } = useGetCategoriesQuery(undefined);
   const { data: sellersData, isLoading: sellersLoading } = useGetApprovedSellersQuery({ limit: 3, sort: "rating" });
   const { data: articlesData, isLoading: articlesLoading } = useGetArticlesQuery({ limit: 3 });
-  const { data: allProductsQueryData } = useGetProductsQuery({ limit: 20 });
-  const { data: testimonialsData } = useGetAllTestimonialsQuery(undefined);
+  const { data: allProductsQueryData, isLoading: allProductsLoading } = useGetProductsQuery({ limit: 20 });
+  const { data: testimonialsData, isLoading: testimonialsLoading } = useGetAllTestimonialsQuery(undefined);
   const [addToCart] = useAddToCartMutation();
   
   const { data: wishlistData, refetch: refetchWishlist } = useGetWishlistQuery(undefined, { skip: !isAuthenticated });
@@ -204,10 +208,7 @@ export default function Home() {
 
   // Filter out deals (comparePrice > price)
   const discountedProductsList = allProductsList.filter((p: any) => p.comparePrice && p.comparePrice > p.price).slice(0, 4);
-  const dealsList = (discountedProductsList.length > 0 ? discountedProductsList : fallbackProducts.map((p) => ({
-    ...p,
-    comparePrice: p.price * 1.25,
-  }))) as StoreProduct[];
+  const dealsList = discountedProductsList as StoreProduct[];
 
   // Filter out recently viewed products
   const recentlyViewedProducts = (allProductsList
@@ -215,9 +216,9 @@ export default function Home() {
     .sort((a: any, b: any) => recentlyViewedIds.indexOf(a._id) - recentlyViewedIds.indexOf(b._id))
     .slice(0, 4)) as StoreProduct[];
 
-  const trendingList = (trendingData?.products && trendingData.products.length > 0 ? trendingData.products.slice(0, 4) : fallbackProducts) as StoreProduct[];
-  const newArrivalsList = (newArrivalsData?.products && newArrivalsData.products.length > 0 ? newArrivalsData.products.slice(0, 4) : fallbackProducts) as StoreProduct[];
-  const categoriesList = (categoriesData?.categories && categoriesData.categories.length > 0 ? categoriesData.categories : fallbackCategories) as StoreCategory[];
+  const trendingList = (trendingData?.products || []) as StoreProduct[];
+  const newArrivalsList = (newArrivalsData?.products || []) as StoreProduct[];
+  const categoriesList = (categoriesData?.categories || []) as StoreCategory[];
   const sellersList = sellersData?.sellers || [];
   const articlesList = articlesData?.data || [];
 
@@ -518,26 +519,36 @@ export default function Home() {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {categoriesList.map((category) => (
-              <Link key={category._id} href={category.slug ? `/category/${category.slug}` : `/categories/${category._id}`} className="group relative min-h-[320px] overflow-hidden rounded-[28px] border border-card-border bg-card-bg shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
-                <img
-                  src={category.image || "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=900&auto=format&fit=crop"}
-                  alt={category.name}
-                  className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
-                <div className="absolute inset-x-0 bottom-0 p-6 text-white">
-                  <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/75 backdrop-blur-md">
-                    <Camera className="h-3.5 w-3.5 text-gold" /> {t("Featured collection")}
+            {categoriesLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <CategoryCardSkeleton key={i} />
+              ))
+            ) : categoriesList.length === 0 ? (
+              <div className="col-span-full text-center py-12 text-sm text-muted">
+                {t("No categories found.")}
+              </div>
+            ) : (
+              categoriesList.map((category) => (
+                <Link key={category._id} href={category.slug ? `/category/${category.slug}` : `/categories/${category._id}`} className="group relative min-h-[320px] overflow-hidden rounded-[28px] border border-card-border bg-card-bg shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
+                  <img
+                    src={category.image || "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=900&auto=format&fit=crop"}
+                    alt={category.name}
+                    className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
+                  <div className="absolute inset-x-0 bottom-0 p-6 text-white">
+                    <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/75 backdrop-blur-md">
+                      <Camera className="h-3.5 w-3.5 text-gold" /> {t("Featured collection")}
+                    </div>
+                    <h3 className="font-serif text-xl font-semibold">{t(category.name)}</h3>
+                    <p className="mt-2 line-clamp-1 text-xs leading-6 text-white/75">{t(category.description || t("A curated edit built to feel premium, tactile, and easy to browse."))}</p>
+                    <div className="mt-5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-gold transition-colors group-hover:text-gold-hover">
+                      {t("Open collection")} <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                    </div>
                   </div>
-                  <h3 className="font-serif text-xl font-semibold">{t(category.name)}</h3>
-                  <p className="mt-2 line-clamp-1 text-xs leading-6 text-white/75">{t(category.description || t("A curated edit built to feel premium, tactile, and easy to browse."))}</p>
-                  <div className="mt-5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-gold transition-colors group-hover:text-gold-hover">
-                    {t("Open collection")} <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))
+            )}
           </div>
         </section>
 
@@ -607,7 +618,16 @@ export default function Home() {
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-            {dealsList.map((product) => {
+            {allProductsLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <CardSkeleton key={i} />
+              ))
+            ) : dealsList.length === 0 ? (
+              <div className="col-span-full text-center py-12 text-sm text-muted">
+                {t("No flash deals currently available. Check back soon!")}
+              </div>
+            ) : (
+              dealsList.map((product) => {
               const discountPercent = product.comparePrice ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100) : 25;
               const stockPercentage = product.stock ? Math.min(Math.max((product.stock / 15) * 100, 10), 100) : 20;
               return (
@@ -694,7 +714,7 @@ export default function Home() {
                   </div>
                 </article>
               );
-            })}
+            }))}
           </div>
         </section>
 
@@ -716,15 +736,12 @@ export default function Home() {
           {trendingLoading ? (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
               {Array.from({ length: 4 }).map((_, idx) => (
-                <div key={idx} className="luxury-card h-[420px] animate-pulse overflow-hidden">
-                  <div className="aspect-square bg-muted-light" />
-                  <div className="flex flex-col gap-3 p-4">
-                    <div className="h-3 w-1/3 rounded bg-muted-light" />
-                    <div className="h-5 w-3/4 rounded bg-muted-light" />
-                    <div className="h-4 w-1/2 rounded bg-muted-light" />
-                  </div>
-                </div>
+                <CardSkeleton key={idx} />
               ))}
+            </div>
+          ) : trendingList.length === 0 ? (
+            <div className="text-center py-12 text-sm text-muted">
+              {t("No trending products available right now.")}
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
@@ -826,15 +843,12 @@ export default function Home() {
           {newArrivalsLoading ? (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
               {Array.from({ length: 4 }).map((_, idx) => (
-                <div key={idx} className="luxury-card h-[420px] animate-pulse overflow-hidden">
-                  <div className="aspect-square bg-muted-light" />
-                  <div className="flex flex-col gap-3 p-4">
-                    <div className="h-3 w-1/3 rounded bg-muted-light" />
-                    <div className="h-5 w-3/4 rounded bg-muted-light" />
-                    <div className="h-4 w-1/2 rounded bg-muted-light" />
-                  </div>
-                </div>
+                <CardSkeleton key={idx} />
               ))}
+            </div>
+          ) : newArrivalsList.length === 0 ? (
+            <div className="text-center py-12 text-sm text-muted">
+              {t("No new arrivals available right now.")}
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
@@ -1025,12 +1039,16 @@ export default function Home() {
           {sellersLoading ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 3 }).map((_, idx) => (
-                <div key={idx} className="luxury-card h-[280px] animate-pulse" />
+                <SellerCardSkeleton key={idx} />
               ))}
+            </div>
+          ) : sellersList.length === 0 ? (
+            <div className="text-center py-12 text-sm text-muted">
+              {t("No verified sellers currently listed.")}
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {(sellersList.length > 0 ? sellersList : fallbackSellers).map((seller: any) => (
+              {sellersList.map((seller: any) => (
                 <div key={seller.id || seller.storeSlug} className="group overflow-hidden rounded-[24px] border border-card-border bg-card-bg shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl p-6 flex flex-col justify-between h-[280px]">
                   <div>
                     <div className="flex items-start gap-4">
@@ -1092,12 +1110,16 @@ export default function Home() {
           {articlesLoading ? (
             <div className="grid gap-6 md:grid-cols-3">
               {Array.from({ length: 3 }).map((_, idx) => (
-                <div key={idx} className="luxury-card h-[360px] animate-pulse" />
+                <ArticleCardSkeleton key={idx} />
               ))}
+            </div>
+          ) : articlesList.length === 0 ? (
+            <div className="text-center py-12 text-sm text-muted">
+              {t("No articles published yet.")}
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-3">
-              {(articlesList.length > 0 ? articlesList : fallbackArticles).map((article: any) => (
+              {articlesList.map((article: any) => (
                 <article key={article._id} className="group overflow-hidden rounded-[24px] border border-card-border bg-card-bg shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl flex flex-col h-full">
                   <div className="relative aspect-[16/10] overflow-hidden bg-muted-light">
                     <Image
@@ -1185,7 +1207,12 @@ export default function Home() {
               <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold">{t("Client voice")}</p>
               <h2 className="mt-2 font-serif text-4xl font-semibold">{t("Proof the experience feels premium in the real world.")}</h2>
               <div className="mt-8 grid gap-5">
-                {displayTestimonials.map((item: any) => (
+                {testimonialsLoading ? (
+                  Array.from({ length: 2 }).map((_, idx) => (
+                    <TestimonialSkeleton key={idx} />
+                  ))
+                ) : (
+                  displayTestimonials.map((item: any) => (
                   <figure key={item.name} className="luxury-card p-6 shadow-sm">
                     <QuoteMark />
                     <blockquote className="mt-4 text-base leading-8 text-foreground">{t(item.quote)}</blockquote>
@@ -1199,7 +1226,7 @@ export default function Home() {
                       </div>
                     </figcaption>
                   </figure>
-                ))}
+                )))}
               </div>
             </div>
 
