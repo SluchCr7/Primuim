@@ -10,17 +10,21 @@ import Footer from "./components/Footer";
 import LanguageWrapper from "./components/LanguageWrapper";
 
 export const metadata: Metadata = {
-  title: "Shop Premium | Bespoke Luxury E-Commerce Portal",
-  description: "Experience a state-of-the-art premium and luxury e-commerce platform built for high-performance browsing, personalized recommendations, and secure checkout workflows.",
+  title: "LUMIXA | Curated Style & Design",
+  description: "Discover thoughtfully curated fashion, accessories, and design from trusted independent stores on LUMIXA.",
   metadataBase: new URL("http://localhost:3000"),
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+  },
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Shop Premium | Bespoke Luxury E-Commerce Portal",
-    description: "Shop premium products with high security, real-time analytics, and instant checkouts.",
+    title: "LUMIXA | Curated Style & Design",
+    description: "Shop considered collections from trusted independent stores.",
     url: "/",
-    siteName: "Shop Premium",
+    siteName: "LUMIXA",
     locale: "en_US",
     type: "website",
   },

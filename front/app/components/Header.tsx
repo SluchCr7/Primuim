@@ -73,11 +73,13 @@ export const Header: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null);
   const [guestCartCount, setGuestCartCount] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Notifications state
   const socketConnected = useAppSelector((state) => state.auth.socketConnected);
@@ -131,7 +133,11 @@ export const Header: React.FC = () => {
   const currencyDropdownRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
 
-  const { data: suggestionsData } = useGetSearchSuggestionsQuery(debouncedQuery, {
+  const {
+    currentData: suggestionsData,
+    isFetching: suggestionsLoading,
+    isError: suggestionsError,
+  } = useGetSearchSuggestionsQuery(debouncedQuery, {
     skip: debouncedQuery.trim().length < 2,
   });
 
@@ -191,9 +197,14 @@ export const Header: React.FC = () => {
     e.preventDefault();
     if (searchQuery.trim()) {
       setShowSuggestions(false);
+      setMobileSearchOpen(false);
       router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
+
+  useEffect(() => {
+    if (mobileSearchOpen) searchInputRef.current?.focus();
+  }, [mobileSearchOpen]);
 
   const handleLogout = async () => {
     try {
@@ -232,10 +243,24 @@ export const Header: React.FC = () => {
         </LinkNext>
 
         {/* SEARCH BAR (Desktop) */}
-        <form onSubmit={handleSearchSubmit} className="relative hidden md:block w-full max-w-md lg:max-w-xl mx-4 lg:mx-8">
+        <form
+          onSubmit={handleSearchSubmit}
+          className={`${
+            mobileSearchOpen
+              ? "absolute inset-x-0 top-full z-50 border-b border-card-border bg-background px-4 py-3 shadow-lg md:relative md:inset-auto md:border-0 md:bg-transparent md:px-0 md:py-0 md:shadow-none"
+              : "hidden md:relative md:block"
+          } w-full max-w-md mx-0 md:mx-4 lg:mx-8 lg:max-w-xl`}
+        >
           <div className="relative flex items-center">
             <input
+              ref={searchInputRef}
               type="text"
+              role="combobox"
+              aria-label={t("Search products")}
+              aria-autocomplete="list"
+              aria-expanded={showSuggestions}
+              aria-controls="header-search-suggestions"
+              autoComplete="off"
               placeholder={t('Search catalog, luxury designers...')}
               value={searchQuery}
               onChange={(e) => {
@@ -243,8 +268,25 @@ export const Header: React.FC = () => {
                 setShowSuggestions(true);
               }}
               onFocus={() => setShowSuggestions(true)}
-              className="w-full rounded-full border border-card-border/80 bg-card-bg/30 py-2.5 pl-6 pr-12 text-sm text-foreground outline-none focus:border-gold focus:ring-4 focus:ring-gold/5 transition-all duration-300"
+              onKeyDown={(event) => {
+                if (event.key === "Escape") setShowSuggestions(false);
+              }}
+              className="w-full rounded-full border border-card-border/80 bg-card-bg/30 py-2.5 pl-6 pr-20 text-sm text-foreground outline-none focus:border-gold focus:ring-4 focus:ring-gold/5 transition-all duration-300"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setShowSuggestions(true);
+                  searchInputRef.current?.focus();
+                }}
+                className="absolute right-10 text-muted hover:text-foreground transition-colors"
+                aria-label={t("Clear search")}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
             <button type="submit" className="absolute right-4 text-muted hover:text-gold transition-colors duration-200" aria-label={t('header.search_aria', 'Submit search')}>
               <Search className="h-4 w-4" />
             </button>
@@ -254,6 +296,9 @@ export const Header: React.FC = () => {
           {showSuggestions && (
             <div
               ref={suggestionsRef}
+              id="header-search-suggestions"
+              role="region"
+              aria-label={t("Search suggestions")}
               className="absolute left-0 mt-2 w-full rounded-2xl border border-card-border bg-card-bg/95 p-4 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in slide-in-from-top-1 duration-200"
             >
               {!searchQuery.trim() && trendingSearchesData?.trending && trendingSearchesData.trending.length > 0 && (
@@ -269,6 +314,7 @@ export const Header: React.FC = () => {
                         onClick={() => {
                           setSearchQuery(t.term);
                           setShowSuggestions(false);
+                          setMobileSearchOpen(false);
                           router.push(`/products?search=${encodeURIComponent(t.term)}`);
                         }}
                         className="rounded-full bg-foreground/5 hover:bg-gold/10 hover:text-gold border border-card-border/50 px-3.5 py-1.5 text-xs font-semibold text-foreground transition-all duration-200 cursor-pointer"
@@ -280,7 +326,9 @@ export const Header: React.FC = () => {
                 </div>
               )}
 
-              {searchQuery.trim().length >= 2 && suggestionsData?.suggestions ? (
+              {searchQuery.trim().length >= 2 &&
+              debouncedQuery.trim() === searchQuery.trim() &&
+              suggestionsData?.suggestions ? (
                 (() => {
                   const suggestions = suggestionsData.suggestions || { products: [], keywords: [] };
                   const hasProducts = Array.isArray(suggestions.products) && suggestions.products.length > 0;
@@ -309,6 +357,7 @@ export const Header: React.FC = () => {
                                   onClick={() => {
                                     setSearchQuery(item.title);
                                     setShowSuggestions(false);
+                                    setMobileSearchOpen(false);
                                     router.push(`/products?search=${encodeURIComponent(item.title)}`);
                                   }}
                                   className="w-full text-left rounded-xl px-3 py-2 text-xs font-medium text-foreground hover:bg-foreground/5 hover:text-gold transition-all duration-150 flex items-center gap-2"
@@ -362,9 +411,14 @@ export const Header: React.FC = () => {
                     </div>
                   );
                 })()
-              ) : searchQuery.trim().length >= 2 ? (
+              ) : searchQuery.trim().length >= 2 &&
+              (debouncedQuery.trim() !== searchQuery.trim() || suggestionsLoading) ? (
                 <div className="text-center py-6 text-xs text-muted">
-                  Searching suggestions...
+                  {t("Searching suggestions...")}
+                </div>
+              ) : searchQuery.trim().length >= 2 && suggestionsError ? (
+                <div className="text-center py-6 text-xs text-muted" role="status">
+                  {t("Suggestions are temporarily unavailable. Press Enter to search.")}
                 </div>
               ) : null}
             </div>
@@ -374,13 +428,18 @@ export const Header: React.FC = () => {
         {/* CONTROLS & ACTIONS */}
         <div className="flex items-center gap-1 sm:gap-2.5">
           
-          {/* MOBILE SEARCH REDIRECT */}
-          <button 
-            onClick={() => router.push('/products')} 
+          {/* MOBILE SEARCH */}
+          <button
+            type="button"
+            onClick={() => {
+              setMobileSearchOpen((open) => !open);
+              setShowSuggestions(true);
+            }}
             className="md:hidden rounded-full p-2.5 text-foreground hover:bg-foreground/5 transition-all"
-            aria-label="Search"
+            aria-label={mobileSearchOpen ? t("Close search") : t("Open search")}
+            aria-expanded={mobileSearchOpen}
           >
-            <Search className="h-5 w-5" />
+            {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
           </button>
 
           {/* CUSTOM LANGUAGE SELECTOR */}
@@ -714,38 +773,48 @@ export const Header: React.FC = () => {
       >
         <div className="mx-auto flex max-w-9xl w-full items-center justify-between px-8 py-0.5 text-sm">
           <div className="flex items-center gap-6 h-12">
-            <LinkNext href="/products" className="text-foreground text-xs hover:text-gold transition-colors font-bold relative h-full flex items-center">
-              {t('All Collections')}
-            </LinkNext>
-            <LinkNext href="/stores" className="text-foreground text-xs hover:text-gold transition-colors font-bold relative h-full flex items-center">
-              {t('Stores')}
-            </LinkNext>
-            
             {categoriesLoading ? (
               <CategoryNavSkeleton count={5} />
             ) : (
-              categoriesData?.categories &&
-              categoriesData.categories.map((cat: any) => (
-                <div 
-                  key={cat._id}
-                  className="h-full flex items-center"
-                  onMouseEnter={() => setActiveMegaMenu(cat._id)}
+              <>
+                <LinkNext
+                  href="/products"
+                  className="text-foreground text-xs hover:text-gold transition-colors font-bold relative h-full flex items-center"
                 >
-                  <LinkNext
-                    href={`/products?category=${cat._id}`}
-                    className={`text-foreground/90 text-xs hover:text-gold transition-colors h-full flex items-center font-semibold relative ${activeMegaMenu === cat._id ? 'text-gold' : ''}`}
+                  {t('All Collections')}
+                </LinkNext>
+
+                <LinkNext
+                  href="/stores"
+                  className="text-foreground text-xs hover:text-gold transition-colors font-bold relative h-full flex items-center"
+                >
+                  {t('Stores')}
+                </LinkNext>
+
+                {categoriesData?.categories?.map((cat: any) => (
+                  <div
+                    key={cat._id}
+                    className="h-full flex items-center"
+                    onMouseEnter={() => setActiveMegaMenu(cat._id)}
                   >
-                    {t(cat.name)}
-                    {activeMegaMenu === cat._id && (
-                      <span className="absolute bottom-0 left-0 w-full h-[3px] bg-gold rounded-full animate-in fade-in duration-200"></span>
-                    )}
-                  </LinkNext>
-                </div>
-              ))
+                    <LinkNext
+                      href={`/products?category=${cat._id}`}
+                      className={`text-foreground/90 text-xs hover:text-gold transition-colors h-full flex items-center font-semibold relative ${
+                        activeMegaMenu === cat._id ? 'text-gold' : ''
+                      }`}
+                    >
+                      {t(cat.name)}
+
+                      {activeMegaMenu === cat._id && (
+                        <span className="absolute bottom-0 left-0 w-full h-[3px] bg-gold rounded-full animate-in fade-in duration-200" />
+                      )}
+                    </LinkNext>
+                  </div>
+                ))}
+              </>
             )}
           </div>
         </div>
-
         {activeMegaMenu && categoriesData?.categories && (
           (() => {
             const currentCat = categoriesData.categories.find((c: any) => c._id === activeMegaMenu);

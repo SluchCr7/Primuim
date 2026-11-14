@@ -50,7 +50,7 @@ export default function PublicStorePage() {
   const [productSort, setProductSort] = useState<"newest" | "price-asc" | "price-desc" | "rating">("newest");
 
   // Fetch store details
-  const { data, isLoading, refetch } = useGetPublicStoreBySlugQuery(slug as string);
+  const { data, isLoading, isError, error, refetch } = useGetPublicStoreBySlugQuery(slug as string);
   const [followSeller, { isLoading: isFollowingSeller }] = useFollowSellerMutation();
   const [addToCart] = useAddToCartMutation();
 
@@ -90,6 +90,30 @@ export default function PublicStorePage() {
 
   if (isLoading) {
     return <StoreProfileSkeleton />;
+  }
+
+  const isNotFoundError =
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    error.status === 404;
+
+  if (isError && !isNotFoundError) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background text-foreground">
+        <div className="flex-grow flex flex-col items-center justify-center py-20 px-6 text-center">
+          <h2 className="font-serif text-3xl font-bold mb-4">{t("Unable to load store")}</h2>
+          <p className="text-muted text-sm max-w-sm mb-6">{t("Please try again in a moment.")}</p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex h-12 items-center justify-center rounded-full bg-foreground px-8 text-xs font-semibold uppercase tracking-widest text-background hover:bg-gold hover:text-white transition-all"
+          >
+            {t("Try Again")}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!seller) {
@@ -167,17 +191,20 @@ export default function PublicStorePage() {
 
   // Search filter
   if (productSearch.trim()) {
-    const query = productSearch.toLowerCase();
+    const query = productSearch.trim().toLocaleLowerCase();
     processedProducts = processedProducts.filter(
-      (p: any) => p.title?.toLowerCase().includes(query) || p.description?.toLowerCase().includes(query)
+      (p: any) =>
+        [p.title, p.description, p.brand, p.category?.name, ...(p.tags || [])]
+          .filter(Boolean)
+          .some((value: string) => value.toLocaleLowerCase().includes(query))
     );
   }
 
   // Sorting
   processedProducts.sort((a: any, b: any) => {
-    if (productSort === "price-asc") return a.price - b.price;
-    if (productSort === "price-desc") return b.price - a.price;
-    if (productSort === "rating") return (b.ratingAverage || 0) - (a.ratingAverage || 0);
+    if (productSort === "price-asc") return Number(a.price || 0) - Number(b.price || 0);
+    if (productSort === "price-desc") return Number(b.price || 0) - Number(a.price || 0);
+    if (productSort === "rating") return Number(b.ratingAverage || 0) - Number(a.ratingAverage || 0);
     return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
   });
 
@@ -185,7 +212,7 @@ export default function PublicStorePage() {
   const totalReviews = reviews.length;
   const averageRating = totalReviews > 0
     ? (reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / totalReviews).toFixed(1)
-    : seller.storeRating.toFixed(1);
+    : Number(seller.storeRating || 0).toFixed(1);
 
   // Star breakdown
   const starCounts = [0, 0, 0, 0, 0];
@@ -428,6 +455,7 @@ export default function PublicStorePage() {
                           placeholder={t("Search in store catalog...")}
                           value={productSearch}
                           onChange={(e) => setProductSearch(e.target.value)}
+                          aria-label={t("Search in store catalog...")}
                           className="w-full rounded-full border border-card-border/80 bg-card-bg/30 py-2 pl-4 pr-10 text-xs text-foreground outline-none focus:border-gold transition-all"
                         />
                         <Search className="absolute right-3.5 top-2.5 h-3.5 w-3.5 text-muted" />
@@ -435,7 +463,8 @@ export default function PublicStorePage() {
 
                       <select
                         value={productSort}
-                        onChange={(e) => setProductSort(e.target.value as any)}
+                        onChange={(e) => setProductSort(e.target.value as typeof productSort)}
+                        aria-label={t("Sort store products")}
                         className="bg-card-bg/30 border border-card-border rounded-full px-4 py-2 text-xs font-semibold outline-none focus:border-gold transition-colors w-full sm:w-auto cursor-pointer"
                       >
                         <option value="newest">{t("Newest Arrivals")}</option>
@@ -446,11 +475,25 @@ export default function PublicStorePage() {
                     </div>
                   </div>
 
+                  <p className="mb-5 text-xs text-muted" aria-live="polite">
+                    {t("Showing {{count}} products", { count: processedProducts.length })}
+                  </p>
+
                   {processedProducts.length === 0 ? (
                     <div className="text-center py-20 bg-card-bg/10 rounded-2xl border border-dashed border-card-border max-w-sm mx-auto">
                       <ShoppingBag className="h-8 w-8 text-gold/30 mx-auto mb-3" />
                       <h5 className="font-bold text-sm">{t("No Matching Items")}</h5>
                       <p className="text-xs text-muted mt-1">{t("Try modifying your filter categories or search query.")}</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProductSearch("");
+                          setSelectedCategory("All");
+                        }}
+                        className="mt-4 text-xs font-semibold text-gold hover:underline"
+                      >
+                        {t("Clear store filters")}
+                      </button>
                     </div>
                   ) : (
                     /* Grid layout for catalog */

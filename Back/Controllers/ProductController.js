@@ -51,6 +51,10 @@ const getProducts = asyncHandler(async (req, res) => {
     filter.category = { $in: catIds };
   }
 
+  if (req.query.subcategory) {
+    filter.subcategory = req.query.subcategory;
+  }
+
   // Price filter
   if (req.query.minPrice || req.query.maxPrice) {
     filter.price = {};

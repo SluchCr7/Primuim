@@ -187,6 +187,34 @@ test("GET /api/products/latest returns latest products", async () => {
   assert.ok(hasRegularProduct);
 });
 
+test("GET /api/products applies the subcategory filter", async () => {
+  const subcategoryId = "60c72b2f9b1d8e25d8888880";
+  const originalFind = Product.find;
+  const originalCountDocuments = Product.countDocuments;
+  let appliedFilter;
+
+  Product.countDocuments = async (filter) => {
+    appliedFilter = filter;
+    return 0;
+  };
+  Product.find = () => ({
+    populate() { return this; },
+    sort() { return this; },
+    skip() { return this; },
+    limit() { return Promise.resolve([]); }
+  });
+
+  try {
+    const response = await request(app).get(`/api/products?subcategory=${subcategoryId}`);
+
+    assert.equal(response.status, 200);
+    assert.equal(appliedFilter.subcategory, subcategoryId);
+  } finally {
+    Product.find = originalFind;
+    Product.countDocuments = originalCountDocuments;
+  }
+});
+
 test("PATCH /api/sellers/orders/:id marks order as delivered, increments salesCount, and checks isBestSeller threshold", async () => {
   mockProduct.salesCount = 48;
   mockProduct.isBestSeller = false;
