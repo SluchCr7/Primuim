@@ -21,6 +21,7 @@ import { formatPrice } from "@/lib/currencyUtils";
 import { StoreCategory, StoreProduct } from "@/lib/types";
 import { useToast } from "./Toast";
 import HomeTestimonials from "./HomeTestimonials";
+import HomeArticles from "./HomeArticles";
 
 type HomeProduct = StoreProduct & {
   variants?: Array<{ sku?: string }>;
@@ -445,6 +446,8 @@ export default function PremiumHomePage() {
           )}
         </div>
       </section>
+
+      <HomeArticles />
 
       <HomeTestimonials />
 

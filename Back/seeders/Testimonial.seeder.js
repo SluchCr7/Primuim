@@ -22,9 +22,17 @@ const testimonialsData = [
     body: "I had a pleasant experience using the platform. The product browsing experience is smooth, and the overall interface is easy to understand.",
   },
   {
-    User: "6a3bff15059bf3b8207cefea",
+    User: "6a3138180ee6bb60a6ffb3de",
     body: "The platform provides a clean shopping experience with useful product information. I would like to see more products and features added in the future.",
-  },
+    },
+    {
+        User: "6a2eec165d71ba4d11d9dafc",
+        body: "I am impressed with the overall shopping experience. The website is well organized, and finding the products I need is quick and straightforward.",
+    },
+    {
+        User: "6a3138180ee6bb60a6ffb3de",
+        body: "The platform offers a convenient way to explore different products. I appreciate the clear product details and the smooth browsing experience.",
+    },
 ];
 
 const seedTestimonials = async () => {
