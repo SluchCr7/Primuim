@@ -32,6 +32,7 @@ During a deep system audit and quality engineering phase, the following enhancem
    - NoSQL injection prevention via inputs sanitization.
    - Winston logger piping HTTP requests to local log cabinets.
    - JWT Access + HttpOnly Cookie Refresh token rotation with reuse detection (revokes all active sessions if an old refresh token is reused).
+5. **Multi-Store Fulfillment**: A mixed-store checkout creates one linked order per seller. Shipping, tax, and redeemed loyalty points are allocated proportionally, with rounding remainder assigned deterministically so the child-order totals equal the checkout total. The order API returns both `orders` and the first-order `order` field for compatibility.
 
 ---
 
@@ -122,6 +123,22 @@ To spin up the entire stack (Database + Backend + Frontend) in containerized env
 ```bash
 docker-compose up --build
 ```
+
+### 5. Existing MongoDB inventory reservations
+
+The backend releases expired reservations transactionally; MongoDB TTL deletion must not remove reservation records first. Before deploying this change to an existing database, reconcile `WarehouseInventory.reservedStock` against its reservation records, then manually replace the old `stockreservations` indexes:
+
+```javascript
+db.stockreservations.dropIndex("expiresAt_1")
+db.stockreservations.dropIndex("cartId_1_sku_1")
+db.stockreservations.createIndex({ expiresAt: 1 })
+db.stockreservations.createIndex(
+  { cartId: 1, sku: 1, warehouse: 1 },
+  { unique: true }
+)
+```
+
+Do not run this as an automatic startup migration. Existing TTL indexes may already have deleted expired reservation records without releasing their reserved stock, so reconcile inventory before changing indexes. New installations create the non-TTL expiry index and the compound reservation key from the model.
 
 ---
 

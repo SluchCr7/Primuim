@@ -66,6 +66,11 @@ const UserSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
+    tokenVersion: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
     phone: {
         type: String,
         default: ""
@@ -105,6 +110,16 @@ const UserSchema = new mongoose.Schema({
     },
     country: {
         type: String,
+        default: ""
+    },
+    storePhone: {
+        type: String,
+        trim: true,
+        default: ""
+    },
+    storeAddress: {
+        type: String,
+        trim: true,
         default: ""
     },
     sellerStatus: {
@@ -256,28 +271,52 @@ UserSchema.pre("save", async function () {
 
 const User = mongoose.model('User', UserSchema);
 
+const strongPasswordSchema = Joi.string()
+    .min(8)
+    .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\\$%\\^&\\*])'))
+    .message('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character');
 
 const validateRegisterUser = (user) => {
     const schema = Joi.object({
         username: Joi.string().min(3).max(30).required(),
         email: Joi.string().email().lowercase().required(),
-        // Enforce strong password: min 8 chars, 1 upper, 1 lower, 1 number, 1 special char
-        password: Joi.string()
-            .min(8)
-            .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\\$%\\^&\\*])'))
-            .message('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character')
-            .required(),
+        password: strongPasswordSchema.required(),
         referredByCode: Joi.string().uppercase().length(8).optional().allow("", null),
         role: Joi.string().valid("customer", "seller").optional(),
         
-        // Seller specific fields
-        brandName: Joi.string().when('role', { is: 'seller', then: Joi.string().required(), otherwise: Joi.string().optional() }),
-        storeName: Joi.string().when('role', { is: 'seller', then: Joi.string().required(), otherwise: Joi.string().optional() }),
-        country: Joi.string().when('role', { is: 'seller', then: Joi.string().required(), otherwise: Joi.string().optional() }),
-        storeDescription: Joi.string().optional().allow(""),
+        // Seller-specific fields
+        brandName: Joi.when('role', {
+            is: 'seller',
+            then: Joi.string().trim().min(2).max(100).required(),
+            otherwise: Joi.string().optional()
+        }),
+        storeName: Joi.when('role', {
+            is: 'seller',
+            then: Joi.string().trim().min(3).max(100).required(),
+            otherwise: Joi.string().optional()
+        }),
+        country: Joi.when('role', {
+            is: 'seller',
+            then: Joi.string().trim().min(2).max(100).required(),
+            otherwise: Joi.string().optional()
+        }),
+        storeDescription: Joi.when('role', {
+            is: 'seller',
+            then: Joi.string().trim().min(1).max(1000).required(),
+            otherwise: Joi.string().optional().allow("")
+        }),
+        storeAddress: Joi.when('role', {
+            is: 'seller',
+            then: Joi.string().trim().min(5).max(300).required(),
+            otherwise: Joi.string().optional()
+        }),
         storeLogo: Joi.string().uri().optional().allow(""),
         storeCover: Joi.string().uri().optional().allow(""),
-        phone: Joi.string().optional().allow("")
+        phone: Joi.when('role', {
+            is: 'seller',
+            then: Joi.string().trim().min(7).max(30).required(),
+            otherwise: Joi.string().optional().allow("")
+        })
     });
     return schema.validate(user);
 };
@@ -289,6 +328,13 @@ const validateLoginUser = (user) => {
     });
     return schema.validate(user);
 };
+
+const validateResetPassword = (data) => Joi.object({
+    token: Joi.string().hex().length(64).required(),
+    newPassword: strongPasswordSchema.required()
+}).validate(data);
+
+const validateStrongPassword = (password) => strongPasswordSchema.validate(password);
 
 const validateUpdateUser = (user) => {
     const schema = Joi.object({
@@ -321,6 +367,8 @@ const validateUpdateStoreProfile = (store) => {
         storeLogo: Joi.string().uri().allow("").optional(),
         storeCover: Joi.string().uri().allow("").optional(),
         country: Joi.string().trim().max(100),
+        storePhone: Joi.string().trim().min(7).max(30).allow(""),
+        storeAddress: Joi.string().trim().min(5).max(300).allow(""),
         responseTime: Joi.string().trim().max(100),
     });
     return schema.validate(store);
@@ -330,6 +378,8 @@ module.exports = {
     User,
     validateRegisterUser,
     validateLoginUser,
+    validateResetPassword,
+    validateStrongPassword,
     validateUpdateUser,
     validateUpdateStoreProfile
 };

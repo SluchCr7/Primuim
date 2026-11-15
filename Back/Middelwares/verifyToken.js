@@ -4,14 +4,11 @@ const { User } = require("../models/User");
 // Verify token middleware
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader) {
+  if (!authHeader || !/^Bearer\s+\S+$/i.test(authHeader)) {
     return res.status(401).json({ message: "No token provided" });
   }
 
-  const token = authHeader.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ message: "Invalid token" });
-  }
+  const token = authHeader.split(/\s+/)[1];
 
   let decoded;
   try {
@@ -30,6 +27,9 @@ const verifyToken = async (req, res, next) => {
   if (!user.isVerify) {
     return res.status(403).json({ message: "Please verify your email before signing in." });
   }
+  if ((decoded.tokenVersion || 0) !== (user.tokenVersion || 0)) {
+    return res.status(401).json({ message: "Session expired. Please sign in again." });
+  }
 
   req.user = {
     ...decoded,
@@ -42,9 +42,9 @@ const verifyToken = async (req, res, next) => {
 
 // Verify admin
 const verifyAdmin = (req, res, next) => {
-  verifyToken(req, res, () => {
+  return verifyToken(req, res, () => {
     if (req.user.role === "admin" || req.user.role === "superadmin") {
-      next();
+      return next();
     } else {
       return res.status(403).json({ message: "You are not an administrator!" });
     }
@@ -53,9 +53,9 @@ const verifyAdmin = (req, res, next) => {
 
 // Verify same user
 const verifyUser = (req, res, next) => {
-  verifyToken(req, res, () => {
+  return verifyToken(req, res, () => {
     if (req.user.id === req.params.id) {
-      next();
+      return next();
     } else {
       return res.status(403).json({ message: "You are not this user!" });
     }
@@ -64,39 +64,33 @@ const verifyUser = (req, res, next) => {
 
 // Verify admin or same user
 const verifyAdminOrUser = (req, res, next) => {
-  verifyToken(req, res, () => {
+  return verifyToken(req, res, () => {
     if (req.user.role === "admin" || req.user.role === "superadmin" || req.user.id === req.params.id) {
-      next();
+      return next();
     } else {
       return res.status(403).json({ message: "You are not authorized!" });
     }
   });
 };
 
-// Verify seller (requires db check to see if approved status is current)
+// verifyToken loads the current role and approval status from the database.
 const verifySeller = (req, res, next) => {
-  verifyToken(req, res, async () => {
+  return verifyToken(req, res, () => {
     if (req.user.role === "admin" || req.user.role === "superadmin") {
       return next();
     }
-    try {
-      const dbUser = await User.findById(req.user.id);
-      if (dbUser && dbUser.role === "seller" && dbUser.sellerStatus === "approved") {
-        next();
-      } else {
-        return res.status(403).json({ message: "Approved sellers access only!" });
-      }
-    } catch (err) {
-      return res.status(500).json({ message: "Authorization verification failed" });
+    if (req.user.role === "seller" && req.user.sellerStatus === "approved") {
+      return next();
     }
+    return res.status(403).json({ message: "Approved sellers access only!" });
   });
 };
 
 // Verify superadmin
 const verifySuperAdmin = (req, res, next) => {
-  verifyToken(req, res, () => {
+  return verifyToken(req, res, () => {
     if (req.user.role === "superadmin") {
-      next();
+      return next();
     } else {
       return res.status(403).json({ message: "Super Administrator access only!" });
     }
@@ -105,9 +99,9 @@ const verifySuperAdmin = (req, res, next) => {
 
 // Verify moderator
 const verifyModerator = (req, res, next) => {
-  verifyToken(req, res, () => {
+  return verifyToken(req, res, () => {
     if (req.user.role === "moderator" || req.user.role === "admin") {
-      next();
+      return next();
     } else {
       return res.status(403).json({ message: "Moderator or Admin access only!" });
     }
@@ -117,9 +111,9 @@ const verifyModerator = (req, res, next) => {
 // Verify roles dynamically
 const verifyRoles = (...allowedRoles) => {
   return (req, res, next) => {
-    verifyToken(req, res, () => {
+    return verifyToken(req, res, () => {
       if (allowedRoles.includes(req.user.role)) {
-        next();
+        return next();
       } else {
         return res.status(403).json({ message: `Access denied. Requires one of: ${allowedRoles.join(", ")}` });
       }

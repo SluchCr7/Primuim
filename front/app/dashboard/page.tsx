@@ -1250,7 +1250,7 @@ export default function DashboardPage() {
                 <h2 className="font-serif text-2xl font-bold mb-2">{t("Seller Onboarding")}</h2>
                 <p className="text-xs text-muted font-light mt-1 mb-6">{t("Apply to open a merchant store on Shop Premium and list your custom catalog")}</p>
 
-                {appStatusData?.request?.status === "approved" || user?.role === "seller" ? (
+                {user?.role === "seller" && user?.sellerStatus === "approved" ? (
                   <div className="flex flex-col items-center text-center py-6 gap-5">
                     <div className="h-16 w-16 rounded-full bg-success/15 text-success flex items-center justify-center">
                       <CheckCircle className="h-8 w-8" />

@@ -10,6 +10,11 @@ const orderItemSchema = new mongoose.Schema(
       ref: "Product",
       required: true,
     },
+    seller: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
 
     title: {
       type: String,
@@ -29,6 +34,37 @@ const orderItemSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 1,
+    },
+    inventoryAllocations: {
+      type: [
+        {
+          warehouse: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Warehouse",
+            required: true,
+          },
+          sku: {
+            type: String,
+            required: true,
+          },
+          quantity: {
+            type: Number,
+            required: true,
+            min: 1,
+          },
+          returnedQuantity: {
+            type: Number,
+            default: 0,
+            min: 0,
+          },
+        },
+      ],
+      default: [],
+    },
+    returnedQuantity: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
   },
   { _id: false }
@@ -74,6 +110,18 @@ const orderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
+    },
+
+    seller: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
+
+    checkoutGroupId: {
+      type: mongoose.Schema.Types.ObjectId,
       index: true,
     },
 
@@ -153,6 +201,12 @@ const orderSchema = new mongoose.Schema(
     },
 
     deliveredAt: Date,
+
+    returnStatus: {
+      type: String,
+      enum: ["none", "partial", "returned"],
+      default: "none",
+    },
 
     note: {
       type: String,

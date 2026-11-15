@@ -3,7 +3,13 @@ const Warehouse = require("../models/Warehouse");
 const WarehouseInventory = require("../models/WarehouseInventory");
 const Order = require("../models/Order");
 const Product = require("../models/Product").Product || require("../models/Product");
-const { reserveStock, routeOrderInventory } = require("../utils/inventoryService");
+const Cart = require("../models/Cart");
+const mongoose = require("mongoose");
+const {
+  releaseCartReservations,
+  reserveStock,
+  routeOrderInventory
+} = require("../utils/inventoryService");
 
 // @desc    Create a new warehouse
 // @route   POST /api/inventory/warehouses
@@ -159,38 +165,60 @@ const getTurnoverReport = asyncHandler(async (req, res) => {
 // @route   POST /api/inventory/reserve
 // @access  Private
 const reserveCartStock = asyncHandler(async (req, res) => {
-  const { cartId, items, coordinates } = req.body;
-
-  if (!cartId || !items || !items.length) {
-    return res.status(400).json({ success: false, message: "cartId and items array are required." });
+  const cart = await Cart.findOne({ user: req.user.id }).populate("items.product");
+  if (!cart || cart.items.length === 0) {
+    return res.status(400).json({ success: false, message: "Your cart is empty." });
   }
 
-  // 1. Determine warehouse routing allocations based on closest proximity
-  let allocations;
-  try {
-    allocations = await routeOrderInventory(items, coordinates);
-  } catch (err) {
-    return res.status(400).json({ success: false, message: err.message });
+  const items = [];
+  for (const item of cart.items) {
+    const product = item.product;
+    if (!product) {
+      return res.status(400).json({ success: false, message: "A cart product is no longer available." });
+    }
+    if (product.isDeleted || !product.isPublished) {
+      return res.status(409).json({ success: false, message: `Product ${product.title} is no longer available.` });
+    }
+    if (product.variants?.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Variant products are currently unavailable for purchase."
+      });
+    }
+    if (!Number.isSafeInteger(item.quantity) || item.quantity < 1 || product.stock < item.quantity) {
+      return res.status(409).json({ success: false, message: `Insufficient stock for product ${product.title}.` });
+    }
+    items.push({
+      sku: product.sku || product.title,
+      quantity: item.quantity,
+      productId: product._id
+    });
   }
 
-  // 2. Perform reservations inside a transaction session
-  const session = await WarehouseInventory.startSession();
+  const cartId = cart._id.toString();
+  const session = await mongoose.startSession();
   session.startTransaction();
   try {
+    await releaseCartReservations(cartId, req.user.id, session);
+    const allocations = await routeOrderInventory(items, undefined, session);
     await reserveStock(cartId, req.user.id, allocations, session);
     await session.commitTransaction();
+    return res.status(200).json({
+      success: true,
+      message: "Stock successfully reserved for 15 minutes",
+      allocations
+    });
   } catch (err) {
-    await session.abortTransaction();
-    return res.status(400).json({ success: false, message: err.message });
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({ success: false, message: err.message });
+    }
+    throw err;
   } finally {
-    session.endSession();
+    await session.endSession();
   }
-
-  res.status(200).json({
-    success: true,
-    message: "Stock successfully reserved for 15 minutes",
-    allocations
-  });
 });
 
 module.exports = {

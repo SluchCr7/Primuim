@@ -9,8 +9,7 @@ const StockReservationSchema = new mongoose.Schema({
   expiresAt: { type: Date, required: true }
 }, { timestamps: true });
 
-// Auto-delete using MongoDB background TTL daemon
-StockReservationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-StockReservationSchema.index({ cartId: 1, sku: 1 }, { unique: true });
+StockReservationSchema.index({ expiresAt: 1 });
+StockReservationSchema.index({ cartId: 1, sku: 1, warehouse: 1 }, { unique: true });
 
 module.exports = mongoose.model('StockReservation', StockReservationSchema);

@@ -11,14 +11,11 @@ import {
   useSaveShippingMutation,
   useSavePaymentMethodMutation,
   useCreateOrderMutation,
-  useCreatePaymentMutation,
   useStartCheckoutMutation,
   useGetLoyaltyWalletQuery,
   API_BASE_URL,
 } from "@/redux/api";
 import {
-  CreditCard,
-  Phone,
   MapPin,
   Truck,
   ShieldCheck,
@@ -26,11 +23,12 @@ import {
   FileText,
   ChevronRight,
   Loader2,
-  QrCode,
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
+
+type CreatedOrder = { _id: string };
 
 export default function CheckoutPage() {
   const { t } = useTranslation();
@@ -60,21 +58,10 @@ export default function CheckoutPage() {
   const [shippingMethod, setShippingMethod] = useState("std"); // "std" | "exp"
 
   // Payment State
-  const [paymentMethod, setPaymentMethod] = useState("cod"); // "cod" | "card" | "fawry" | "vodafone_cash"
-  const [walletNumber, setWalletNumber] = useState("");
-  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
-  const [walletOtp, setWalletOtp] = useState("");
-  const [walletPin, setWalletPin] = useState("");
-
-  // Card Form State
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvc, setCardCvc] = useState("");
   const [shippingQuote, setShippingQuote] = useState({ shippingCost: 0, taxCost: 0 });
 
   // Completed Order State
-  const [createdOrder, setCreatedOrder] = useState<any>(null);
-  const [paymentResponse, setPaymentResponse] = useState<any>(null);
+  const [createdOrders, setCreatedOrders] = useState<CreatedOrder[]>([]);
 
   // Loyalty points redemption state
   const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
@@ -91,7 +78,6 @@ export default function CheckoutPage() {
   const [saveShipping] = useSaveShippingMutation();
   const [savePaymentMethod] = useSavePaymentMethodMutation();
   const [createOrder, { isLoading: isCreatingOrder }] = useCreateOrderMutation();
-  const [createPayment] = useCreatePaymentMutation();
 
   // Start checkout session on load
   useEffect(() => {
@@ -177,11 +163,6 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
-    if (paymentMethod !== "cod") {
-      showToast(t("Online payment methods are temporarily unavailable."), "error");
-      return;
-    }
-
     setStep("processing");
 
     try {
@@ -192,23 +173,17 @@ export default function CheckoutPage() {
         redeemPoints: pointsRedeemedApplied,
       }).unwrap();
 
-      const order = orderRes.order;
-      setCreatedOrder(order);
+      const orders = orderRes.orders || (orderRes.order ? [orderRes.order] : []);
+      if (orders.length === 0) {
+        throw new Error("Order creation did not return any orders.");
+      }
+      setCreatedOrders(orders);
 
       setStep("confirm");
     } catch (err: any) {
       showToast(t(err.data?.message || err.message || "Checkout failed. Please try again."), "error");
       setStep("payment");
     }
-  };
-
-  const handleWalletSubmit = () => {
-    if (!walletOtp || !walletPin) {
-      showToast(t("Please fill in OTP and wallet PIN."), "error");
-      return;
-    }
-    setIsWalletModalOpen(false);
-    handlePlaceOrder();
   };
 
   // Price calculations
@@ -439,99 +414,16 @@ export default function CheckoutPage() {
               <h2 className="font-serif text-2xl font-bold mb-6">{t("Payment Options")}</h2>
               
               <div className="flex flex-col gap-5">
-                
-                {/* Stripe Simulator Card */}
-                <button
-                  type="button"
-                  onClick={() => showToast(t("Card payments are temporarily unavailable."), "error")}
-                  className={`p-5 border rounded text-left flex gap-4 items-start ${paymentMethod === "card" ? "border-gold bg-gold/5" : "border-card-border"}`}
-                >
-                  <CreditCard className="h-5 w-5 text-gold flex-shrink-0 mt-0.5" />
-                  <div className="flex-grow">
-                    <span className="font-bold text-sm block">{t("Credit / Debit Card (temporarily unavailable)")}</span>
-                    <span className="text-xs text-muted font-light mt-0.5 block">{t("This payment provider is not configured yet.")}</span>
-
-                    {paymentMethod === "card" && (
-                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3" onClick={(e) => e.stopPropagation()}>
-                        <div className="sm:col-span-3">
-                          <input
-                            type="text"
-                            placeholder={t("Card Number")}
-                            value={cardNumber}
-                            onChange={(e) => setCardNumber(e.target.value)}
-                            className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
-                          />
-                        </div>
-                        <input
-                          type="text"
-                          placeholder="MM/YY"
-                          value={cardExpiry}
-                          onChange={(e) => setCardExpiry(e.target.value)}
-                          className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
-                        />
-                        <input
-                          type="text"
-                          placeholder="CVC"
-                          value={cardCvc}
-                          onChange={(e) => setCardCvc(e.target.value)}
-                          className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </button>
-
-                {/* Fawry Cash Egyptian stub */}
-                <button
-                  type="button"
-                  onClick={() => showToast(t("Fawry payments are temporarily unavailable."), "error")}
-                  className={`p-5 border rounded text-left flex gap-4 items-start ${paymentMethod === "fawry" ? "border-gold bg-gold/5" : "border-card-border"}`}
-                >
-                  <FileText className="h-5 w-5 text-gold flex-shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold text-sm block">{t("Fawry (temporarily unavailable)")}</span>
-                    <span className="text-xs text-muted font-light mt-0.5 block">{t("This payment provider is not configured yet.")}</span>
-                  </div>
-                </button>
-
-                {/* Vodafone Cash Egyptian stub */}
-                <button
-                  type="button"
-                  onClick={() => showToast(t("Vodafone Cash is temporarily unavailable."), "error")}
-                  className={`p-5 border rounded text-left flex gap-4 items-start ${paymentMethod === "vodafone_cash" ? "border-gold bg-gold/5" : "border-card-border"}`}
-                >
-                  <Phone className="h-5 w-5 text-gold flex-shrink-0 mt-0.5" />
-                  <div className="flex-grow">
-                    <span className="font-bold text-sm block">{t("Vodafone Cash (temporarily unavailable)")}</span>
-                    <span className="text-xs text-muted font-light mt-0.5 block">{t("This payment provider is not configured yet.")}</span>
-
-                    {paymentMethod === "vodafone_cash" && (
-                      <div className="mt-4" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="tel"
-                          placeholder={t("Wallet Mobile Number")}
-                          value={walletNumber}
-                          onChange={(e) => setWalletNumber(e.target.value)}
-                          className="w-full max-w-sm rounded border border-card-border bg-background px-3 py-2.5 text-xs outline-none focus:border-gold"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </button>
-
-                {/* Cash on Delivery */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod("cod")}
-                  className={`p-5 border rounded text-left flex gap-4 items-start ${paymentMethod === "cod" ? "border-gold bg-gold/5" : "border-card-border"}`}
-                >
+                <div className="p-5 border border-gold rounded bg-gold/5 text-left flex gap-4 items-start">
                   <Truck className="h-5 w-5 text-gold flex-shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold text-sm block">{t("Cash on Delivery (COD)")}</span>
                     <span className="text-xs text-muted font-light mt-0.5 block">{t("Pay cash to the bespoke courier when packages are delivered to your door.")}</span>
                   </div>
-                </button>
-
+                </div>
+                <p className="text-xs text-muted">
+                  {t("Online payment methods are currently unavailable. No card or mobile-wallet details are collected.")}
+                </p>
               </div>
 
               <div className="flex gap-4 mt-8">
@@ -547,7 +439,7 @@ export default function CheckoutPage() {
                   onClick={handlePlaceOrder}
                   className="w-2/3 h-14 bg-foreground hover:bg-gold hover:text-luxury-white text-background font-semibold rounded text-sm uppercase tracking-wider shadow-md transition-all"
                 >
-                  {t("Place Order & Pay {total} EGP").replace("{total}", total.toFixed(2))}
+                  {t("Place Order (Cash on Delivery)")}
                 </button>
               </div>
             </div>
@@ -645,7 +537,7 @@ export default function CheckoutPage() {
         )}
 
         {/* STEP 3: ORDER CONFIRMATION & RECEIPT DETAILS */}
-        {step === "confirm" && createdOrder && (
+        {step === "confirm" && createdOrders.length > 0 && (
           <div className="max-w-2xl mx-auto luxury-card p-8 text-center flex flex-col items-center gap-6 shadow-xl border-gold">
             <div className="rounded-full bg-gold/10 p-5 text-gold animate-bounce">
               <CheckCircle className="h-12 w-12" />
@@ -653,58 +545,28 @@ export default function CheckoutPage() {
 
             <div>
               <span className="text-xs font-bold tracking-widest text-gold uppercase">{t("Successful Reservation")}</span>
-              <h2 className="font-serif text-3xl font-bold mt-1">{t("Order Allocated")}</h2>
+              <h2 className="font-serif text-3xl font-bold mt-1">
+                {createdOrders.length > 1 ? t("Store Orders Allocated") : t("Order Allocated")}
+              </h2>
               <p className="text-sm text-muted font-light mt-2 max-w-md mx-auto">
-                {t("We have registered your purchase. Your order identifier is:")} <br />
-                <span className="font-mono text-gold font-semibold text-xs">{createdOrder._id}</span>
+                {t("We have registered your purchase. Each store has its own order and delivery status.")}
               </p>
             </div>
 
-            {/* Egyptian local stubs feedback block */}
-            {paymentMethod === "fawry" && paymentResponse?.fawryRef && (
-              <div className="w-full rounded bg-gold/10 border border-gold/30 p-5 text-left flex flex-col gap-3">
-                <span className="flex items-center gap-2 text-xs font-bold tracking-widest text-gold uppercase">
-                  <QrCode className="h-4 w-4" /> {t("Fawry Invoice Code")}
-                </span>
-                <p className="text-sm font-light">
-                  {t("Please head to any Fawry kiosk outlet and supply the reference number below to make your payment:")}
-                </p>
-                <div className="text-center font-mono text-2xl font-extrabold tracking-widest text-foreground bg-background py-3 rounded border border-card-border">
-                  {paymentResponse.fawryRef}
+            <div className="w-full border-t border-card-border pt-6 flex flex-col gap-3">
+              {createdOrders.map((createdOrder) => (
+                <div key={createdOrder._id} className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded border border-card-border p-3">
+                  <span className="font-mono text-xs text-gold">{createdOrder._id}</span>
+                  <Link
+                    href={`${API_BASE_URL}/orders/${createdOrder._id}/invoice`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded border border-gold hover:bg-gold/10 px-5 text-gold font-semibold text-xs uppercase tracking-wider transition-all"
+                  >
+                    <FileText className="h-4 w-4" /> {t("Download Invoice")}
+                  </Link>
                 </div>
-                <p className="text-[10px] text-muted">
-                  {t("Note: Reservation holds automatically expire in 24 hours if checkout cash is not received.")}
-                </p>
-              </div>
-            )}
-
-            {paymentMethod === "vodafone_cash" && paymentResponse?.vodafoneRef && (
-              <div className="w-full rounded bg-gold/10 border border-gold/30 p-5 text-left flex flex-col gap-3">
-                <span className="flex items-center gap-2 text-xs font-bold tracking-widest text-gold uppercase">
-                  <Phone className="h-4 w-4" /> {t("Vodafone Cash Transaction")}
-                </span>
-                <p className="text-sm font-light">
-                  {t("Your mobile wallet billing has been registered successfully.")}
-                </p>
-                <div className="text-xs font-light">
-                  {t("Reference:")} <strong className="font-mono text-gold font-semibold">{paymentResponse.vodafoneRef}</strong>
-                </div>
-                <div className="text-xs font-light">
-                  {t("Wallet Charged:")} <strong className="font-mono">{walletNumber}</strong>
-                </div>
-              </div>
-            )}
-
-            {/* INVOICE DOWNLOAD & CONTINUE ACTIONS */}
-            <div className="w-full border-t border-card-border pt-6 flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                href={`${API_BASE_URL}/orders/${createdOrder._id}/invoice`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded border border-gold hover:bg-gold/10 px-6 text-gold font-semibold text-xs uppercase tracking-wider transition-all"
-              >
-                <FileText className="h-4 w-4" /> {t("Download PDF Invoice")}
-              </Link>
+              ))}
               <button
                 onClick={() => router.push("/dashboard")}
                 className="h-12 rounded bg-foreground text-background hover:bg-gold hover:text-luxury-white px-8 font-semibold text-xs uppercase tracking-wider transition-all"
@@ -720,58 +582,6 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {/* Vodafone cash verification simulator modal */}
-        {isWalletModalOpen && (
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-            <div className="w-full max-w-sm luxury-card p-6 shadow-xl border-gold">
-              <h3 className="font-serif font-bold text-lg mb-2">{t("Vodafone Cash Wallet")}</h3>
-              <p className="text-xs text-muted font-light mb-4">
-                {t("We have triggered a transaction validation code to {number}.").replace("{number}", walletNumber)}
-              </p>
-              
-              <div className="flex flex-col gap-4">
-                <div>
-                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">{t("Enter OTP Code")}</label>
-                  <input
-                    type="text"
-                    placeholder="E.g. 593028"
-                    value={walletOtp}
-                    onChange={(e) => setWalletOtp(e.target.value)}
-                    className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">{t("Enter Wallet Pin")}</label>
-                  <input
-                    type="password"
-                    placeholder="&bull;&bull;&bull;&bull;&bull;&bull;"
-                    value={walletPin}
-                    onChange={(e) => setWalletPin(e.target.value)}
-                    className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold font-mono"
-                  />
-                </div>
-
-                <div className="flex gap-3 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsWalletModalOpen(false)}
-                    className="w-1/2 h-10 border border-card-border rounded text-xs font-semibold uppercase tracking-wider"
-                  >
-                    {t("Cancel")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleWalletSubmit}
-                    className="w-1/2 h-10 bg-gold text-luxury-white hover:bg-gold-hover rounded text-xs font-semibold uppercase tracking-wider"
-                  >
-                    {t("Authorize Pay")}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </main>
 
     </div>

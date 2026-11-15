@@ -2,6 +2,7 @@ const Cart = require("../models/Cart");
 const asyncHandler = require("express-async-handler");
 const { Product } = require("../models/Product");
 
+const isValidQuantity = (quantity) => Number.isSafeInteger(quantity) && quantity > 0;
 
 // ========================================
 // GET CART
@@ -36,7 +37,7 @@ const addToCart = asyncHandler(async (req, res) => {
 
     const { productId, quantity } = req.body;
 
-    if (!productId || !quantity || quantity <= 0) {
+    if (!productId || !isValidQuantity(quantity)) {
         return res.status(400).json({
             success: false,
             message: "Invalid product or quantity"
@@ -49,6 +50,12 @@ const addToCart = asyncHandler(async (req, res) => {
         return res.status(404).json({
             success: false,
             message: "Product not found"
+        });
+    }
+    if (product.isDeleted || !product.isPublished) {
+        return res.status(409).json({
+            success: false,
+            message: "Product is no longer available"
         });
     }
 
@@ -80,9 +87,21 @@ const addToCart = asyncHandler(async (req, res) => {
     );
 
     if (existingItem) {
+        if (existingItem.quantity + quantity > product.stock) {
+            return res.status(409).json({
+                success: false,
+                message: `Only ${product.stock} units are available`
+            });
+        }
         existingItem.quantity += quantity;
         existingItem.price = product.price;
     } else {
+        if (quantity > product.stock) {
+            return res.status(409).json({
+                success: false,
+                message: `Only ${product.stock} units are available`
+            });
+        }
         cart.items.push({
             product: productId,
             quantity,
@@ -193,19 +212,53 @@ const mergeCart = asyncHandler(async (req, res) => {
     }
 
     for (const item of items) {
+        if (!item || typeof item !== "object") {
+            return res.status(400).json({
+                success: false,
+                message: "Each guest cart item must be an object."
+            });
+        }
         const { productId, quantity } = item;
-        if (!productId || !quantity || quantity <= 0) continue;
+        if (!productId || !isValidQuantity(quantity)) {
+            return res.status(400).json({
+                success: false,
+                message: "Guest cart items must have a product ID and a positive whole-number quantity."
+            });
+        }
 
         const product = await Product.findById(productId);
-        if (!product) continue;
-        if (product.seller && product.seller.toString() === req.user.id) continue;
+        if (!product || product.isDeleted || !product.isPublished) {
+            return res.status(409).json({
+                success: false,
+                message: "A guest cart product is no longer available."
+            });
+        }
+        if (product.variants?.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Variant products are currently unavailable for purchase."
+            });
+        }
+        if (product.seller && product.seller.toString() === req.user.id) {
+            return res.status(400).json({
+                success: false,
+                message: "You cannot add your own product to the cart."
+            });
+        }
 
         const existingItem = cart.items.find(
             ci => ci.product.toString() === productId
         );
 
+        const nextQuantity = (existingItem?.quantity || 0) + quantity;
+        if (nextQuantity > product.stock) {
+            return res.status(409).json({
+                success: false,
+                message: `Only ${product.stock} units of ${product.title} are available.`
+            });
+        }
         if (existingItem) {
-            existingItem.quantity += quantity;
+            existingItem.quantity = nextQuantity;
             existingItem.price = product.price;
         } else {
             cart.items.push({
@@ -245,7 +298,7 @@ const mergeCart = asyncHandler(async (req, res) => {
 const updateCartItemQuantity = asyncHandler(async (req, res) => {
     const { productId, quantity } = req.body;
 
-    if (!productId || quantity === undefined || quantity < 0) {
+    if (!productId || !Number.isSafeInteger(quantity) || quantity < 0) {
         return res.status(400).json({
             success: false,
             message: "Invalid product or quantity"
@@ -280,6 +333,18 @@ const updateCartItemQuantity = asyncHandler(async (req, res) => {
                 return res.status(400).json({
                     success: false,
                     message: "Variant products are currently unavailable for purchase."
+                });
+            }
+            if (product.isDeleted || !product.isPublished) {
+                return res.status(409).json({
+                    success: false,
+                    message: "Product is no longer available"
+                });
+            }
+            if (quantity > product.stock) {
+                return res.status(409).json({
+                    success: false,
+                    message: `Only ${product.stock} units are available`
                 });
             }
             cart.items[itemIndex].quantity = quantity;

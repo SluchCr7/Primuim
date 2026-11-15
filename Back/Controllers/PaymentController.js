@@ -1,7 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const Payment = require("../models/Payment");
 const Order = require("../models/Order");
-const { Product } = require("../models/Product");
 
 const paymentMethods = [
   { key: "cod", label: "Cash on Delivery", provider: "manual" },
@@ -27,7 +26,7 @@ const getMyPayments = asyncHandler(async (req, res) => {
 
 const createPayment = asyncHandler(async (req, res) => {
   const { orderId } = req.params;
-  const { paymentMethod, provider, transactionId, providerReference } = req.body;
+  const { paymentMethod, transactionId, providerReference } = req.body;
 
   const order = await Order.findById(orderId);
   if (!order) {
@@ -47,43 +46,6 @@ const createPayment = asyncHandler(async (req, res) => {
   const allowedMethods = ["cod", "card", "paypal", "fawry", "vodafone_cash", "paymob"];
   if (!allowedMethods.includes(normalizedMethod)) {
     return res.status(400).json({ success: false, message: "Unsupported payment method" });
-  }
-
-  // Gateway Integrations / Ref generations
-  let clientSecret = "";
-  let fawryRef = "";
-  let vodafoneRef = "";
-  let paymobOrderId = "";
-  let redirectUrl = "";
-
-  const finalProvider = provider || (
-    normalizedMethod === "card" ? "stripe" : 
-    normalizedMethod === "paypal" ? "paypal" :
-    normalizedMethod === "fawry" ? "fawry" :
-    normalizedMethod === "vodafone_cash" ? "vodafone_cash" :
-    normalizedMethod === "paymob" ? "paymob" : "manual"
-  );
-
-  if (normalizedMethod === "card" && finalProvider === "stripe") {
-    if (process.env.STRIPE_SECRET_KEY) {
-      const stripeSdk = require("stripe")(process.env.STRIPE_SECRET_KEY);
-      const paymentIntent = await stripeSdk.paymentIntents.create({
-        amount: Math.round(order.totalPrice * 100), // cents
-        currency: "egp",
-        metadata: { orderId: order._id.toString(), userId: req.user.id }
-      });
-      clientSecret = paymentIntent.client_secret;
-    } else {
-      clientSecret = `mock_stripe_secret_key_${Date.now()}`;
-    }
-  } else if (normalizedMethod === "fawry") {
-    fawryRef = Math.floor(100000000 + Math.random() * 900000000).toString();
-  } else if (normalizedMethod === "vodafone_cash") {
-    vodafoneRef = `VDF-${Math.floor(100000 + Math.random() * 900000)}`;
-    redirectUrl = `https://eg-vodafone.com/vodafonecash/pay?ref=${vodafoneRef}&amount=${order.totalPrice}`;
-  } else if (normalizedMethod === "paymob" || (normalizedMethod === "card" && finalProvider === "paymob")) {
-    paymobOrderId = Math.floor(1000000 + Math.random() * 9000000);
-    redirectUrl = `https://accept.paymob.com/api/acceptance/iframes/12345?payment_token=mock_token_${paymobOrderId}`;
   }
 
   if (normalizedMethod !== "cod") {
@@ -110,18 +72,12 @@ const createPayment = asyncHandler(async (req, res) => {
       amount: order.totalPrice,
       currency: "EGP",
       paymentMethod: normalizedMethod,
-      provider: finalProvider,
-      providerReference: providerReference || fawryRef || vodafoneRef || paymobOrderId || null,
-      transactionId: transactionId || null,
+      provider: "manual",
+      providerReference: null,
+      transactionId: null,
       status: nextStatus,
-      paymentResult: transactionId
-        ? {
-            id: transactionId,
-            status: "completed",
-            email: req.user.email || ""
-          }
-        : undefined,
-      paidAt: nextStatus === "paid" ? new Date() : undefined,
+      paymentResult: undefined,
+      paidAt: undefined,
       failedAt: undefined
     },
     { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
@@ -140,12 +96,7 @@ const createPayment = asyncHandler(async (req, res) => {
   res.status(201).json({
     success: true,
     payment,
-    order,
-    clientSecret,
-    fawryRef,
-    vodafoneRef,
-    paymobOrderId,
-    redirectUrl
+    order
   });
 });
 
@@ -176,22 +127,6 @@ const refundPayment = asyncHandler(async (req, res) => {
     payment.order.isPaid = false;
     payment.order.orderStatus = payment.order.orderStatus === "delivered" ? "delivered" : "cancelled";
 
-    for (const item of payment.order.orderItems) {
-      const product = await Product.findById(item.product);
-
-      if (product) {
-        product.stock += item.quantity;
-        product.sold = Math.max(0, product.sold - item.quantity);
-        product.inventoryLogs.push({
-          action: "refund",
-          quantity: item.quantity,
-          note: `Refund for payment ${payment._id}`,
-          createdBy: req.user.id
-        });
-        await product.save();
-      }
-    }
-
     await payment.order.save();
   }
 
@@ -199,7 +134,7 @@ const refundPayment = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    message: "Payment refunded successfully",
+    message: "Refund status recorded. This endpoint does not transfer funds; complete any external refund separately.",
     payment
   });
 });

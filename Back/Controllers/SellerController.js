@@ -6,6 +6,7 @@ const { User, validateUpdateStoreProfile } = require("../models/User");
 const Notification = require("../models/Notification");
 const asyncHandler = require("express-async-handler");
 const { cloudUpload } = require("../config/cloudUplaod");
+const { awardLoyaltyPoints } = require("../utils/loyaltyService");
 
 // ========================================
 // APPLY TO BECOME A SELLER (Customer only)
@@ -86,7 +87,10 @@ const getSellerStats = asyncHandler(async (req, res) => {
 
   // 2. Fetch orders containing these products
   const orders = await Order.find({
-    "orderItems.product": { $in: productIds }
+    $or: [
+      { seller: sellerId },
+      { "orderItems.product": { $in: productIds } }
+    ]
   });
 
   let totalEarnings = 0;
@@ -99,7 +103,9 @@ const getSellerStats = asyncHandler(async (req, res) => {
   orders.forEach(order => {
     // Filter items in order that belong to this seller
     const sellerItems = order.orderItems.filter(item =>
-      productIds.some(pid => pid.toString() === item.product.toString())
+      item.seller
+        ? item.seller.toString() === sellerId
+        : productIds.some(pid => pid.toString() === item.product.toString())
     );
 
     const subtotal = sellerItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -152,7 +158,12 @@ const getSellerOrders = asyncHandler(async (req, res) => {
   const productIds = products.map(p => p._id);
 
   // Find orders containing any of these products
-  const orders = await Order.find({ "orderItems.product": { $in: productIds } })
+  const orders = await Order.find({
+    $or: [
+      { seller: sellerId },
+      { "orderItems.product": { $in: productIds } }
+    ]
+  })
     .populate("user", "username email")
     .sort({ createdAt: -1 });
 
@@ -162,7 +173,9 @@ const getSellerOrders = asyncHandler(async (req, res) => {
     
     // Keep only this seller's products
     orderObj.orderItems = orderObj.orderItems.filter(item =>
-      productIds.some(pid => pid.toString() === item.product.toString())
+      item.seller
+        ? item.seller.toString() === sellerId
+        : productIds.some(pid => pid.toString() === item.product.toString())
     );
 
     // Calculate subtotal for seller
@@ -183,7 +196,7 @@ const updateSellerOrderStatus = asyncHandler(async (req, res) => {
   const { orderId } = req.params;
   const { status } = req.body;
 
-  const allowedStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+  const allowedStatuses = ["processing", "shipped", "delivered"];
   if (!allowedStatuses.includes(status)) {
     return res.status(400).json({
       success: false,
@@ -191,93 +204,125 @@ const updateSellerOrderStatus = asyncHandler(async (req, res) => {
     });
   }
 
-  const order = await Order.findById(orderId).populate("user", "username email");
+  const allowedTransitions = {
+    pending: ["processing"],
+    processing: ["shipped", "delivered"],
+    shipped: ["delivered"]
+  };
+  const session = await mongoose.startSession();
+  let order;
+  const earnings = [];
 
-  if (!order) {
-    return res.status(404).json({
-      success: false,
-      message: "Order not found"
-    });
-  }
+  try {
+    session.startTransaction();
+    order = await Order.findById(orderId).session(session);
+    if (!order) {
+      throw Object.assign(new Error("Order not found"), { statusCode: 404 });
+    }
 
-  // Verify the seller has items in this order, or is admin
-  const sellerId = req.user.id;
-  const products = await Product.find({ seller: sellerId }).select("_id");
-  const productIds = products.map(p => p._id.toString());
+    if (!allowedTransitions[order.orderStatus]?.includes(status)) {
+      throw Object.assign(new Error("This order status transition is not allowed."), { statusCode: 409 });
+    }
 
-  const allItemsBelongToSeller = order.orderItems.every(item =>
-    productIds.includes(item.product.toString())
-  );
-  const hasItemInOrder = order.orderItems.some(item =>
-    productIds.includes(item.product.toString())
-  );
+    const sellerId = req.user.id;
+    if (req.user.role !== "admin" && req.user.role !== "superadmin") {
+      const products = await Product.find({ seller: sellerId }).select("_id").session(session);
+      const productIds = new Set(products.map(product => product._id.toString()));
+      const hasItemInOrder = order.orderItems.some(item =>
+        item.seller ? item.seller.toString() === sellerId : productIds.has(item.product.toString())
+      );
+      const allItemsBelongToSeller = order.seller
+        ? order.seller.toString() === sellerId
+        : order.orderItems.every(item =>
+            item.seller
+              ? item.seller.toString() === sellerId
+              : productIds.has(item.product.toString())
+          );
 
-  if (!hasItemInOrder && req.user.role !== "admin") {
-    return res.status(403).json({
-      success: false,
-      message: "Not authorized to update status for this order"
-    });
-  }
-
-  const oldStatus = order.orderStatus;
-  if (!allItemsBelongToSeller) {
-    return res.status(403).json({
-      success: false,
-      message: "Multi-seller fulfillment is not supported for this order."
-    });
-  }
-  if (order.orderStatus === "delivered") {
-    return res.status(409).json({
-      success: false,
-      message: "A delivered order cannot be changed or settled again."
-    });
-  }
-
-  order.orderStatus = status;
-
-  // If status is changed to delivered, credit sellers wallets
-  if (status === "delivered" && oldStatus !== "delivered") {
-    order.isDelivered = true;
-    order.deliveredAt = new Date();
-
-    // Loop through order items and credit corresponding sellers
-    for (const item of order.orderItems) {
-      const prod = await Product.findById(item.product);
-      if (prod && prod.seller) {
-        // Increment sales count and promote to best seller if threshold met
-        prod.salesCount = (prod.salesCount || 0) + item.quantity;
-        if (prod.salesCount >= 50) {
-          prod.isBestSeller = true;
-        }
-        await prod.save();
-
-        const sellerUser = await User.findById(prod.seller);
-        if (sellerUser) {
-          const creditAmount = item.price * item.quantity;
-          sellerUser.walletBalance += creditAmount;
-          sellerUser.loyaltyPoints += Math.floor(creditAmount * 0.05); // 5% loyalty bonus
-          
-          sellerUser.activityLogs.push({
-            action: "seller_earnings",
-            details: `Earned ${creditAmount} EGP from order #${order._id.toString().substring(18).toUpperCase()} for product "${item.title}"`
-          });
-          
-          await sellerUser.save();
-
-          // Notification
-          const { createNotification } = require("../utils/notifications");
-          await createNotification({
-            user: sellerUser._id,
-            title: "Fulfillment Earning Credited",
-            message: `Order #${order._id.toString().substring(18).toUpperCase()} containing "${item.title}" was marked as delivered. ${creditAmount} EGP credited to your store balance.`,
-            type: "order"
-          });
-        }
+      if (!hasItemInOrder) {
+        throw Object.assign(new Error("Not authorized to update status for this order"), { statusCode: 403 });
+      }
+      if (!allItemsBelongToSeller) {
+        throw Object.assign(new Error("Multi-seller fulfillment is not supported for this order."), { statusCode: 403 });
       }
     }
+
+    if (status === "delivered") {
+      order.isDelivered = true;
+      order.deliveredAt = new Date();
+
+      for (const item of order.orderItems) {
+        const product = await Product.findById(item.product).session(session);
+        if (!product || !product.seller) {
+          throw Object.assign(new Error(`Seller information is missing for ${item.title}.`), { statusCode: 409 });
+        }
+
+        product.salesCount = (product.salesCount || 0) + item.quantity;
+        if (product.salesCount >= 50) {
+          product.isBestSeller = true;
+        }
+        await product.save({ session });
+
+        const orderSellerId = order.seller || item.seller || product.seller;
+        if (!orderSellerId || (order.seller && order.seller.toString() !== orderSellerId.toString())) {
+          throw Object.assign(new Error(`Seller information is missing for ${item.title}.`), { statusCode: 409 });
+        }
+
+        const sellerUser = await User.findById(orderSellerId).session(session);
+        if (!sellerUser) {
+          throw Object.assign(new Error(`Seller account was not found for ${item.title}.`), { statusCode: 409 });
+        }
+
+        const creditAmount = item.price * item.quantity;
+        sellerUser.walletBalance += creditAmount;
+        sellerUser.loyaltyPoints += Math.floor(creditAmount * 0.05);
+        sellerUser.activityLogs.push({
+          action: "seller_earnings",
+          details: `Earned ${creditAmount} EGP from order #${order._id.toString().substring(18).toUpperCase()} for product "${item.title}"`
+        });
+        await sellerUser.save({ session });
+        earnings.push({ sellerId: sellerUser._id, title: item.title, amount: creditAmount });
+      }
+
+      await awardLoyaltyPoints(order.user, order._id, order.totalPrice, session);
+    }
+
+    order.orderStatus = status;
+    const customerId = order.user?._id || order.user;
+    const customer = await User.findById(customerId)
+      .select("username email")
+      .session(session);
+    if (customer) {
+      order.user = customer;
+    }
+
+    await order.save({ session });
+    await session.commitTransaction();
+  } catch (error) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
+    throw error;
+  } finally {
+    await session.endSession();
   }
 
-  await order.save();
+  try {
+    for (const earning of earnings) {
+      const { createNotification } = require("../utils/notifications");
+      await createNotification({
+        user: earning.sellerId,
+        title: "Fulfillment Earning Credited",
+        message: `Order #${order._id.toString().substring(18).toUpperCase()} containing "${earning.title}" was marked as delivered. ${earning.amount} EGP credited to your store balance.`,
+        type: "order"
+      });
+    }
+  } catch (notificationError) {
+    console.error("Seller earnings notifications failed:", notificationError.message);
+  }
 
   // Create real-time notification for the customer
   try {
@@ -329,42 +374,47 @@ const updateSellerOrderStatus = asyncHandler(async (req, res) => {
 const requestPayout = asyncHandler(async (req, res) => {
   const { amount } = req.body;
 
-  if (!amount || amount <= 0) {
+  if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) {
     return res.status(400).json({
       success: false,
-      message: "Please specify a positive payout amount"
+      message: "Please specify a valid positive payout amount"
     });
   }
 
-  const seller = await User.findById(req.user.id);
+  const seller = await User.findOneAndUpdate(
+    { _id: req.user.id, walletBalance: { $gte: amount } },
+    {
+      $inc: { walletBalance: -amount },
+      $push: {
+        activityLogs: {
+          action: "payout_request",
+          details: `Requested payout of ${amount} EGP`
+        }
+      }
+    },
+    { new: true, runValidators: true }
+  );
 
-  if (seller.walletBalance < amount) {
+  if (!seller) {
     return res.status(400).json({
       success: false,
-      message: `Insufficient store balance. Your balance is ${seller.walletBalance} EGP`
+      message: "Insufficient store balance or seller account not found"
     });
   }
 
-  // Subtract balance and log transaction
-  seller.walletBalance -= amount;
-  
-  seller.activityLogs.push({
-    action: "payout_request",
-    details: `Requested payout of ${amount} EGP. Remaining store balance: ${seller.walletBalance} EGP`
-  });
-
-  await seller.save();
-
-  // Notify seller
-  await Notification.create({
-    user: seller._id,
-    title: "Payout Request Initiated",
-    message: `A payout request for ${amount} EGP has been submitted. Funds will be sent to your bank account within 2-3 business days.`
-  });
+  try {
+    await Notification.create({
+      user: seller._id,
+      title: "Payout Request Received",
+      message: `Your payout request for ${amount} EGP has been recorded. We will contact you with its status.`
+    });
+  } catch (notificationError) {
+    console.error("Could not notify seller about payout request:", notificationError.message);
+  }
 
   res.status(200).json({
     success: true,
-    message: `Payout of ${amount} EGP requested successfully!`,
+    message: `Payout request for ${amount} EGP recorded successfully.`,
     walletBalance: seller.walletBalance
   });
 });
@@ -537,6 +587,8 @@ const updateSellerStoreProfile = asyncHandler(async (req, res) => {
     "storeLogo",
     "storeCover",
     "country",
+    "storePhone",
+    "storeAddress",
     "responseTime"
   ];
 
@@ -560,6 +612,8 @@ const updateSellerStoreProfile = asyncHandler(async (req, res) => {
       storeCover: seller.storeCover,
       storeDescription: seller.storeDescription,
       country: seller.country,
+      storePhone: seller.storePhone,
+      storeAddress: seller.storeAddress,
       responseTime: seller.responseTime,
       storeRating: seller.storeRating,
       totalSales: seller.totalSales

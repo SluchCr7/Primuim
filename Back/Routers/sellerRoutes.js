@@ -184,7 +184,7 @@ router.patch("/orders/:orderId", verifySeller, updateSellerOrderStatus);
  * @swagger
  * /api/sellers/payout:
  *   post:
- *     summary: Request a payout of available balance to the seller's bank account
+ *     summary: Record a payout request against the seller's available balance
  *     tags: [Sellers]
  *     security:
  *       - bearerAuth: []

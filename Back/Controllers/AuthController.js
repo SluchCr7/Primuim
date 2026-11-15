@@ -7,7 +7,12 @@ const {
   generateAccessToken,
   generateRefreshToken
 } = require("../Middelwares/TokenGenerator");
-const { User, validateRegisterUser, validateLoginUser } = require("../models/User");
+const {
+  User,
+  validateRegisterUser,
+  validateLoginUser,
+  validateResetPassword
+} = require("../models/User");
 const Verification = require("../models/VerificationToken");
 const sendEmail = require("../utils/sendEmail");
 const SellerRequest = require("../models/SellerRequest");
@@ -47,7 +52,7 @@ const getFrontendOrigin = () => {
 
 
 const register = asyncHandler(async (req, res) => {
-  const { error } = validateRegisterUser(req.body);
+  const { error, value } = validateRegisterUser(req.body);
 
   if (error) {
     return res.status(400).json({ message: error.details[0].message });
@@ -63,10 +68,11 @@ const register = asyncHandler(async (req, res) => {
     storeName,
     country,
     storeDescription,
+    storeAddress,
     storeLogo,
     storeCover,
     phone
-  } = req.body;
+  } = value;
   const emailExists = await User.findOne({ email });
 
   if (emailExists) {
@@ -83,13 +89,14 @@ const register = asyncHandler(async (req, res) => {
     email,
     password,
     referredBy: referredByUser ? referredByUser._id : null,
-    // Sellers start as "customer" role until admin approves their store request
-    role: "customer",
+    role: role === "seller" ? "seller" : "customer",
     phone: phone || "",
     brandName: role === "seller" ? brandName : "",
     storeName: role === "seller" ? storeName : "",
     country: role === "seller" ? country : "",
     storeDescription: role === "seller" ? storeDescription : "",
+    storePhone: role === "seller" ? phone : "",
+    storeAddress: role === "seller" ? storeAddress : "",
     storeLogo: role === "seller" && storeLogo ? storeLogo : "",
     storeCover: role === "seller" && storeCover ? storeCover : "",
     sellerStatus: role === "seller" ? "pending" : null
@@ -97,19 +104,19 @@ const register = asyncHandler(async (req, res) => {
 
   // If registering as seller, automatically create a SellerRequest document
   // so the admin can see and approve/reject it from the admin panel
-  if (role === "seller" && storeName) {
+  if (role === "seller") {
     try {
       await SellerRequest.create({
         user: user._id,
-        storeName: storeName || "My Store",
-        storeDescription: storeDescription || "No description provided.",
-        storePhone: phone || "N/A",
-        storeAddress: country || "N/A",
+        storeName,
+        storeDescription,
+        storePhone: phone,
+        storeAddress,
         status: "pending"
       });
     } catch (sellerReqErr) {
-      // Non-fatal: seller request creation failed (e.g., duplicate), but user was created
-      console.error("Could not auto-create SellerRequest during registration:", sellerReqErr.message);
+      await User.deleteOne({ _id: user._id });
+      throw sellerReqErr;
     }
   }
 
@@ -200,7 +207,8 @@ const register = asyncHandler(async (req, res) => {
       id: user._id,
       username: user.username,
       email: user.email,
-      role: user.role
+      role: user.role,
+      sellerStatus: user.sellerStatus || null
     }
   });
 });
@@ -298,14 +306,14 @@ const register = asyncHandler(async (req, res) => {
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  const { error } = validateLoginUser({ email, password });
+  const { error, value } = validateLoginUser({ email, password });
 
   if (error) {
     return res.status(400).json({ message: error.details[0].message });
   }
 
   // ملحوظة: تأكدت هنا إننا بنجيب الـ isVerify لو مش نازلة باي ديفولت في الـ Schema
-  const user = await User.findOne({ email }).select("+password");
+  const user = await User.findOne({ email: value.email }).select("+password");
 
   if (!user) {
     return res.status(401).json({ message: "Invalid credentials" });
@@ -319,7 +327,7 @@ const login = asyncHandler(async (req, res) => {
     });
   }
 
-  const isMatch = await bcrypt.compare(password, user.password);
+  const isMatch = await bcrypt.compare(value.password, user.password);
 
   if (!isMatch) {
     // Increment failed attempts
@@ -340,6 +348,10 @@ const login = asyncHandler(async (req, res) => {
     }
     await user.save();
     return res.status(401).json({ message: "Invalid credentials" });
+  }
+
+  if (user.isBlocked) {
+    return res.status(403).json({ message: "This account is blocked." });
   }
 
   // ==================== التعديل الجديد هنا ====================
@@ -433,7 +445,8 @@ const login = asyncHandler(async (req, res) => {
       id: user._id,
       username: user.username,
       email: user.email,
-      role: user.role
+      role: user.role,
+      sellerStatus: user.sellerStatus || null
     }
   });
 });
@@ -453,37 +466,15 @@ const refresh = asyncHandler(async (req, res) => {
   }
 
   const hashedToken = hashRefreshToken(token);
-  const storedToken = await RefreshToken.findOne({ token: hashedToken });
-
-  if (!storedToken) {
-    // REUSE DETECTION!
-    // Someone is trying to refresh with an old/used token. Revoke all sessions!
-    await RefreshToken.deleteMany({ user: decoded.id });
-    res.clearCookie("refreshToken", {
-      httpOnly: cookieOptions.httpOnly,
-      secure: cookieOptions.secure,
-      sameSite: cookieOptions.sameSite,
-      path: cookieOptions.path,
-    });
-    
-    // Log security incident
-    const user = await User.findById(decoded.id);
-    if (user) {
-      user.activityLogs.push({
-        action: "security_alert",
-        ip: req.ip,
-        details: "Refresh token reuse detected. Revoked all sessions."
-      });
-      await user.save();
-    }
-    
-    return res.status(403).json({ message: "Security warning: Refresh token reuse detected. All sessions revoked." });
-  }
-
   const user = await User.findById(decoded.id);
 
   if (!user) {
     return res.status(404).json({ message: "User not found" });
+  }
+
+  if ((decoded.tokenVersion || 0) !== (user.tokenVersion || 0)) {
+    res.clearCookie("refreshToken", cookieOptions);
+    return res.status(401).json({ message: "Session expired. Please sign in again." });
   }
 
   // Token rotation
@@ -495,10 +486,31 @@ const refresh = asyncHandler(async (req, res) => {
     });
   }
 
+  const storedToken = await RefreshToken.findOneAndDelete({
+    token: hashedToken,
+    user: user._id
+  });
+  if (!storedToken) {
+    await RefreshToken.deleteMany({ user: user._id });
+    await User.updateOne(
+      { _id: user._id },
+      {
+        $inc: { tokenVersion: 1 },
+        $push: {
+          activityLogs: {
+            action: "security_alert",
+            ip: req.ip,
+            details: "Refresh token reuse detected. Revoked all sessions."
+          }
+        }
+      }
+    );
+    res.clearCookie("refreshToken", cookieOptions);
+    return res.status(403).json({ message: "Security warning: Refresh token reuse detected. All sessions revoked." });
+  }
+
   const newAccessToken = generateAccessToken(user);
   const newRefreshToken = generateRefreshToken(user);
-
-  await RefreshToken.deleteOne({ token: hashedToken });
 
   await RefreshToken.create({
     user: user._id,
@@ -572,13 +584,14 @@ const verifyAccount = asyncHandler(async (req, res) => {
 
 const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
-  if (!email) {
+  if (typeof email !== "string" || !email.trim()) {
     return res.status(400).json({ message: "Email is required" });
   }
 
-  const user = await User.findOne({ email });
+  const responseMessage = "If your email is registered, we have sent a reset link.";
+  const user = await User.findOne({ email: email.trim().toLowerCase() });
   if (!user) {
-    return res.status(200).json({ message: "If your email is registered, we have sent a reset link." });
+    return res.status(200).json({ message: responseMessage });
   }
 
   const resetToken = crypto.randomBytes(32).toString("hex");
@@ -650,21 +663,16 @@ const forgotPassword = asyncHandler(async (req, res) => {
       </div>
       `
   });
-  res.status(200).json({ message: "Reset link sent successfully." });
+  res.status(200).json({ message: responseMessage });
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
-  const { token, newPassword } = req.body;
-
-  if (!token || !newPassword) {
-    return res.status(400).json({ message: "Token and new password are required" });
+  const { error, value } = validateResetPassword(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
   }
 
-  if (newPassword.length < 8) {
-    return res.status(400).json({ message: "Password must be at least 8 characters long" });
-  }
-
-  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  const hashedToken = crypto.createHash("sha256").update(value.token).digest("hex");
 
   const user = await User.findOne({
     passwordResetToken: hashedToken,
@@ -675,19 +683,31 @@ const resetPassword = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Invalid or expired reset token" });
   }
 
-  user.password = newPassword;
-  user.passwordResetToken = undefined;
-  user.passwordResetExpires = undefined;
-  user.failedLoginAttempts = 0;
-  user.lockUntil = undefined;
-  
-  user.activityLogs.push({
-    action: "password_reset",
-    ip: req.ip,
-    details: "Password was reset successfully via email link."
-  });
-
-  await user.save();
+  const passwordHash = await bcrypt.hash(value.newPassword, 12);
+  const updateResult = await User.updateOne(
+    {
+      _id: user._id,
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: new Date() }
+    },
+    {
+      $set: { password: passwordHash, failedLoginAttempts: 0 },
+      $unset: { passwordResetToken: 1, passwordResetExpires: 1, lockUntil: 1 },
+      $inc: { tokenVersion: 1 },
+      $push: {
+        activityLogs: {
+          action: "password_reset",
+          ip: req.ip,
+          details: "Password was reset successfully via email link."
+        }
+      }
+    },
+    { runValidators: true }
+  );
+  if (updateResult.modifiedCount !== 1) {
+    return res.status(400).json({ message: "Invalid or expired reset token" });
+  }
+  await RefreshToken.deleteMany({ user: user._id });
 
   res.status(200).json({ success: true, message: "Password reset successful." });
 });
@@ -698,7 +718,7 @@ const sendOTP = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "User not found" });
   }
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otp = crypto.randomInt(100000, 1000000).toString();
   
   user.otpSecret = crypto.createHash("sha256").update(otp).digest("hex");
   user.otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins valid

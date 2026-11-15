@@ -3,7 +3,8 @@ const bcrypt = require("bcrypt");
 const Joi = require("joi");
 
 const Wishlist = require("../models/Wishlist");
-const { User, validateUpdateUser } = require("../models/User");
+const RefreshToken = require("../models/RefreshTOken");
+const { User, validateUpdateUser, validateStrongPassword } = require("../models/User");
 const { cloudUpload, cloudRemove } = require("../config/cloudUplaod");
 
 // ========================================
@@ -103,10 +104,11 @@ const updatePassword = asyncHandler(async (req, res) => {
         });
     }
 
-    if (newPassword.length < 8) {
+    const { error } = validateStrongPassword(newPassword);
+    if (error) {
         return res.status(400).json({
             success: false,
-            message: "Password must be at least 8 characters"
+            message: error.details[0].message
         });
     }
 
@@ -137,7 +139,9 @@ const updatePassword = asyncHandler(async (req, res) => {
     // لو معندكش middleware استخدم:
     // user.password = await bcrypt.hash(newPassword, 12);
 
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
     await user.save();
+    await RefreshToken.deleteMany({ user: user._id });
 
     res.status(200).json({
         success: true,

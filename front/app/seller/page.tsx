@@ -92,7 +92,7 @@ export default function SellerDashboardPage() {
     setMounted(true);
   }, []);
 
-  const isApprovedSeller = user?.role === "seller" || user?.role === "admin";
+  const isApprovedSeller = user?.role === "admin" || (user?.role === "seller" && user?.sellerStatus === "approved");
   const hasPendingApp = appStatusData?.request && appStatusData.request.status === "pending";
   const hasRejectedApp = appStatusData?.request && appStatusData.request.status === "rejected";
 
@@ -113,7 +113,7 @@ export default function SellerDashboardPage() {
   const [updateSellerStoreProfile, { isLoading: isUpdatingProfile }] = useUpdateSellerStoreProfileMutation();
   const [uploadStoreLogo, { isLoading: isUploadingLogo }] = useUploadStoreLogoMutation();
   const [uploadStoreCover, { isLoading: isUploadingCover }] = useUploadStoreCoverMutation();
-  const { data: myArticlesData, refetch: refetchMyArticles } = useGetMyArticlesQuery(undefined, { skip: !user || (user.role !== "seller" && user.role !== "admin") });
+  const { data: myArticlesData, refetch: refetchMyArticles } = useGetMyArticlesQuery(undefined, { skip: !isApprovedSeller });
   const [createArticle, { isLoading: isCreatingArticle }] = useCreateArticleMutation();
   const [updateArticle, { isLoading: isUpdatingArticle }] = useUpdateArticleMutation();
   const [deleteArticle] = useDeleteArticleMutation();
@@ -149,6 +149,8 @@ export default function SellerDashboardPage() {
   const [storeLogo, setStoreLogo] = useState("");
   const [storeCover, setStoreCover] = useState("");
   const [country, setCountry] = useState("");
+  const [storePhone, setStorePhone] = useState("");
+  const [storeAddress, setStoreAddress] = useState("");
   const [responseTime, setResponseTime] = useState("");
 
   // Article form states
@@ -181,6 +183,8 @@ export default function SellerDashboardPage() {
       setStoreLogo(meData.user.storeLogo || "");
       setStoreCover(meData.user.storeCover || "");
       setCountry(meData.user.country || "");
+      setStorePhone(meData.user.storePhone || meData.user.phone || "");
+      setStoreAddress(meData.user.storeAddress || "");
       setResponseTime(meData.user.responseTime || "Within 24 hours");
     }
   }, [meData]);
@@ -195,6 +199,8 @@ export default function SellerDashboardPage() {
         storeLogo,
         storeCover,
         country,
+        storePhone,
+        storeAddress,
         responseTime,
       }).unwrap();
       showToast("Store settings updated successfully", "success");
@@ -205,8 +211,15 @@ export default function SellerDashboardPage() {
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
     const file = e.target.files?.[0];
+    input.value = "";
     if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showToast("Choose a valid image file.", "error");
+      return;
+    }
 
     if (file.size > 2 * 1024 * 1024) {
       showToast("Logo image must be less than 2MB.", "error");
@@ -227,8 +240,15 @@ export default function SellerDashboardPage() {
   };
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
     const file = e.target.files?.[0];
+    input.value = "";
     if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showToast("Choose a valid image file.", "error");
+      return;
+    }
 
     if (file.size > 5 * 1024 * 1024) {
       showToast("Cover image must be less than 5MB.", "error");
@@ -415,7 +435,7 @@ export default function SellerDashboardPage() {
         formData.append("isPublished", String(isPublished));
         
         const tagsArray = tags.split(",").map((t) => t.trim()).filter(Boolean);
-        tagsArray.forEach((t) => formData.append("tags[]", t));
+        tagsArray.forEach((t) => formData.append("tags", t));
 
         formData.append("specifications", JSON.stringify(specifications));
 
@@ -472,6 +492,13 @@ export default function SellerDashboardPage() {
     }
   };
 
+  const getNextOrderStatuses = (currentStatus: string) => {
+    if (currentStatus === "pending") return ["processing"];
+    if (currentStatus === "processing") return ["shipped", "delivered"];
+    if (currentStatus === "shipped") return ["delivered"];
+    return [];
+  };
+
   const handlePayoutRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountVal = parseFloat(payoutAmount);
@@ -482,7 +509,7 @@ export default function SellerDashboardPage() {
 
     try {
       await requestPayout({ amount: amountVal }).unwrap();
-      showToast(`Payout request of ${amountVal} EGP submitted successfully!`, "success");
+      showToast(`Payout request of ${amountVal} EGP recorded successfully!`, "success");
       setPayoutAmount("");
       refetchMe();
     } catch (err: any) {
@@ -969,20 +996,21 @@ export default function SellerDashboardPage() {
                           {order.shippingAddress?.street}, {order.shippingAddress?.city}, Egypt. Phone: {order.shippingAddress?.phone}
                         </div>
 
-                        {order.orderStatus !== "delivered" && order.orderStatus !== "cancelled" && (
+                        {getNextOrderStatuses(order.orderStatus).length > 0 && (
                           <div className="flex items-center gap-2 self-end">
                             <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">{translate("Update Status:", "Update Status:")}</span>
                             <select
-                              value={order.orderStatus}
+                              value=""
                               disabled={isUpdatingStatus}
                               onChange={(e) => handleUpdateStatus(order._id, e.target.value)}
                               className="bg-card-bg border border-card-border text-xs text-foreground px-2 py-1 rounded outline-none cursor-pointer"
                             >
-                              <option value="pending">Pending</option>
-                              <option value="processing">Processing</option>
-                              <option value="shipped">Shipped</option>
-                              <option value="delivered">Delivered</option>
-                              <option value="cancelled">Cancelled</option>
+                              <option value="" disabled>{translate("Choose status", "Choose status")}</option>
+                              {getNextOrderStatuses(order.orderStatus).map((nextStatus) => (
+                                <option key={nextStatus} value={nextStatus}>
+                                  {translate(nextStatus, nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1))}
+                                </option>
+                              ))}
                             </select>
                           </div>
                         )}
@@ -1017,10 +1045,10 @@ export default function SellerDashboardPage() {
 
                   {/* Payout Form */}
                   <div className="luxury-card p-6">
-                    <h3 className="font-serif font-bold text-base mb-4">{translate("Withdraw Store Funds", "Withdraw Store Funds")}</h3>
+                    <h3 className="font-serif font-bold text-base mb-4">{translate("Request a Payout", "Request a Payout")}</h3>
                     <form onSubmit={handlePayoutRequest} className="flex flex-col gap-3">
                       <div>
-                        <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">{translate("Amount to Withdraw (EGP)", "Amount to Withdraw (EGP)")}</label>
+                        <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">{translate("Payout Amount (EGP)", "Payout Amount (EGP)")}</label>
                         <input
                           type="number"
                           required
@@ -1037,7 +1065,7 @@ export default function SellerDashboardPage() {
                         disabled={isRequestingPayout || !payoutAmount}
                         className="w-full h-9 bg-gold text-luxury-white hover:bg-gold-hover rounded text-xs font-semibold uppercase tracking-wider transition-all"
                       >
-                        {isRequestingPayout ? translate("Requesting Withdrawal...", "Requesting Withdrawal...") : translate("Withdraw Funds", "Withdraw Funds")}
+                        {isRequestingPayout ? translate("Recording Request...", "Recording Request...") : translate("Request Payout", "Request Payout")}
                       </button>
                     </form>
                   </div>
@@ -1102,7 +1130,7 @@ export default function SellerDashboardPage() {
                   </div>
                   {meData?.user?.storeSlug && (
                     <a
-                      href={`/stores/${meData.user.storeSlug}`}
+                      href={`/store/${meData.user.storeSlug}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex h-9 items-center justify-center gap-1.5 rounded border border-gold hover:bg-gold/10 text-gold px-4 text-xs font-semibold uppercase tracking-wider transition-all"
@@ -1150,6 +1178,30 @@ export default function SellerDashboardPage() {
                         onChange={(e) => setCountry(e.target.value)}
                         className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
                         placeholder="e.g. Egypt"
+                      />
+                    </div>
+
+                    {/* Store Phone */}
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">{translate("Store Phone", "Store Phone")}</label>
+                      <input
+                        type="tel"
+                        value={storePhone}
+                        onChange={(e) => setStorePhone(e.target.value)}
+                        className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
+                        placeholder="+20 100 123 4567"
+                      />
+                    </div>
+
+                    {/* Store Address */}
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">{translate("Store Address", "Store Address")}</label>
+                      <textarea
+                        value={storeAddress}
+                        onChange={(e) => setStoreAddress(e.target.value)}
+                        rows={2}
+                        className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold resize-none"
+                        placeholder={translate("Street, city, and region", "Street, city, and region")}
                       />
                     </div>
 

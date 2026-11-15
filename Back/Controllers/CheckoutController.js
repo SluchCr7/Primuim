@@ -10,6 +10,37 @@ const shippingOptions = [
   { id: "free", name: "Free Shipping", cost: 0, days: "5-7 business days", minAmount: 1000 }
 ];
 
+const getCartSubtotal = (cart) => cart.items.reduce(
+  (total, item) => total + item.product.price * item.quantity,
+  0
+);
+
+const isValidAddress = (address) => {
+  const requiredFields = ["fullName", "phone", "city", "street"];
+  return Boolean(address) &&
+    requiredFields.every(field =>
+      typeof address[field] === "string" &&
+      address[field].trim().length > 0 &&
+      address[field].length <= 200
+    ) &&
+    (address.postalCode === undefined || typeof address.postalCode === "string");
+};
+
+const validatePurchasableCart = (cart) => {
+  for (const item of cart.items) {
+    if (!item.product || item.product.isDeleted || !item.product.isPublished) {
+      return "A product in your cart is no longer available.";
+    }
+    if (item.product.variants?.length > 0) {
+      return "Variant products are currently unavailable for purchase.";
+    }
+    if (item.product.stock < item.quantity) {
+      return `Insufficient stock for product: ${item.product.title}`;
+    }
+  }
+  return null;
+};
+
 // ========================================
 // @desc    Start Checkout Session
 // @route   POST /api/checkout/start
@@ -22,15 +53,11 @@ const startCheckout = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "Your cart is empty" });
   }
 
-  // Double check actual stock levels
-  for (const item of cart.items) {
-    if (item.product.stock < item.quantity) {
-      return res.status(400).json({
-        success: false,
-        message: `Insufficient stock for product: ${item.product.title}`
-      });
-    }
+  const cartError = validatePurchasableCart(cart);
+  if (cartError) {
+    return res.status(409).json({ success: false, message: cartError });
   }
+  const subtotal = getCartSubtotal(cart);
 
   const sessionId = `chk_${req.user.id}_${Date.now()}`;
   const sessionData = {
@@ -42,7 +69,7 @@ const startCheckout = asyncHandler(async (req, res) => {
       price: item.product.price,
       quantity: item.quantity
     })),
-    subtotal: cart.totalPrice,
+    subtotal,
     shippingAddress: null,
     shippingMethod: null,
     shippingCost: 0,
@@ -50,7 +77,7 @@ const startCheckout = asyncHandler(async (req, res) => {
     paymentMethod: null,
     couponCode: null,
     discountAmount: 0,
-    total: cart.totalPrice,
+    total: subtotal,
     step: "shipping",
     expiresAt: new Date(Date.now() + 60 * 60 * 1000)
   };
@@ -76,28 +103,25 @@ const startCheckout = asyncHandler(async (req, res) => {
 const validateAddress = asyncHandler(async (req, res) => {
   const { fullName, phone, city, street, postalCode } = req.body;
 
-  if (!fullName || !phone || !city || !street) {
+  if (
+    ![fullName, phone, city, street].every(value => typeof value === "string" && value.trim()) ||
+    [fullName, phone, city, street].some(value => value.length > 200) ||
+    (postalCode !== undefined && typeof postalCode !== "string")
+  ) {
     return res.status(400).json({ success: false, message: "Missing required address fields" });
-  }
-
-  // Simulating external address verification service (e.g. DHL/Aramex API)
-  const cityLower = city.toLowerCase().trim();
-  const allowedCities = ["cairo", "giza", "alexandria", "dakahlia", "qalyubia", "gharbia", "port said", "suez"];
-  
-  const isValidCity = allowedCities.some(c => cityLower.includes(c));
-
-  if (!isValidCity) {
-    return res.status(400).json({
-      success: false,
-      message: `Address warning: Delivery to '${city}' might experience delays. Please verify.`,
-      suggestedCity: "Cairo"
-    });
   }
 
   res.status(200).json({
     success: true,
-    message: "Address validated successfully",
-    verifiedAddress: { fullName, phone, city, street, postalCode, country: "Egypt" }
+    message: "Required address details are complete.",
+    validatedAddress: {
+      fullName: fullName.trim(),
+      phone: phone.trim(),
+      city: city.trim(),
+      street: street.trim(),
+      postalCode: postalCode?.trim() || "",
+      country: "Egypt"
+    }
   });
 });
 
@@ -114,23 +138,53 @@ const saveShipping = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "No active checkout session found" });
   }
 
-  if (!shippingAddress) {
+  if (!session.expiresAt || session.expiresAt <= new Date()) {
+    return res.status(400).json({ success: false, message: "Checkout session has expired. Please start checkout again." });
+  }
+  if (!isValidAddress(shippingAddress)) {
     return res.status(400).json({ success: false, message: "Shipping address is required" });
   }
 
-  const selectedOption = shippingOptions.find(opt => opt.id === shippingMethodId) || shippingOptions[0];
+  const selectedOption = shippingOptions.find(opt => opt.id === shippingMethodId);
+  if (!selectedOption) {
+    return res.status(400).json({ success: false, message: "Unsupported shipping method." });
+  }
+
+  const cart = await Cart.findOne({ user: req.user.id }).populate("items.product");
+  if (!cart || cart.items.length === 0) {
+    return res.status(400).json({ success: false, message: "Your cart is empty." });
+  }
+  const cartError = validatePurchasableCart(cart);
+  if (cartError) {
+    return res.status(409).json({ success: false, message: cartError });
+  }
+  const subtotal = getCartSubtotal(cart);
   
   // Calculate cost
   let shippingCost = selectedOption.cost;
-  if (selectedOption.id === "free" && session.subtotal < selectedOption.minAmount) {
+  if (selectedOption.id === "free" && subtotal < selectedOption.minAmount) {
     shippingCost = shippingOptions[0].cost; // fallback to standard if threshold not met
   }
 
-  session.shippingAddress = shippingAddress;
+  session.items = cart.items.map(item => ({
+    product: item.product._id,
+    title: item.product.title,
+    price: item.product.price,
+    quantity: item.quantity
+  }));
+  session.subtotal = subtotal;
+  session.shippingAddress = {
+    fullName: shippingAddress.fullName.trim(),
+    phone: shippingAddress.phone.trim(),
+    city: shippingAddress.city.trim(),
+    street: shippingAddress.street.trim(),
+    postalCode: typeof shippingAddress.postalCode === "string" ? shippingAddress.postalCode.trim() : "",
+    country: "Egypt"
+  };
   session.shippingMethod = selectedOption.name;
   session.shippingCost = shippingCost;
-  session.taxCost = Math.round(session.subtotal * 0.14 * 100) / 100; // 14% Egyptian VAT
-  session.total = session.subtotal + shippingCost + session.taxCost - session.discountAmount;
+  session.taxCost = Math.round(subtotal * 0.14 * 100) / 100; // 14% Egyptian VAT
+  session.total = subtotal + shippingCost + session.taxCost - session.discountAmount;
   session.step = "payment";
 
   await session.save();
@@ -162,10 +216,8 @@ const savePayment = asyncHandler(async (req, res) => {
   if (!session) {
     return res.status(400).json({ success: false, message: "No active checkout session found" });
   }
-
-  const allowedPaymentMethods = ["cod", "card", "paypal", "fawry", "vodafone_cash"];
-  if (!allowedPaymentMethods.includes(paymentMethod)) {
-    return res.status(400).json({ success: false, message: "Unsupported payment method" });
+  if (!session.expiresAt || session.expiresAt <= new Date()) {
+    return res.status(400).json({ success: false, message: "Checkout session has expired. Please start checkout again." });
   }
 
   session.paymentMethod = paymentMethod;
@@ -189,6 +241,9 @@ const getCheckoutState = asyncHandler(async (req, res) => {
   const session = await CheckoutSession.findOne({ userId: req.user.id });
   
   if (!session) {
+    return res.status(404).json({ success: false, message: "No active checkout session found" });
+  }
+  if (!session.expiresAt || session.expiresAt <= new Date()) {
     return res.status(404).json({ success: false, message: "No active checkout session found" });
   }
 

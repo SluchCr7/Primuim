@@ -189,7 +189,7 @@ router.patch("/admin/:id/status", verifyAdmin, updatePaymentStatus);
  * @swagger
  * /api/payments/admin/{id}/refund:
  *   post:
- *     summary: Issue a full or partial refund for a payment (admin only)
+ *     summary: Record a refund status for a payment (admin only)
  *     tags: [Payments]
  *     security:
  *       - bearerAuth: []
@@ -204,16 +204,12 @@ router.patch("/admin/:id/status", verifyAdmin, updatePaymentStatus);
  *           schema:
  *             type: object
  *             properties:
- *               amount:
- *                 type: number
- *                 description: Amount to refund (omit for full refund)
- *                 example: 1500
  *               reason:
  *                 type: string
  *                 example: Customer request
  *     responses:
  *       200:
- *         description: Refund issued successfully.
+ *         description: Refund status recorded; funds must be transferred separately.
  *         content:
  *           application/json:
  *             schema:

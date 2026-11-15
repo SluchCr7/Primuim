@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,6 +42,7 @@ const registerSchema = z.object({
   storeName: z.string().optional().or(z.literal("")),
   country: z.string().optional().or(z.literal("")),
   storeDescription: z.string().optional().or(z.literal("")),
+  storeAddress: z.string().optional().or(z.literal("")),
   storeLogo: z.string().optional().or(z.literal("")),
   storeCover: z.string().optional().or(z.literal("")),
   phone: z.string().optional().or(z.literal("")),
@@ -50,105 +51,13 @@ const registerSchema = z.object({
     if (!data.brandName?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Brand Name is required for sellers", path: ["brandName"] });
     if (!data.storeName?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Store Name is required for sellers", path: ["storeName"] });
     if (!data.country?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Country is required for sellers", path: ["country"] });
+    if (!data.storeDescription?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Store description is required", path: ["storeDescription"] });
+    if (!data.storeAddress?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Store address is required", path: ["storeAddress"] });
+    if (!data.phone?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Store phone number is required", path: ["phone"] });
   }
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
-
-// ─── Image Drop Zone Component ────────────────────────────────────────────────
-interface ImageDropZoneProps {
-  label: string;
-  hint: string;
-  aspectRatio: "square" | "wide";
-  value: string;
-  onUpload: (url: string) => void;
-  onClear: () => void;
-  isUploading: boolean;
-}
-
-function ImageDropZone({ label, hint, aspectRatio, value, onUpload, onClear, isUploading }: ImageDropZoneProps) {
-  const [dragging, setDragging] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleFile = useCallback(async (file: File) => {
-    if (!file.type.startsWith("image/")) return;
-    const formData = new FormData();
-    formData.append("image", file);
-    onUpload(URL.createObjectURL(file)); // optimistic preview
-    // actual upload is handled by parent via formData ref
-    (inputRef.current as any)._pendingFile = file;
-  }, [onUpload]);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  }, [handleFile]);
-
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleFile(file);
-  }, [handleFile]);
-
-  const heightClass = aspectRatio === "square" ? "h-36" : "h-36";
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[10px] font-bold uppercase tracking-widest text-muted">{label}</label>
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        onClick={() => !isUploading && inputRef.current?.click()}
-        className={`
-          relative ${heightClass} rounded-xl border-2 border-dashed cursor-pointer overflow-hidden transition-all duration-300 group
-          ${dragging ? "border-gold bg-gold/10 scale-[1.01]" : value ? "border-success/50 bg-success/5" : "border-card-border bg-background hover:border-gold/60 hover:bg-gold/5"}
-        `}
-      >
-        {/* Preview */}
-        {value && (
-          <img
-            src={value}
-            alt={label}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        )}
-
-        {/* Overlay on hover or no image */}
-        <div className={`absolute inset-0 flex flex-col items-center justify-center gap-2 transition-all duration-200 ${value ? "opacity-0 group-hover:opacity-100 bg-black/60" : "opacity-100"}`}>
-          {isUploading ? (
-            <Loader2 className="h-6 w-6 text-gold animate-spin" />
-          ) : (
-            <>
-              {value ? (
-                <CheckCircle className="h-6 w-6 text-success" />
-              ) : (
-                <Upload className={`h-6 w-6 transition-colors ${dragging ? "text-gold" : "text-muted"}`} />
-              )}
-              <span className={`text-[10px] font-semibold uppercase tracking-wider text-center px-3 ${value ? "text-white" : "text-muted"}`}>
-                {value ? "Click to replace" : "Drop image or click to browse"}
-              </span>
-              {!value && <span className="text-[9px] text-muted/60">{hint}</span>}
-            </>
-          )}
-        </div>
-
-        {/* Clear button */}
-        {value && !isUploading && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onClear(); if (inputRef.current) inputRef.current.value = ""; }}
-            className="absolute top-2 right-2 z-10 h-6 w-6 bg-black/70 hover:bg-error rounded-full flex items-center justify-center transition-colors"
-          >
-            <X className="h-3.5 w-3.5 text-white" />
-          </button>
-        )}
-      </div>
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
-    </div>
-  );
-}
 
 // ─── Main Register Page ───────────────────────────────────────────────────────
 export default function RegisterPage() {
@@ -156,6 +65,7 @@ export default function RegisterPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [accountType, setAccountType] = useState<"customer" | "seller">("customer");
+  const [sellerStep, setSellerStep] = useState<1 | 2>(1);
   const [showPassword, setShowPassword] = useState(false);
 
   // Image upload state
@@ -163,8 +73,12 @@ export default function RegisterPage() {
   const [coverPreview, setCoverPreview] = useState("");
   const [logoUploading, setLogoUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
-  const logoFileRef = useRef<File | null>(null);
-  const coverFileRef = useRef<File | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const logoPreviewRef = useRef<string | null>(null);
+  const coverPreviewRef = useRef<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const [registerCall, { isLoading }] = useRegisterMutation();
   const [uploadImage] = useUploadImageMutation();
@@ -173,6 +87,7 @@ export default function RegisterPage() {
     register,
     handleSubmit,
     setValue,
+    trigger,
     formState: { errors },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -182,6 +97,62 @@ export default function RegisterPage() {
   const handleRoleToggle = (type: "customer" | "seller") => {
     setAccountType(type);
     setValue("role", type);
+    setSellerStep(1);
+  };
+
+  useEffect(() => () => {
+    if (logoPreviewRef.current) URL.revokeObjectURL(logoPreviewRef.current);
+    if (coverPreviewRef.current) URL.revokeObjectURL(coverPreviewRef.current);
+  }, []);
+
+  const selectStoreImage = (kind: "logo" | "cover", file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setErrorMsg(t("Choose a valid image file.", "Choose a valid image file."));
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMsg(t("Store images must be 5MB or smaller.", "Store images must be 5MB or smaller."));
+      return;
+    }
+
+    setErrorMsg(null);
+    const previewUrl = URL.createObjectURL(file);
+    if (kind === "logo") {
+      if (logoPreviewRef.current) URL.revokeObjectURL(logoPreviewRef.current);
+      logoPreviewRef.current = previewUrl;
+      setLogoFile(file);
+      setLogoPreview(previewUrl);
+    } else {
+      if (coverPreviewRef.current) URL.revokeObjectURL(coverPreviewRef.current);
+      coverPreviewRef.current = previewUrl;
+      setCoverFile(file);
+      setCoverPreview(previewUrl);
+    }
+  };
+
+  const clearStoreImage = (kind: "logo" | "cover") => {
+    if (kind === "logo") {
+      if (logoPreviewRef.current) URL.revokeObjectURL(logoPreviewRef.current);
+      logoPreviewRef.current = null;
+      setLogoFile(null);
+      setLogoPreview("");
+      setValue("storeLogo", "");
+      if (logoInputRef.current) logoInputRef.current.value = "";
+      return;
+    }
+
+    if (coverPreviewRef.current) URL.revokeObjectURL(coverPreviewRef.current);
+    coverPreviewRef.current = null;
+    setCoverFile(null);
+    setCoverPreview("");
+    setValue("storeCover", "");
+    if (coverInputRef.current) coverInputRef.current.value = "";
+  };
+
+  const continueSellerSetup = async () => {
+    const validAccount = await trigger(["username", "email", "password"]);
+    if (validAccount) setSellerStep(2);
   };
 
   // Upload a file to Cloudinary and return URL
@@ -190,28 +161,6 @@ export default function RegisterPage() {
     formData.append("image", file);
     const result = await uploadImage(formData).unwrap();
     return result.url;
-  };
-
-  // Handle logo selection - store file ref and show preview
-  const handleLogoDrop = (previewUrl: string) => {
-    setLogoPreview(previewUrl);
-  };
-
-  // Handle cover selection - store file ref and show preview  
-  const handleCoverDrop = (previewUrl: string) => {
-    setCoverPreview(previewUrl);
-  };
-
-  const handleLogoChange = async (file: File | null) => {
-    if (!file) return;
-    logoFileRef.current = file;
-    setLogoPreview(URL.createObjectURL(file));
-  };
-
-  const handleCoverChange = async (file: File | null) => {
-    if (!file) return;
-    coverFileRef.current = file;
-    setCoverPreview(URL.createObjectURL(file));
   };
 
   const onSubmit = async (data: RegisterFormValues) => {
@@ -224,6 +173,7 @@ export default function RegisterPage() {
       delete payload.storeName;
       delete payload.country;
       delete payload.storeDescription;
+      delete payload.storeAddress;
       delete payload.storeLogo;
       delete payload.storeCover;
     }
@@ -231,19 +181,19 @@ export default function RegisterPage() {
     // If seller, upload logo & cover first
     if (payload.role === "seller") {
       try {
-        if (logoFileRef.current) {
+        if (logoFile) {
           setLogoUploading(true);
-          const logoUrl = await uploadFile(logoFileRef.current);
+          const logoUrl = await uploadFile(logoFile);
           payload.storeLogo = logoUrl;
           setLogoUploading(false);
         }
-        if (coverFileRef.current) {
+        if (coverFile) {
           setCoverUploading(true);
-          const coverUrl = await uploadFile(coverFileRef.current);
+          const coverUrl = await uploadFile(coverFile);
           payload.storeCover = coverUrl;
           setCoverUploading(false);
         }
-      } catch (err) {
+      } catch {
         setLogoUploading(false);
         setCoverUploading(false);
         setErrorMsg(t("Image upload failed. Please try again or skip the images.", "Image upload failed. Please try again or skip the images."));
@@ -258,8 +208,15 @@ export default function RegisterPage() {
       } else {
         setSuccessMsg(t("VIP Profile created! We sent a verification link to your email. Please check your inbox.", "VIP Profile created! We sent a verification link to your email. Please check your inbox."));
       }
-    } catch (err: any) {
-      setErrorMsg(err.data?.message || t("Registration failed. Email might already be registered.", "Registration failed. Email might already be registered."));
+    } catch (error: unknown) {
+      let apiMessage: string | undefined;
+      if (typeof error === "object" && error !== null && "data" in error) {
+        const data = error.data;
+        if (typeof data === "object" && data !== null && "message" in data && typeof data.message === "string") {
+          apiMessage = data.message;
+        }
+      }
+      setErrorMsg(apiMessage || t("Registration failed. Email might already be registered.", "Registration failed. Email might already be registered."));
     }
   };
 
@@ -284,7 +241,11 @@ export default function RegisterPage() {
               <div className="text-center mb-8">
                 <span className="text-xs font-bold tracking-widest text-gold uppercase">{t("VIP Sign Up", "VIP Sign Up")}</span>
                 <h1 className="font-serif text-3xl font-bold mt-1 text-foreground">{t("Create Profile", "Create Profile")}</h1>
-                <p className="text-sm text-muted mt-2">{t("Choose your account type and enter credentials", "Choose your account type and enter credentials")}</p>
+                <p className="text-sm text-muted mt-2">
+                  {accountType === "seller"
+                    ? t("Create your account, then set up your storefront", "Create your account, then set up your storefront")
+                    : t("Choose your account type and enter credentials", "Choose your account type and enter credentials")}
+                </p>
               </div>
 
               {/* Role Toggle */}
@@ -292,6 +253,7 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => handleRoleToggle("customer")}
+                  disabled={isSubmitting}
                   className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-full transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     accountType === "customer" ? "bg-foreground text-background shadow-sm" : "text-muted hover:text-foreground"
                   }`}
@@ -301,6 +263,7 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => handleRoleToggle("seller")}
+                  disabled={isSubmitting}
                   className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-full transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     accountType === "seller" ? "bg-gold text-luxury-black shadow-sm" : "text-muted hover:text-foreground"
                   }`}
@@ -308,6 +271,17 @@ export default function RegisterPage() {
                   <Store className="h-3.5 w-3.5" /> {t("Seller / Store", "Seller / Store")}
                 </button>
               </div>
+
+              {accountType === "seller" && (
+                <div className="flex items-center gap-3 mb-6" aria-label="Seller registration steps">
+                  <div className={`flex-1 rounded-full px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wider ${sellerStep === 1 ? "bg-gold text-luxury-black" : "bg-success/10 text-success"}`}>
+                    1. {t("Account", "Account")}
+                  </div>
+                  <div className={`flex-1 rounded-full px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wider ${sellerStep === 2 ? "bg-gold text-luxury-black" : "bg-background text-muted border border-card-border"}`}>
+                    2. {t("Store Profile", "Store Profile")}
+                  </div>
+                </div>
+              )}
 
               {/* Messages */}
               {errorMsg && (
@@ -334,6 +308,7 @@ export default function RegisterPage() {
                   <input type="hidden" {...register("role")} />
 
                   {/* ── ACCOUNT IDENTITY SECTION ── */}
+                  {(accountType === "customer" || sellerStep === 1) && (
                   <div className={`grid gap-4 ${accountType === "seller" ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                     {/* Username */}
                     <div className={accountType === "seller" ? "sm:col-span-2" : ""}>
@@ -389,25 +364,11 @@ export default function RegisterPage() {
                       {errors.password && <p className="text-xs text-error mt-1 leading-relaxed">{errors.password.message}</p>}
                     </div>
 
-                    {/* Phone (seller only) */}
-                    {accountType === "seller" && (
-                      <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">{t("Phone Number", "Phone Number")}</label>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted/50" />
-                          <input
-                            type="text"
-                            {...register("phone")}
-                            className="w-full rounded-xl border border-card-border bg-background pl-9 pr-4 py-2.5 text-sm outline-none focus:border-gold transition-all placeholder-muted/40"
-                            placeholder="+20 100 123 4567"
-                          />
-                        </div>
-                      </div>
-                    )}
                   </div>
+                  )}
 
                   {/* ── SELLER STORE SECTION ── */}
-                  {accountType === "seller" && (
+                  {accountType === "seller" && sellerStep === 2 && (
                     <>
                       {/* Divider */}
                       <div className="relative flex items-center gap-3 my-1">
@@ -419,6 +380,21 @@ export default function RegisterPage() {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Store Phone */}
+                        <div>
+                          <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">{t("Store Phone *", "Store Phone *")}</label>
+                          <div className="relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted/50" />
+                            <input
+                              type="tel"
+                              {...register("phone")}
+                              className="w-full rounded-xl border border-card-border bg-background pl-9 pr-4 py-2.5 text-sm outline-none focus:border-gold transition-all placeholder-muted/40"
+                              placeholder="+20 100 123 4567"
+                            />
+                          </div>
+                          {errors.phone && <p className="text-xs text-error mt-1">{errors.phone.message}</p>}
+                        </div>
+
                         {/* Brand Name */}
                         <div>
                           <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">{t("Brand Name *", "Brand Name *")}</label>
@@ -458,9 +434,24 @@ export default function RegisterPage() {
                           {errors.country && <p className="text-xs text-error mt-1">{errors.country.message}</p>}
                         </div>
 
+                        {/* Store Address */}
+                        <div>
+                          <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">{t("Store Address *", "Store Address *")}</label>
+                          <div className="relative">
+                            <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted/50" />
+                            <textarea
+                              rows={2}
+                              {...register("storeAddress")}
+                              className="w-full rounded-xl border border-card-border bg-background pl-9 pr-4 py-2.5 text-sm outline-none focus:border-gold transition-all placeholder-muted/40 resize-none"
+                              placeholder={t("Street, city, and region", "Street, city, and region")}
+                            />
+                          </div>
+                          {errors.storeAddress && <p className="text-xs text-error mt-1">{errors.storeAddress.message}</p>}
+                        </div>
+
                         {/* Store Description */}
                         <div className="sm:col-span-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">{t("Store Description", "Store Description")}</label>
+                          <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">{t("Store Description *", "Store Description *")}</label>
                           <div className="relative">
                             <FileText className="absolute left-3 top-3 h-4 w-4 text-muted/50" />
                             <textarea
@@ -470,6 +461,7 @@ export default function RegisterPage() {
                               placeholder="Briefly describe your brand, what you sell, and who you are..."
                             />
                           </div>
+                          {errors.storeDescription && <p className="text-xs text-error mt-1">{errors.storeDescription.message}</p>}
                         </div>
                       </div>
 
@@ -485,11 +477,11 @@ export default function RegisterPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* Logo Upload */}
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted">{t("Store Logo", "Store Logo")}</label>
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted">{t("Store Logo (Optional)", "Store Logo (Optional)")}</label>
                           <div
                             className={`relative h-36 rounded-xl border-2 border-dashed cursor-pointer overflow-hidden transition-all duration-300 group
                               ${logoPreview ? "border-success/50 bg-success/5" : "border-card-border bg-background hover:border-gold/60 hover:bg-gold/5"}`}
-                            onClick={() => document.getElementById("logoInput")?.click()}
+                            onClick={() => logoInputRef.current?.click()}
                           >
                             {logoPreview && (
                               <img src={logoPreview} alt="Store Logo" className="absolute inset-0 w-full h-full object-cover" />
@@ -513,24 +505,24 @@ export default function RegisterPage() {
                               )}
                             </div>
                             {logoPreview && (
-                              <button type="button" onClick={(e) => { e.stopPropagation(); setLogoPreview(""); logoFileRef.current = null; setValue("storeLogo", ""); }}
+                              <button type="button" onClick={(e) => { e.stopPropagation(); clearStoreImage("logo"); }}
                                 className="absolute top-2 right-2 z-10 h-6 w-6 bg-black/70 hover:bg-error rounded-full flex items-center justify-center transition-colors">
                                 <X className="h-3.5 w-3.5 text-white" />
                               </button>
                             )}
                           </div>
-                          <input id="logoInput" type="file" accept="image/*" className="hidden"
-                            onChange={(e) => { const f = e.target.files?.[0]; if (f) { logoFileRef.current = f; setLogoPreview(URL.createObjectURL(f)); }}} />
+                          <input ref={logoInputRef} type="file" accept="image/*" className="hidden"
+                            onChange={(e) => { const f = e.target.files?.[0]; selectStoreImage("logo", f); e.currentTarget.value = ""; }} />
                           <span className="text-[9px] text-muted/60">{t("Recommended: 400×400px square image", "Recommended: 400×400px square image")}</span>
                         </div>
 
                         {/* Cover Upload */}
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted">{t("Store Cover Banner", "Store Cover Banner")}</label>
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted">{t("Store Cover Banner (Optional)", "Store Cover Banner (Optional)")}</label>
                           <div
                             className={`relative h-36 rounded-xl border-2 border-dashed cursor-pointer overflow-hidden transition-all duration-300 group
                               ${coverPreview ? "border-success/50 bg-success/5" : "border-card-border bg-background hover:border-gold/60 hover:bg-gold/5"}`}
-                            onClick={() => document.getElementById("coverInput")?.click()}
+                            onClick={() => coverInputRef.current?.click()}
                           >
                             {coverPreview && (
                               <img src={coverPreview} alt="Store Cover" className="absolute inset-0 w-full h-full object-cover" />
@@ -554,14 +546,14 @@ export default function RegisterPage() {
                               )}
                             </div>
                             {coverPreview && (
-                              <button type="button" onClick={(e) => { e.stopPropagation(); setCoverPreview(""); coverFileRef.current = null; setValue("storeCover", ""); }}
+                              <button type="button" onClick={(e) => { e.stopPropagation(); clearStoreImage("cover"); }}
                                 className="absolute top-2 right-2 z-10 h-6 w-6 bg-black/70 hover:bg-error rounded-full flex items-center justify-center transition-colors">
                                 <X className="h-3.5 w-3.5 text-white" />
                               </button>
                             )}
                           </div>
-                          <input id="coverInput" type="file" accept="image/*" className="hidden"
-                            onChange={(e) => { const f = e.target.files?.[0]; if (f) { coverFileRef.current = f; setCoverPreview(URL.createObjectURL(f)); }}} />
+                          <input ref={coverInputRef} type="file" accept="image/*" className="hidden"
+                            onChange={(e) => { const f = e.target.files?.[0]; selectStoreImage("cover", f); e.currentTarget.value = ""; }} />
                           <span className="text-[9px] text-muted/60">{t("Recommended: 1200×400px landscape banner", "Recommended: 1200×400px landscape banner")}</span>
                         </div>
                       </div>
@@ -606,28 +598,49 @@ export default function RegisterPage() {
                     </div>
                   )}
 
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className={`w-full rounded-xl py-3 font-bold text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 mt-2 ${
-                      accountType === "seller"
-                        ? "bg-gold hover:bg-gold-hover text-luxury-black"
-                        : "bg-foreground hover:bg-gold hover:text-luxury-black text-background"
-                    }`}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        {logoUploading ? t("Uploading Logo...", "Uploading Logo...") : coverUploading ? t("Uploading Cover...", "Uploading Cover...") : t("Creating Account...", "Creating Account...")}
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="h-4 w-4" />
-                        {accountType === "seller" ? t("Submit Store Application", "Submit Store Application") : t("Request Invitation", "Request Invitation")}
-                      </>
-                    )}
-                  </button>
+                  {accountType === "seller" && sellerStep === 1 ? (
+                    <button
+                      type="button"
+                      onClick={continueSellerSetup}
+                      className="w-full rounded-xl py-3 font-bold text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 bg-gold hover:bg-gold-hover text-luxury-black"
+                    >
+                      <Store className="h-4 w-4" /> {t("Continue to Store Profile", "Continue to Store Profile")}
+                    </button>
+                  ) : (
+                    <div className={`grid gap-3 mt-2 ${accountType === "seller" ? "grid-cols-2" : "grid-cols-1"}`}>
+                      {accountType === "seller" && (
+                        <button
+                          type="button"
+                          onClick={() => setSellerStep(1)}
+                          disabled={isSubmitting}
+                          className="w-full rounded-xl py-3 font-bold text-sm uppercase tracking-widest transition-all cursor-pointer border border-card-border text-muted hover:text-foreground disabled:opacity-60"
+                        >
+                          {t("Back to Account", "Back to Account")}
+                        </button>
+                      )}
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className={`w-full rounded-xl py-3 font-bold text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 ${
+                          accountType === "seller"
+                            ? "bg-gold hover:bg-gold-hover text-luxury-black"
+                            : "bg-foreground hover:bg-gold hover:text-luxury-black text-background"
+                        }`}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            {logoUploading ? t("Uploading Logo...", "Uploading Logo...") : coverUploading ? t("Uploading Cover...", "Uploading Cover...") : t("Creating Account...", "Creating Account...")}
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="h-4 w-4" />
+                            {accountType === "seller" ? t("Submit Store Application", "Submit Store Application") : t("Request Invitation", "Request Invitation")}
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
 
                   <div className="text-center pt-4 border-t border-card-border text-sm text-muted">
                     {t("Already have a profile?", "Already have a profile?")} {" "}

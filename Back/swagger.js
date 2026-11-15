@@ -518,8 +518,7 @@ Refresh tokens are stored in an **HttpOnly cookie** automatically set on login.
           type: 'object',
           required: ['amount'],
           properties: {
-            amount:     { type: 'number', example: 5000 },
-            bankAccount:{ type: 'string', example: 'IBAN: EG123456789...' },
+            amount: { type: 'number', example: 5000 },
           },
         },
 
