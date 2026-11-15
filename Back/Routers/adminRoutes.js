@@ -71,7 +71,7 @@ const { verifyAdmin } = require("../Middelwares/verifyToken");
  *                     $ref: '#/components/schemas/UserPublic'
  *                 totalUsers: { type: integer, example: 1204 }
  */
-router.get("/users", verifyAdmin, getAllUsers);
+router.get("/users", getAllUsers);
 
 /**
  * @swagger
