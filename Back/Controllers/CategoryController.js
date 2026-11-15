@@ -107,19 +107,14 @@ const createCategory = asyncHandler(async (req, res) => {
     }
   }
 
-  // 2. التحقق من وجود ملف الصورة المرفوع عبر Multer
-  if (!req.file) {
-    return res.status(400).json({ success: false, message: "Please upload a category image" });
-  }
+  // 2. رفع الصورة إذا تم إرفاقها؛ وإلا فسيُستخدم رابط الصورة الافتراضي.
+  const image = req.file ? (await cloudUpload(req.file)).secure_url : undefined;
 
-  // 3. رفع الصورة إلى Cloudinary باستخدام الـ Buffer
-  const uploadResult = await cloudUpload(req.file);
-
-  // 4. إنشاء القسم وحفظ رابط Cloudinary المستقر (secure_url)
+  // 3. إنشاء القسم وحفظ رابط Cloudinary المستقر (secure_url)
   const category = await Category.create({
     name,
     description,
-    image: uploadResult.secure_url, // هنا يتم حفظ الرابط بالكامل تلقائياً
+    ...(image && { image }),
     parent: parent || null,
     isActive,
   });

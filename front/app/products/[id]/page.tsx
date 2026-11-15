@@ -199,9 +199,12 @@ export default function ProductDetailsPage() {
             <div className="flex flex-col gap-4 mt-2">
               <button
                 onClick={handleAddToCart}
-                className="w-full h-14 rounded bg-foreground font-semibold text-background hover:bg-gold hover:text-luxury-white transition-all flex items-center justify-center gap-2 shadow-md uppercase tracking-wider text-sm"
+                disabled={(product.variants?.length ?? 0) > 0}
+                className="w-full h-14 rounded bg-foreground font-semibold text-background hover:bg-gold hover:text-luxury-white transition-all flex items-center justify-center gap-2 shadow-md uppercase tracking-wider text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add To Shopping Bag
+                {(product.variants?.length ?? 0) > 0
+                  ? "Variant purchases are temporarily unavailable"
+                  : "Add To Shopping Bag"}
               </button>
               <div className="flex items-center justify-center gap-6 text-xs text-muted">
                 <span className="flex items-center gap-1"><Shield className="h-3.5 w-3.5" /> 100% Secure Checkout</span>

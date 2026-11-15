@@ -2,20 +2,42 @@ const jwt = require("jsonwebtoken");
 const { User } = require("../models/User");
 
 // Verify token middleware
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-  if (authHeader) {
-    const token = authHeader.split(' ')[1];
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-      req.user = decoded;
-      next();
-    } catch (error) {
-      return res.status(401).json({ message: "Invalid token" });
-    }
-  } else {
+  if (!authHeader) {
     return res.status(401).json({ message: "No token provided" });
   }
+
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ message: "Invalid token" });
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+  } catch {
+    return res.status(401).json({ message: "Invalid token" });
+  }
+
+  const user = await User.findById(decoded.id);
+  if (!user) {
+    return res.status(401).json({ message: "User not found" });
+  }
+  if (user.isBlocked) {
+    return res.status(403).json({ message: "This account is blocked." });
+  }
+  if (!user.isVerify) {
+    return res.status(403).json({ message: "Please verify your email before signing in." });
+  }
+
+  req.user = {
+    ...decoded,
+    id: user._id.toString(),
+    role: user.role,
+    sellerStatus: user.sellerStatus
+  };
+  return next();
 };
 
 // Verify admin

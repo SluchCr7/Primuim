@@ -175,19 +175,7 @@ const register = asyncHandler(async (req, res) => {
     `
   });
 
-  const accessToken = generateAccessToken(user);
-  const refreshToken = generateRefreshToken(user);
-
-  await RefreshToken.create({
-    user: user._id,
-    token: hashRefreshToken(refreshToken),
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-  });
-
-  res.cookie("refreshToken", refreshToken, cookieOptions);
-
   res.status(201).json({
-    accessToken,
     user: {
       id: user._id,
       username: user.username,
@@ -479,6 +467,14 @@ const refresh = asyncHandler(async (req, res) => {
   }
 
   // Token rotation
+  if (!user.isVerify || user.isBlocked) {
+    await RefreshToken.deleteOne({ token: hashedToken });
+    res.clearCookie("refreshToken", cookieOptions);
+    return res.status(403).json({
+      message: user.isBlocked ? "This account is blocked." : "Please verify your email before signing in."
+    });
+  }
+
   const newAccessToken = generateAccessToken(user);
   const newRefreshToken = generateRefreshToken(user);
 

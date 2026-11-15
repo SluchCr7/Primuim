@@ -205,6 +205,9 @@ const updateSellerOrderStatus = asyncHandler(async (req, res) => {
   const products = await Product.find({ seller: sellerId }).select("_id");
   const productIds = products.map(p => p._id.toString());
 
+  const allItemsBelongToSeller = order.orderItems.every(item =>
+    productIds.includes(item.product.toString())
+  );
   const hasItemInOrder = order.orderItems.some(item =>
     productIds.includes(item.product.toString())
   );
@@ -217,15 +220,25 @@ const updateSellerOrderStatus = asyncHandler(async (req, res) => {
   }
 
   const oldStatus = order.orderStatus;
+  if (!allItemsBelongToSeller) {
+    return res.status(403).json({
+      success: false,
+      message: "Multi-seller fulfillment is not supported for this order."
+    });
+  }
+  if (order.orderStatus === "delivered") {
+    return res.status(409).json({
+      success: false,
+      message: "A delivered order cannot be changed or settled again."
+    });
+  }
+
   order.orderStatus = status;
 
   // If status is changed to delivered, credit sellers wallets
   if (status === "delivered" && oldStatus !== "delivered") {
     order.isDelivered = true;
     order.deliveredAt = new Date();
-    order.isPaid = true;
-    order.paidAt = new Date();
-    order.paymentStatus = "paid";
 
     // Loop through order items and credit corresponding sellers
     for (const item of order.orderItems) {

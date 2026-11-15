@@ -124,11 +124,8 @@ router.post("/shipping", verifyToken, saveShipping);
  *             properties:
  *               paymentMethod:
  *                 type: string
- *                 enum: [stripe, cod]
- *                 example: stripe
- *               couponCode:
- *                 type: string
- *                 example: SUMMER20
+ *                 enum: [cod]
+ *                 example: cod
  *     responses:
  *       200:
  *         description: Payment method saved. Returns final checkout state with totals.

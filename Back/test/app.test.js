@@ -51,6 +51,8 @@ const mockUser = {
   _id: "60c72b2f9b1d8e25d7777777",
   role: "seller",
   sellerStatus: "approved",
+  isVerify: true,
+  isBlocked: false,
   walletBalance: 0,
   loyaltyPoints: 0,
   activityLogs: [],
@@ -158,13 +160,63 @@ test("GET unknown route returns 404", async () => {
   assert.match(response.body.message, /Not Found/i);
 });
 
+test("POST social login is disabled until provider identity verification is configured", async () => {
+  const response = await request(app)
+    .post("/api/auth/social-login")
+    .send({
+      provider: "google",
+      email: "someone@example.com",
+      id: "unverified-provider-id"
+    });
+
+  assert.equal(response.status, 503);
+  assert.equal(response.body.success, false);
+});
+
+test("authenticated routes reject users who have not verified their email", async () => {
+  const originalFindById = User.findById;
+  User.findById = async () => ({ ...mockUser, isVerify: false });
+
+  try {
+    const response = await request(app)
+      .get("/api/cart")
+      .set("Authorization", `Bearer ${sellerToken}`);
+
+    assert.equal(response.status, 403);
+  } finally {
+    User.findById = originalFindById;
+  }
+});
+
 test("GET /api/payments/methods returns payment methods", async () => {
   const response = await request(app).get("/api/payments/methods");
 
   assert.equal(response.status, 200);
   assert.equal(response.body.success, true);
   assert.ok(Array.isArray(response.body.paymentMethods));
-  assert.ok(response.body.paymentMethods.length >= 3);
+  assert.deepEqual(response.body.paymentMethods.map((method) => method.key), ["cod"]);
+});
+
+test("payment status and unsigned webhooks cannot mark orders paid", async () => {
+  const statusResponse = await request(app)
+    .patch("/api/payments/untrusted-payment-id/status")
+    .set("Authorization", `Bearer ${sellerToken}`)
+    .send({ status: "paid" });
+  const webhookResponse = await request(app)
+    .post("/api/payments/webhook/stripe")
+    .send({ status: "paid", transactionId: "unverified" });
+
+  assert.equal(statusResponse.status, 503);
+  assert.equal(webhookResponse.status, 503);
+});
+
+test("checkout rejects online payment methods without provider verification", async () => {
+  const response = await request(app)
+    .post("/api/checkout/payment")
+    .set("Authorization", `Bearer ${sellerToken}`)
+    .send({ paymentMethod: "card" });
+
+  assert.equal(response.status, 503);
 });
 
 test("GET /api/products/best-sellers returns best selling products", async () => {
@@ -213,6 +265,24 @@ test("GET /api/products applies the subcategory filter", async () => {
     Product.find = originalFind;
     Product.countDocuments = originalCountDocuments;
   }
+});
+
+test("seller cannot cycle a delivered order or repeat wallet settlement", async () => {
+  const previousStatus = mockOrder.orderStatus;
+  const previousDelivered = mockOrder.isDelivered;
+  const previousBalance = mockUser.walletBalance;
+  mockOrder.orderStatus = "delivered";
+  mockOrder.isDelivered = true;
+
+  const response = await request(app)
+    .patch("/api/sellers/orders/60c72b2f9b1d8e25d9999999")
+    .set("Authorization", `Bearer ${sellerToken}`)
+    .send({ status: "processing" });
+
+  assert.equal(response.status, 409);
+  assert.equal(mockUser.walletBalance, previousBalance);
+  mockOrder.orderStatus = previousStatus;
+  mockOrder.isDelivered = previousDelivered;
 });
 
 test("PATCH /api/sellers/orders/:id marks order as delivered, increments salesCount, and checks isBestSeller threshold", async () => {

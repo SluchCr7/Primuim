@@ -5,11 +5,6 @@ const { Product } = require("../models/Product");
 
 const paymentMethods = [
   { key: "cod", label: "Cash on Delivery", provider: "manual" },
-  { key: "card", label: "Card Payment", provider: "stripe" },
-  { key: "paypal", label: "PayPal", provider: "paypal" },
-  { key: "fawry", label: "Fawry Pay", provider: "fawry" },
-  { key: "vodafone_cash", label: "Vodafone Cash Wallet", provider: "vodafone_cash" },
-  { key: "paymob", label: "Paymob Gate", provider: "paymob" }
 ];
 
 const getPaymentMethods = asyncHandler(async (req, res) => {
@@ -91,7 +86,21 @@ const createPayment = asyncHandler(async (req, res) => {
     redirectUrl = `https://accept.paymob.com/api/acceptance/iframes/12345?payment_token=mock_token_${paymobOrderId}`;
   }
 
-  const nextStatus = transactionId ? "paid" : normalizedMethod === "cod" ? "pending" : "processing";
+  if (normalizedMethod !== "cod") {
+    return res.status(503).json({
+      success: false,
+      message: "Online payment processing is unavailable until a payment provider is configured."
+    });
+  }
+
+  if (transactionId || providerReference) {
+    return res.status(400).json({
+      success: false,
+      message: "Client-supplied transaction references cannot verify payment."
+    });
+  }
+
+  const nextStatus = "pending";
 
   const payment = await Payment.findOneAndUpdate(
     { order: order._id },

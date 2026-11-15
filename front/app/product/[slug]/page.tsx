@@ -670,12 +670,15 @@ export default function ProductDetailsBySlugPage() {
                     addingToCart ||
                     product.stock === 0 ||
                     isOwner ||
+                    (product.variants?.length ?? 0) > 0 ||
                     !allAttributesSelected ||
                     (allAttributesSelected && activeVariant !== undefined && activeVariant !== null && activeVariant.stock <= 0)
                   }
-                  className="flex-grow h-14 rounded-full bg-foreground text-background hover:bg-gold hover:text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-black/5 uppercase tracking-widest text-xs font-semibold disabled:opacity-50 cursor-pointer hover:-translate-y-0.5"
+                  className="flex-grow h-14 rounded-full bg-foreground text-background hover:bg-gold hover:text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-black/5 uppercase tracking-widest text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:-translate-y-0.5"
                 >
-                  {addingToCart ? (
+                  {(product.variants?.length ?? 0) > 0 ? (
+                    t("Variant purchases are temporarily unavailable")
+                  ) : addingToCart ? (
                     t("Reserving Allocation…")
                   ) : product.stock === 0 ? (
                     t("Allocation Closed")

@@ -119,7 +119,7 @@ router.post("/orders/:orderId", verifyToken, createPayment);
  * @swagger
  * /api/payments/{id}/status:
  *   patch:
- *     summary: Update payment status (user self-reports Stripe result after front-end confirmation)
+ *     summary: Owner payment status updates are disabled pending verified provider integration
  *     tags: [Payments]
  *     security:
  *       - bearerAuth: []
@@ -137,13 +137,18 @@ router.post("/orders/:orderId", verifyToken, createPayment);
  *             $ref: '#/components/schemas/UpdatePaymentStatusInput'
  *     responses:
  *       200:
- *         description: Payment status updated.
+ *         description: Owner status updates are disabled until provider verification is configured.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  */
-router.patch("/:id/status", verifyToken, updatePaymentStatus);
+router.patch("/:id/status", verifyToken, (req, res) =>
+  res.status(503).json({
+    success: false,
+    message: "Payment status is controlled by verified payment processing."
+  })
+);
 
 /**
  * @swagger
@@ -226,7 +231,7 @@ router.post("/admin/:id/refund", verifyAdmin, refundPayment);
  * @swagger
  * /api/payments/webhook/{provider}:
  *   post:
- *     summary: Receive payment provider webhooks (Stripe, etc.) — do NOT call manually
+ *     summary: Payment webhooks are disabled pending verified provider integration
  *     tags: [Payments]
  *     parameters:
  *       - in: path
@@ -235,7 +240,7 @@ router.post("/admin/:id/refund", verifyAdmin, refundPayment);
  *         schema: { type: string, enum: [stripe] }
  *         description: Payment provider identifier
  *     requestBody:
- *       description: Raw webhook payload (verified via provider signature header)
+ *       description: Raw webhook payload; processing is unavailable until provider signatures are verified
  *       required: true
  *       content:
  *         application/json:
@@ -243,7 +248,7 @@ router.post("/admin/:id/refund", verifyAdmin, refundPayment);
  *             type: object
  *     responses:
  *       200:
- *         description: Webhook processed.
+ *         description: Webhook processing is disabled until provider signature verification is configured.
  *         content:
  *           application/json:
  *             schema:
@@ -255,6 +260,11 @@ router.post("/admin/:id/refund", verifyAdmin, refundPayment);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post("/webhook/:provider", handlePaymentWebhook);
+router.post("/webhook/:provider", (req, res) =>
+  res.status(503).json({
+    success: false,
+    message: "Payment webhooks are unavailable until provider signature verification is configured."
+  })
+);
 
 module.exports = router;

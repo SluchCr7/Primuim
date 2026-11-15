@@ -237,7 +237,12 @@ router.post("/reset-password", resetPassword);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post("/social-login", socialLogin);
+router.post("/social-login", (req, res) =>
+  res.status(503).json({
+    success: false,
+    message: "Social sign-in is unavailable until an identity provider is configured."
+  })
+);
 
 /**
  * @swagger

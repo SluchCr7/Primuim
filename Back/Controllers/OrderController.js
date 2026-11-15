@@ -4,7 +4,6 @@ const asyncHandler = require("express-async-handler");
 const { Product } = require("../models/Product");
 const mongoose = require("mongoose");
 const generateInvoice = require("../utils/generateInvoice");
-const CheckoutSession = require("../models/CheckoutSession");
 const WarehouseInventory = require("../models/WarehouseInventory");
 const StockReservation = require("../models/StockReservation");
 const { awardLoyaltyPoints, redeemLoyaltyPoints } = require("../utils/loyaltyService");
@@ -36,9 +35,23 @@ const createOrder = asyncHandler(async (req, res) => {
 
     try {
         const cart = await Cart.findOne({ user: req.user.id }).session(session);
-        const { shippingAddress, coordinates, redeemPoints } = req.body;
-        const allowedPaymentMethods = ["cod", "card", "paypal"];
-        const paymentMethod = req.body.paymentMethod || "cod";
+        const { coordinates, redeemPoints } = req.body;
+        const checkoutSession = await CheckoutSession.findOne({ userId: req.user.id });
+        if (
+          !checkoutSession ||
+          !checkoutSession.shippingAddress ||
+          !checkoutSession.shippingMethod ||
+          !checkoutSession.paymentMethod
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "Complete checkout shipping and payment details before placing the order."
+          });
+        }
+
+        const allowedPaymentMethods = ["cod"];
+        const paymentMethod = checkoutSession.paymentMethod;
+        const shippingAddress = checkoutSession.shippingAddress;
 
         if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.phone || !shippingAddress.city || !shippingAddress.street) {
             return res.status(400).json({
@@ -68,6 +81,12 @@ const createOrder = asyncHandler(async (req, res) => {
 
             if (!product) {
                 throw new Error("Product not found");
+            }
+
+            if (product.variants?.length > 0) {
+                const error = new Error("Variant products are currently unavailable for purchase.");
+                error.statusCode = 400;
+                throw error;
             }
 
             if (product.seller && product.seller.toString() === req.user.id) {
@@ -190,8 +209,8 @@ const createOrder = asyncHandler(async (req, res) => {
             await redeemLoyaltyPoints(req.user.id, redeemPoints, tempOrderId, session);
         }
 
-        const shippingPrice = req.body.shippingPrice || 0;
-        const taxPrice = req.body.taxPrice || 0;
+        const shippingPrice = checkoutSession.shippingCost;
+        const taxPrice = checkoutSession.taxCost;
         const totalPrice = Math.max(0, itemsPrice + shippingPrice + taxPrice - pointsDiscount);
 
         const orderStatus = paymentMethod === "cod" ? "pending" : "processing";
@@ -547,3 +566,4 @@ module.exports = {
     downloadInvoice,
     processReturn
 };
+const CheckoutSession = require("../models/CheckoutSession");

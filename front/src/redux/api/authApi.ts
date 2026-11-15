@@ -44,14 +44,6 @@ export const authApi = baseApi.injectEndpoints({
         method: "POST",
       }),
     }),
-    socialLogin: builder.mutation({
-      query: (socialData) => ({
-        url: "/auth/social-login",
-        method: "POST",
-        body: socialData,
-      }),
-      invalidatesTags: ["User", "Cart"],
-    }),
     forgotPassword: builder.mutation({
       query: (emailData) => ({
         url: "/auth/forgot-password",
@@ -92,7 +84,6 @@ export const {
   useRefreshTokenMutation,
   useVerifyOTPMutation,
   useSendOTPMutation,
-  useSocialLoginMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
   useToggle2FAMutation,

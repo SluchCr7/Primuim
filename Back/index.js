@@ -62,7 +62,18 @@ app.use(
 app.use(helmet());
 app.use(
     cors({
-        origin: process.env.FRONTEND_ORIGIN ? process.env.FRONTEND_ORIGIN.split(",") : true,
+        origin: (origin, callback) => {
+            const allowedOrigins = (process.env.FRONTEND_ORIGIN || "http://localhost:3000")
+                .split(",")
+                .map((value) => value.trim())
+                .filter(Boolean);
+
+            if (!origin || (allowedOrigins.includes(origin) && !allowedOrigins.includes("*"))) {
+                return callback(null, true);
+            }
+
+            return callback(new Error("Origin is not allowed by CORS"));
+        },
         credentials: true
     })
 );
@@ -166,6 +177,8 @@ const startServer = async () => {
 };
 
 // استدعاء الدالة لتشغيل التطبيق
-startServer();
+if (require.main === module) {
+    startServer();
+}
 
 module.exports = app;

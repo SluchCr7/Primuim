@@ -150,6 +150,13 @@ const saveShipping = asyncHandler(async (req, res) => {
 // ========================================
 const savePayment = asyncHandler(async (req, res) => {
   const { paymentMethod } = req.body;
+
+  if (paymentMethod !== "cod") {
+    return res.status(503).json({
+      success: false,
+      message: "Online payment processing is unavailable until a payment provider is configured."
+    });
+  }
   const session = await CheckoutSession.findOne({ userId: req.user.id });
 
   if (!session) {

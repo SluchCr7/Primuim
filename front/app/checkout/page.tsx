@@ -70,6 +70,7 @@ export default function CheckoutPage() {
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvc, setCardCvc] = useState("");
+  const [shippingQuote, setShippingQuote] = useState({ shippingCost: 0, taxCost: 0 });
 
   // Completed Order State
   const [createdOrder, setCreatedOrder] = useState<any>(null);
@@ -160,10 +161,14 @@ export default function CheckoutPage() {
 
     try {
       // Sync shipping in checkout session
-      await saveShipping({
+      const shippingResponse = await saveShipping({
         shippingAddress: { fullName, phone, city, street, postalCode, country: "Egypt" },
         shippingMethodId: shippingMethod,
       }).unwrap();
+      setShippingQuote({
+        shippingCost: shippingResponse.checkoutSession.shippingCost,
+        taxCost: shippingResponse.checkoutSession.taxCost,
+      });
 
       setStep("payment");
     } catch (err: any) {
@@ -172,59 +177,23 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
-    if (paymentMethod === "vodafone_cash" && !isWalletModalOpen && !paymentResponse) {
-      if (!walletNumber) {
-        showToast(t("Please enter your Vodafone Cash wallet number."), "error");
-        return;
-      }
-      setIsWalletModalOpen(true);
+    if (paymentMethod !== "cod") {
+      showToast(t("Online payment methods are temporarily unavailable."), "error");
       return;
     }
 
     setStep("processing");
 
-    const cartPrice = cartData?.cart?.totalPrice || 0;
-    const shippingPrice = shippingMethod === "exp" ? 150 : cartPrice > 10000 ? 0 : 250;
-    const taxPrice = Math.round(cartPrice * 0.14 * 100) / 100;
-
     try {
+      await savePaymentMethod({ paymentMethod: "cod" }).unwrap();
+
       // 1. Create order
       const orderRes = await createOrder({
-        shippingAddress: { fullName, phone, city, street, postalCode, country: "Egypt" },
-        paymentMethod: paymentMethod === "cod" ? "cod" : paymentMethod === "card" ? "card" : "paypal",
-        shippingPrice,
-        taxPrice,
         redeemPoints: pointsRedeemedApplied,
-        coordinates: [31.2357, 30.0444] // default Cairo coords for proximity routing fallback
       }).unwrap();
 
       const order = orderRes.order;
       setCreatedOrder(order);
-
-      // 2. Process mock payment if not COD
-      if (paymentMethod !== "cod") {
-        const payload: any = {
-          paymentMethod,
-        };
-
-        if (paymentMethod === "card") {
-          payload.transactionId = `stripe_mock_txn_${Date.now()}`;
-          payload.provider = "stripe";
-        } else if (paymentMethod === "fawry") {
-          payload.provider = "fawry";
-        } else if (paymentMethod === "vodafone_cash") {
-          payload.provider = "vodafone_cash";
-          payload.transactionId = `vdf_mock_txn_${Date.now()}`;
-          payload.providerReference = `VDF-${Math.floor(100000 + Math.random() * 900000)}`;
-        }
-
-        const payRes = await createPayment({
-          orderId: order._id,
-          paymentData: payload,
-        }).unwrap();
-
-        setPaymentResponse(payRes);
-      }
 
       setStep("confirm");
     } catch (err: any) {
@@ -244,9 +213,12 @@ export default function CheckoutPage() {
 
   // Price calculations
   const cartPrice = cartData?.cart?.totalPrice || 0;
-  const shippingPrice = shippingMethod === "exp" ? 150 : cartPrice > 10000 ? 0 : 250;
-  const taxPrice = Math.round(cartPrice * 0.14 * 100) / 100;
-  const total = Math.max(0, cartPrice + shippingPrice + taxPrice - pointsRedeemedApplied);
+  const shippingPrice = shippingQuote.shippingCost;
+  const taxPrice = shippingQuote.taxCost;
+  const total = Math.max(
+    0,
+    cartPrice + shippingPrice + taxPrice - pointsRedeemedApplied
+  );
 
   if (isCartLoading) {
     return (
@@ -471,13 +443,13 @@ export default function CheckoutPage() {
                 {/* Stripe Simulator Card */}
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("card")}
+                  onClick={() => showToast(t("Card payments are temporarily unavailable."), "error")}
                   className={`p-5 border rounded text-left flex gap-4 items-start ${paymentMethod === "card" ? "border-gold bg-gold/5" : "border-card-border"}`}
                 >
                   <CreditCard className="h-5 w-5 text-gold flex-shrink-0 mt-0.5" />
                   <div className="flex-grow">
-                    <span className="font-bold text-sm block">{t("Credit / Debit Card (Stripe SDK stub)")}</span>
-                    <span className="text-xs text-muted font-light mt-0.5 block">{t("Securely authorize and charge using international card rails.")}</span>
+                    <span className="font-bold text-sm block">{t("Credit / Debit Card (temporarily unavailable)")}</span>
+                    <span className="text-xs text-muted font-light mt-0.5 block">{t("This payment provider is not configured yet.")}</span>
 
                     {paymentMethod === "card" && (
                       <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3" onClick={(e) => e.stopPropagation()}>
@@ -512,26 +484,26 @@ export default function CheckoutPage() {
                 {/* Fawry Cash Egyptian stub */}
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("fawry")}
+                  onClick={() => showToast(t("Fawry payments are temporarily unavailable."), "error")}
                   className={`p-5 border rounded text-left flex gap-4 items-start ${paymentMethod === "fawry" ? "border-gold bg-gold/5" : "border-card-border"}`}
                 >
                   <FileText className="h-5 w-5 text-gold flex-shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold text-sm block">{t("Fawry Pay (Egyptian Retail Kiosk)")}</span>
-                    <span className="text-xs text-muted font-light mt-0.5 block">{t("Get a Fawry billing code and pay at any neighborhood kiosk machine.")}</span>
+                    <span className="font-bold text-sm block">{t("Fawry (temporarily unavailable)")}</span>
+                    <span className="text-xs text-muted font-light mt-0.5 block">{t("This payment provider is not configured yet.")}</span>
                   </div>
                 </button>
 
                 {/* Vodafone Cash Egyptian stub */}
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("vodafone_cash")}
+                  onClick={() => showToast(t("Vodafone Cash is temporarily unavailable."), "error")}
                   className={`p-5 border rounded text-left flex gap-4 items-start ${paymentMethod === "vodafone_cash" ? "border-gold bg-gold/5" : "border-card-border"}`}
                 >
                   <Phone className="h-5 w-5 text-gold flex-shrink-0 mt-0.5" />
                   <div className="flex-grow">
-                    <span className="font-bold text-sm block">{t("Vodafone Cash (Mobile Wallet)")}</span>
-                    <span className="text-xs text-muted font-light mt-0.5 block">{t("Pay instantly using your active Vodafone Egypt mobile wallet.")}</span>
+                    <span className="font-bold text-sm block">{t("Vodafone Cash (temporarily unavailable)")}</span>
+                    <span className="text-xs text-muted font-light mt-0.5 block">{t("This payment provider is not configured yet.")}</span>
 
                     {paymentMethod === "vodafone_cash" && (
                       <div className="mt-4" onClick={(e) => e.stopPropagation()}>

@@ -52,6 +52,13 @@ const addToCart = asyncHandler(async (req, res) => {
         });
     }
 
+    if (product.variants?.length > 0) {
+        return res.status(400).json({
+            success: false,
+            message: "Variant products are currently unavailable for purchase."
+        });
+    }
+
     if (product.seller && product.seller.toString() === req.user.id) {
         return res.status(400).json({
             success: false,
@@ -262,6 +269,19 @@ const updateCartItemQuantity = asyncHandler(async (req, res) => {
         if (quantity === 0) {
             cart.items.splice(itemIndex, 1);
         } else {
+            const product = await Product.findById(productId);
+            if (!product) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Product not found"
+                });
+            }
+            if (product.variants?.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Variant products are currently unavailable for purchase."
+                });
+            }
             cart.items[itemIndex].quantity = quantity;
         }
     } else {
