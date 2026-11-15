@@ -93,13 +93,31 @@ During a deep system audit and quality engineering phase, the following enhancem
 2. Configure `.env.local` variables:
    ```env
    NEXT_PUBLIC_API_URL=http://localhost:5000/api
+   NEXT_PUBLIC_SITE_URL=http://localhost:3000
    ```
 3. Run Next.js in development mode:
    ```bash
    npm run dev
    ```
 
-### 3. Docker Compose Setup
+### 3. Vercel Production Configuration
+
+Deploy the backend and frontend as separate Vercel projects:
+
+- Set the backend project's Root Directory to `Back`; its `vercel.json` routes API and health requests to the Express app.
+- Set the frontend project's Root Directory to `front`.
+- Configure these environment variables in the backend project:
+  - `MONGO_URI`: production MongoDB connection string.
+  - `FRONTEND_ORIGIN`: public HTTPS frontend origin, without a path. Multiple allowed origins may be comma-separated.
+- Configure these environment variables in the frontend project:
+  - `NEXT_PUBLIC_API_URL`: public HTTPS backend URL, preferably ending in `/api`.
+  - `NEXT_PUBLIC_SITE_URL`: public HTTPS frontend origin, without a path.
+
+The frontend build rejects missing or non-public production URLs. The backend health endpoints (`/health` and `/api/health`) verify MongoDB connectivity and return `503` when the database is unavailable. Confirm the MongoDB provider's network access rules permit the deployed backend to connect; do not commit connection strings or widen database access unnecessarily.
+
+The repository cannot verify Vercel project/root-directory settings, deployment status, environment variable values, or MongoDB network access. If a Vercel domain still returns a platform-level `404`, verify that the domain is attached to the project using the expected repository and Root Directory, then redeploy.
+
+### 4. Docker Compose Setup
 To spin up the entire stack (Database + Backend + Frontend) in containerized environments:
 ```bash
 docker-compose up --build

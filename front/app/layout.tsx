@@ -8,11 +8,12 @@ import { ToastProvider } from "./components/Toast";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import LanguageWrapper from "./components/LanguageWrapper";
+import { SITE_URL } from "@/lib/siteConfig";
 
 export const metadata: Metadata = {
   title: "LUMIXA | Curated Style & Design",
   description: "Discover thoughtfully curated fashion, accessories, and design from trusted independent stores on LUMIXA.",
-  metadataBase: new URL("http://localhost:3000"),
+  metadataBase: new URL(SITE_URL),
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",

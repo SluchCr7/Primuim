@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
 
 import { useTranslation } from "react-i18next";
+import { SITE_URL } from "@/lib/siteConfig";
 
 interface BreadcrumbItem {
   label: string;
@@ -25,7 +26,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items }) => {
       "@type": "ListItem",
       "position": index + 1,
       "name": item.label,
-      "item": item.url ? `http://localhost:3000${item.url}` : undefined,
+      "item": item.url ? `${SITE_URL}${item.url}` : undefined,
     })),
   };
 

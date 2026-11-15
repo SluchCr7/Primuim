@@ -1,11 +1,31 @@
 import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
 import { setCredentials, logOut } from "@/lib/authSlice";
 
+const getServerApiBaseUrl = () => {
+  const configuredUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (!configuredUrl && process.env.VERCEL) {
+    throw new Error("NEXT_PUBLIC_API_URL must be configured for Vercel deployments.");
+  }
+
+  if (configuredUrl && process.env.VERCEL) {
+    const backendOrigin = new URL(configuredUrl);
+    if (
+      backendOrigin.protocol !== "https:" ||
+      ["localhost", "127.0.0.1", "::1"].includes(backendOrigin.hostname)
+    ) {
+      throw new Error("NEXT_PUBLIC_API_URL must use a public HTTPS backend URL on Vercel.");
+    }
+  }
+
+  const baseUrl = (configuredUrl || "http://localhost:5000/api").replace(/\/+$/, "");
+  return baseUrl.endsWith("/api") ? baseUrl : `${baseUrl}/api`;
+};
+
 // 1. تحديد عنوان الـ API الأساسي بناءً على مكان التشغيل (متصفح أو سيرفر)
 export const API_BASE_URL =
   typeof window !== "undefined"
     ? "/api" // في المتصفح: بنستخدم "/api" عشان يمر عبر Next.js Proxy (يمنع مشاكل الـ CORS ويسمح بإرسال الكوكيز)
-    : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"); // على السيرفر (SSR): بنستخدم الرابط المباشر للباك إند
+    : getServerApiBaseUrl(); // على السيرفر (SSR): بنستخدم الرابط المباشر للباك إند
 
 
 // 2. إعداد الاتصال الأساسي وإضافة الـ Token وإعدادات الكوكيز لكل الطلبات

@@ -12,8 +12,22 @@ const nextConfig: NextConfig = {
   },
 
   async rewrites() {
-    const backendUrl =
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+    const configuredBackendUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+    if (!configuredBackendUrl && process.env.VERCEL) {
+      throw new Error("NEXT_PUBLIC_API_URL must be configured for Vercel deployments.");
+    }
+
+    if (configuredBackendUrl && process.env.VERCEL) {
+      const backendOrigin = new URL(configuredBackendUrl);
+      if (
+        backendOrigin.protocol !== "https:" ||
+        ["localhost", "127.0.0.1", "::1"].includes(backendOrigin.hostname)
+      ) {
+        throw new Error("NEXT_PUBLIC_API_URL must use a public HTTPS backend URL on Vercel.");
+      }
+    }
+
+    const backendUrl = configuredBackendUrl || "http://localhost:5000/api";
 
     // Remove trailing /api to avoid duplicating it
     const backendBase = backendUrl.replace(/\/api\/?$/, "");

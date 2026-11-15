@@ -1,7 +1,22 @@
 import { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/siteConfig";
 
-const BASE_URL = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const BASE_URL = SITE_URL;
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+
+if (!configuredApiUrl && process.env.VERCEL) {
+  throw new Error("NEXT_PUBLIC_API_URL must be configured for Vercel deployments.");
+}
+
+const backendUrl = (configuredApiUrl || "http://localhost:5000/api").replace(/\/+$/, "");
+const API_URL = backendUrl.endsWith("/api") ? backendUrl : `${backendUrl}/api`;
+
+interface SitemapRecord {
+  _id?: string;
+  slug?: string;
+  updatedAt?: string;
+  createdAt?: string;
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPaths = [
@@ -18,13 +33,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let productPaths: MetadataRoute.Sitemap = [];
   try {
     const res = await fetch(`${API_URL}/products?limit=100`, { next: { revalidate: 3600 } });
-    if (res.ok) {
-      const data = await res.json();
+    if (!res.ok) {
+      console.error(`Failed to generate dynamic product sitemap (HTTP ${res.status}).`);
+    } else {
+      const data = (await res.json()) as { success?: boolean; products?: SitemapRecord[] };
       if (data.success && Array.isArray(data.products)) {
-        productPaths = data.products.map((prod: any) => ({
-          url: `${BASE_URL}/product/${prod.slug}`,
-          lastModified: new Date(prod.updatedAt || prod.createdAt || Date.now()),
-        }));
+        productPaths = data.products.flatMap((prod) =>
+          typeof prod.slug === "string" && prod.slug.length > 0
+            ? [{
+                url: `${BASE_URL}/product/${prod.slug}`,
+                lastModified: new Date(prod.updatedAt || prod.createdAt || Date.now()),
+              }]
+            : []
+        );
       }
     }
   } catch (err) {
@@ -34,13 +55,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let categoryPaths: MetadataRoute.Sitemap = [];
   try {
     const res = await fetch(`${API_URL}/categories?tree=false`, { next: { revalidate: 3600 } });
-    if (res.ok) {
-      const data = await res.json();
+    if (!res.ok) {
+      console.error(`Failed to generate dynamic category sitemap (HTTP ${res.status}).`);
+    } else {
+      const data = (await res.json()) as { success?: boolean; categories?: SitemapRecord[] };
       if (data.success && Array.isArray(data.categories)) {
-        categoryPaths = data.categories.map((cat: any) => ({
-          url: `${BASE_URL}/category/${cat.slug}`,
-          lastModified: new Date(cat.updatedAt || cat.createdAt || Date.now()),
-        }));
+        categoryPaths = data.categories.flatMap((cat) =>
+          typeof cat.slug === "string" && cat.slug.length > 0
+            ? [{
+                url: `${BASE_URL}/category/${cat.slug}`,
+                lastModified: new Date(cat.updatedAt || cat.createdAt || Date.now()),
+              }]
+            : []
+        );
       }
     }
   } catch (err) {
@@ -50,13 +77,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let articlePaths: MetadataRoute.Sitemap = [];
   try {
     const res = await fetch(`${API_URL}/articles`, { next: { revalidate: 3600 } });
-    if (res.ok) {
-      const data = await res.json();
+    if (!res.ok) {
+      console.error(`Failed to generate dynamic article sitemap (HTTP ${res.status}).`);
+    } else {
+      const data = (await res.json()) as { success?: boolean; articles?: SitemapRecord[] };
       if (data.success && Array.isArray(data.articles)) {
-        articlePaths = data.articles.map((art: any) => ({
-          url: `${BASE_URL}/blog/${art.slug || art._id}`,
-          lastModified: new Date(art.updatedAt || art.createdAt || Date.now()),
-        }));
+        articlePaths = data.articles.flatMap((article) => {
+          const slug =
+            typeof article.slug === "string" && article.slug.length > 0
+              ? article.slug
+              : article._id;
+          return slug
+            ? [{
+                url: `${BASE_URL}/blog/${slug}`,
+                lastModified: new Date(article.updatedAt || article.createdAt || Date.now()),
+              }]
+            : [];
+        });
       }
     }
   } catch (err) {

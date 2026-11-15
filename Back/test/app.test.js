@@ -2,6 +2,7 @@ const { test, before } = require("node:test");
 const assert = require("node:assert/strict");
 const request = require("supertest");
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 
 // Mock sendEmail in require cache before requiring app/controllers
 require.cache[require.resolve("../utils/sendEmail")] = {
@@ -13,7 +14,11 @@ require.cache[require.resolve("../utils/sendEmail")] = {
 require.cache[require.resolve("../config/db")] = {
   exports: async () => {
     console.log("Mocked database connection success");
-    return {};
+    mongoose.connection.readyState = 1;
+    mongoose.connection.db = {
+      admin: () => ({ ping: async () => ({ ok: 1 }) })
+    };
+    return mongoose.connection;
   }
 };
 
@@ -145,12 +150,15 @@ before(() => {
   };
 });
 
-test("GET /health returns ok", async () => {
+test("GET /health and /api/health report the database status", async () => {
   const response = await request(app).get("/health");
-
   assert.equal(response.status, 200);
   assert.equal(response.body.success, true);
-  assert.equal(response.body.status, "ok");
+  assert.equal(response.body.database, "connected");
+
+  const apiResponse = await request(app).get("/api/health");
+  assert.equal(apiResponse.status, 200);
+  assert.equal(apiResponse.body.database, "connected");
 });
 
 test("GET unknown route returns 404", async () => {

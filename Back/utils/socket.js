@@ -4,9 +4,22 @@ const jwt = require("jsonwebtoken");
 module.exports = {
   init: (server) => {
     const { Server } = require("socket.io");
+    const configuredOrigins = process.env.FRONTEND_ORIGIN
+      ? process.env.FRONTEND_ORIGIN
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .map((value) => new URL(value).origin)
+      : [];
+    const allowedOrigins = configuredOrigins.length
+      ? configuredOrigins
+      : process.env.NODE_ENV === "production"
+        ? []
+        : ["http://localhost:3000"];
+
     io = new Server(server, {
       cors: {
-        origin: process.env.FRONTEND_ORIGIN ? process.env.FRONTEND_ORIGIN.split(",") : true,
+        origin: allowedOrigins,
         credentials: true,
       },
     });

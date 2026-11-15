@@ -25,6 +25,26 @@ const cookieOptions = {
 const hashRefreshToken = (token) =>
   crypto.createHash("sha256").update(token).digest("hex");
 
+const getFrontendOrigin = () => {
+  const configuredOrigin = process.env.FRONTEND_ORIGIN?.split(",")[0].trim();
+  if (!configuredOrigin) {
+    if (isProduction) {
+      throw new Error("FRONTEND_ORIGIN is required to send account links in production.");
+    }
+    return "http://localhost:3000";
+  }
+
+  const origin = new URL(configuredOrigin);
+  if (
+    isProduction &&
+    (origin.protocol !== "https:" ||
+      ["localhost", "127.0.0.1", "::1"].includes(origin.hostname))
+  ) {
+    throw new Error("FRONTEND_ORIGIN must use a public HTTPS URL in production.");
+  }
+  return origin.origin;
+};
+
 
 const register = asyncHandler(async (req, res) => {
   const { error } = validateRegisterUser(req.body);
@@ -118,7 +138,7 @@ const register = asyncHandler(async (req, res) => {
   });
 
   // Send email
-  const verifyUrl = `${process.env.FRONTEND_ORIGIN || "http://localhost:3000"}/verify-email?id=${user._id}&token=${tokenVer}`;
+  const verifyUrl = `${getFrontendOrigin()}/verify-email?id=${user._id}&token=${tokenVer}`;
 
   await sendEmail({
     email: user.email,
@@ -336,7 +356,7 @@ const login = asyncHandler(async (req, res) => {
     });
 
     // 3. تجهيز رابط التفعيل (نفس اللي عملته في الـ register)
-    const verifyUrl = `${process.env.FRONTEND_ORIGIN || "http://localhost:3000"}/verify-email?id=${user._id}&token=${tokenVer}`;
+    const verifyUrl = `${getFrontendOrigin()}/verify-email?id=${user._id}&token=${tokenVer}`;
 
     // 4. إرسال الإيميل
     await sendEmail({
@@ -567,7 +587,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   await user.save();
 
-  const resetUrl = `${process.env.FRONTEND_ORIGIN || "http://localhost:3000"}/reset-password?token=${resetToken}`;
+  const resetUrl = `${getFrontendOrigin()}/reset-password?token=${resetToken}`;
   
   await sendEmail({
     email: user.email,

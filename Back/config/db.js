@@ -1,23 +1,34 @@
 const mongoose = require('mongoose');
 
-let cachedConnection = null;
+let connectionPromise = null;
+
+mongoose.connection.on('disconnected', () => {
+    connectionPromise = null;
+});
 
 const connectDB = async () => {
-    if (cachedConnection) {
-        return cachedConnection;
+    if (mongoose.connection.readyState === 1) {
+        return mongoose.connection;
     }
 
-    try {
-        cachedConnection = await mongoose.connect(process.env.MONGO_URI, {
+    if (!process.env.MONGO_URI) {
+        throw new Error('MONGO_URI is required to connect to MongoDB');
+    }
+
+    if (!connectionPromise) {
+        connectionPromise = mongoose.connect(process.env.MONGO_URI, {
             maxPoolSize: 20,
             serverSelectionTimeoutMS: 5000
+        }).then(() => {
+            console.log('MongoDB connected successfully');
+            return mongoose.connection;
+        }).catch((error) => {
+            connectionPromise = null;
+            throw error;
         });
-        console.log('MongoDB connected successfully');
-        return cachedConnection;
-    } catch (error) {
-        console.error('Error connecting to MongoDB:', error);
-        process.exit(1);
     }
+
+    return connectionPromise;
 };
 
 module.exports = connectDB;

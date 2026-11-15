@@ -11,6 +11,7 @@ const logger = require("./config/logger");
 const { errorhandler } = require("./Middelwares/errorHandler");
 const { notfound } = require("./Middelwares/errorHandler");
 const { swaggerUi, specs } = require('./swagger');
+const mongoose = require("mongoose");
 const mongoSanitize = () => (req, res, next) => {
   const sanitizeInput = (obj) => {
     if (obj && typeof obj === "object") {
@@ -63,12 +64,20 @@ app.use(helmet());
 app.use(
     cors({
         origin: (origin, callback) => {
-            const allowedOrigins = (process.env.FRONTEND_ORIGIN || "http://localhost:3000")
-                .split(",")
-                .map((value) => value.trim())
-                .filter(Boolean);
+            const configuredOrigins = process.env.FRONTEND_ORIGIN
+                ? process.env.FRONTEND_ORIGIN
+                    .split(",")
+                    .map((value) => value.trim())
+                    .filter(Boolean)
+                    .map((value) => new URL(value).origin)
+                : [];
+            const allowedOrigins = configuredOrigins.length
+                ? configuredOrigins
+                : process.env.NODE_ENV === "production"
+                    ? []
+                    : ["http://localhost:3000"];
 
-            if (!origin || (allowedOrigins.includes(origin) && !allowedOrigins.includes("*"))) {
+            if (!origin || allowedOrigins.includes(origin)) {
                 return callback(null, true);
             }
 
@@ -108,12 +117,51 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-app.get("/health", (req, res) => {
-    res.status(200).json({
-        success: true,
-        status: "ok",
-        uptime: process.uptime()
-    });
+const healthCheck = async (req, res) => {
+    const states = {
+        0: "disconnected",
+        1: "connected",
+        2: "connecting",
+        3: "disconnecting",
+    };
+
+    try {
+        await connectDB();
+        await mongoose.connection.db.admin().ping();
+
+        return res.status(200).json({
+            success: true,
+            server: "running",
+            database: "connected",
+            readyState: mongoose.connection.readyState,
+            uptime: process.uptime(),
+        });
+    } catch (error) {
+        logger.error(`Health check database connection failed: ${error?.name || "ConnectionError"}`);
+        return res.status(503).json({
+            success: false,
+            server: "running",
+            database: states[mongoose.connection.readyState] || "unknown",
+            readyState: mongoose.connection.readyState,
+            uptime: process.uptime(),
+        });
+    }
+};
+
+app.get("/health", healthCheck);
+app.get("/api/health", healthCheck);
+
+app.use("/api", async (req, res, next) => {
+    try {
+        await connectDB();
+        return next();
+    } catch (error) {
+        logger.error(`API request rejected because MongoDB is unavailable: ${error?.name || "ConnectionError"}`);
+        return res.status(503).json({
+            success: false,
+            message: "Database unavailable",
+        });
+    }
 });
 
 app.use("/api/auth", authRoutes);
@@ -167,11 +215,11 @@ const startServer = async () => {
                 await releaseExpiredReservations();
                 await processExpiredPoints();
             } catch (err) {
-                console.error("Error running background inventory/loyalty cleanups:", err.message);
+                logger.error(`Background inventory/loyalty cleanup failed: ${err?.name || "Error"}`);
             }
         }, 60 * 1000);
     } catch (error) {
-        console.error("Failed to start the server due to DB connection error:", error);
+        logger.error(`Failed to start the server due to a database connection error: ${error?.name || "Error"}`);
         process.exit(1); // إنهاء العملية إذا فشل الاتصال الحرج
     }
 };
