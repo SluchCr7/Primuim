@@ -242,7 +242,11 @@ export default function PremiumHomePage() {
 
   return (
     <div className="bg-background text-foreground">
-      <section className="relative isolate overflow-hidden bg-[#eee8df] dark:bg-[#191814]">
+      <section className="relative isolate overflow-hidden bg-[#eee8df] text-[#191814] dark:bg-[#191814] dark:text-[#f5f5f3]">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-gold/10 blur-3xl"
+        />
         <div className="mx-auto grid max-w-[1440px] gap-10 px-5 pb-12 pt-10 sm:px-8 md:py-16 lg:min-h-[680px] lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:px-12 xl:px-16">
           <motion.div
             initial={reduceMotion ? false : { opacity: 0, y: 18 }}
@@ -254,7 +258,7 @@ export default function PremiumHomePage() {
               <span className="h-px w-8 bg-gold" />
               LUMIXA — A considered edit
             </p>
-            <h1 className="mt-6 max-w-lg font-serif text-5xl font-medium leading-[0.98] tracking-[-0.045em] sm:text-6xl xl:text-7xl">
+            <h1 className="mt-6 max-w-lg font-serif text-5xl font-medium leading-[0.98] tracking-[-0.045em] text-foreground sm:text-6xl xl:text-7xl">
               Discover what feels like you.
             </h1>
             <p className="mt-6 max-w-md text-sm leading-7 text-muted sm:text-base">
@@ -457,17 +461,23 @@ export default function PremiumHomePage() {
         </div>
       </section>
 
-      <section className="bg-[#1c1b18] text-[#fcfcfa]">
-        <div className="mx-auto flex max-w-[1440px] flex-col items-start justify-between gap-6 px-5 py-12 sm:px-8 sm:py-14 md:flex-row md:items-center lg:px-12 xl:px-16">
-          <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-[#d7bc97]">Your next discovery starts here</p>
-            <h2 className="mt-3 max-w-2xl font-serif text-3xl font-medium sm:text-4xl">
-              Take a closer look around.
-            </h2>
+      <section className="border-y border-card-border bg-muted-light/40">
+        <div className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 sm:py-14 lg:px-12 xl:px-16">
+          <div className="relative isolate flex flex-col items-start justify-between gap-6 overflow-hidden border border-card-border bg-background px-6 py-9 shadow-[0_24px_70px_rgba(16,16,15,0.06)] sm:px-10 sm:py-12 md:flex-row md:items-center dark:shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-12 -top-20 -z-10 h-64 w-64 rounded-full bg-gold/15 blur-3xl"
+            />
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold">Your next discovery starts here</p>
+              <h2 className="mt-3 max-w-2xl font-serif text-3xl font-medium text-foreground sm:text-4xl">
+                Take a closer look around.
+              </h2>
+            </div>
+            <Link href="/products" className="inline-flex min-h-12 items-center gap-3 bg-foreground px-6 text-xs font-medium uppercase tracking-[0.18em] text-background transition-colors hover:bg-gold hover:text-luxury-black">
+              Explore all products <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
-          <Link href="/products" className="inline-flex min-h-12 items-center gap-3 border border-white/35 px-6 text-xs font-medium uppercase tracking-[0.18em] transition-colors hover:bg-white hover:text-[#1c1b18]">
-            Explore all products <ArrowRight className="h-4 w-4" />
-          </Link>
         </div>
       </section>
     </div>

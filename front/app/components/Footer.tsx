@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 const linkGroups = [
@@ -43,11 +44,19 @@ export const Footer = () => {
       className="mt-auto w-full border-t border-card-border bg-card-bg text-foreground"
       aria-label={t("Site Footer")}
     >
+      <div
+        aria-hidden="true"
+        className="h-px bg-gradient-to-r from-transparent via-gold/80 to-transparent"
+      />
       <div className="mx-auto grid max-w-7xl gap-10 px-6 py-12 sm:px-8 lg:grid-cols-[1.4fr_3fr] lg:gap-16 lg:py-16">
-        <div className="max-w-sm">
+        <div className="relative isolate max-w-sm overflow-hidden border border-card-border bg-muted-light/40 p-6 sm:p-8">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-12 -top-14 -z-10 h-40 w-40 rounded-full bg-gold/15 blur-3xl"
+          />
           <Link
             href="/"
-            className="font-serif text-2xl font-semibold tracking-[0.22em] text-gold"
+            className="font-serif text-2xl font-semibold tracking-[0.22em] text-foreground transition-colors hover:text-gold"
             aria-label="LUMIXA home"
           >
             LUMIXA
@@ -57,6 +66,12 @@ export const Footer = () => {
               "A considered edit across fashion, home, technology, and everyday finds."
             )}
           </p>
+          <Link
+            href="/products"
+            className="mt-6 inline-flex min-h-11 items-center gap-3 border border-gold/50 px-4 text-[10px] font-medium uppercase tracking-[0.16em] text-foreground transition-colors hover:bg-gold hover:text-luxury-black"
+          >
+            {t("Explore the catalog")} <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
 
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
