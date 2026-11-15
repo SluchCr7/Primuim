@@ -6,6 +6,7 @@ export * from "./cartApi";
 export * from "./checkoutApi";
 export * from "./orderApi";
 export * from "./reviewApi";
+export * from "./testimonialApi";
 export * from "./articleApi";
 export * from "./sellerApi";
 export * from "./notificationApi";
