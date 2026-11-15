@@ -138,69 +138,69 @@ const register = asyncHandler(async (req, res) => {
   }
 
   // Account verification token
-  const tokenVer = crypto.randomBytes(32).toString("hex");
-  await Verification.create({
-    userId: user._id,
-    tokenVer
-  });
+  // const tokenVer = crypto.randomBytes(32).toString("hex");
+  // await Verification.create({
+  //   userId: user._id,
+  //   tokenVer
+  // });
 
-  // Send email
-  const verifyUrl = `${getFrontendOrigin()}/verify-email?id=${user._id}&token=${tokenVer}`;
+  // // Send email
+  // const verifyUrl = `${getFrontendOrigin()}/verify-email?id=${user._id}&token=${tokenVer}`;
 
-  await sendEmail({
-    email: user.email,
-    subject: "🔒 Activate Your Shop Premium Account",
-    html: `
-      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #fff;">
+  // await sendEmail({
+  //   email: user.email,
+  //   subject: "🔒 Activate Your Shop Premium Account",
+  //   html: `
+  //     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #fff;">
         
-        <!-- Header / Logo Area -->
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #111; font-size: 26px; font-weight: 700; margin: 0; letter-spacing: 1px;">SHOP PREMIUM</h1>
-          <p style="color: #666; font-size: 14px; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 2px;">Elevate Your Experience</p>
-        </div>
+  //       <!-- Header / Logo Area -->
+  //       <div style="text-align: center; margin-bottom: 30px;">
+  //         <h1 style="color: #111; font-size: 26px; font-weight: 700; margin: 0; letter-spacing: 1px;">SHOP PREMIUM</h1>
+  //         <p style="color: #666; font-size: 14px; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 2px;">Elevate Your Experience</p>
+  //       </div>
         
-        <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 30px;" />
+  //       <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 30px;" />
         
-        <!-- Body Content -->
-        <div style="padding: 0 10px;">
-          <h2 style="color: #222; font-size: 20px; font-weight: 600; margin-top: 0;">Welcome aboard, ${user.username}! ✨</h2>
+  //       <!-- Body Content -->
+  //       <div style="padding: 0 10px;">
+  //         <h2 style="color: #222; font-size: 20px; font-weight: 600; margin-top: 0;">Welcome aboard, ${user.username}! ✨</h2>
           
-          <p style="color: #444; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-            Thank you for joining <strong>Shop Premium</strong>. We're thrilled to have you with us. To unlock your exclusive access and start exploring premium deals, please verify your email address.
-          </p>
+  //         <p style="color: #444; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+  //           Thank you for joining <strong>Shop Premium</strong>. We're thrilled to have you with us. To unlock your exclusive access and start exploring premium deals, please verify your email address.
+  //         </p>
           
-          <!-- CTA Button -->
-          <div style="text-align: center; margin: 35px 0;">
-            <a href="${verifyUrl}" style="background-color: #000; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-              Verify Email Address
-            </a>
-          </div>
+  //         <!-- CTA Button -->
+  //         <div style="text-align: center; margin: 35px 0;">
+  //           <a href="${verifyUrl}" style="background-color: #000; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+  //             Verify Email Address
+  //           </a>
+  //         </div>
           
-          <p style="color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 10px;">
-            This verification link is valid for a limited time. If the button above doesn't work, please copy and paste the following URL into your browser:
-          </p>
+  //         <p style="color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 10px;">
+  //           This verification link is valid for a limited time. If the button above doesn't work, please copy and paste the following URL into your browser:
+  //         </p>
           
-          <!-- Fallback URL -->
-          <div style="background-color: #f9f9f9; padding: 12px; border-radius: 6px; word-break: break-all; margin-bottom: 30px;">
-            <a href="${verifyUrl}" style="color: #0066cc; font-size: 13px; text-decoration: none;">${verifyUrl}</a>
-          </div>
-        </div>
+  //         <!-- Fallback URL -->
+  //         <div style="background-color: #f9f9f9; padding: 12px; border-radius: 6px; word-break: break-all; margin-bottom: 30px;">
+  //           <a href="${verifyUrl}" style="color: #0066cc; font-size: 13px; text-decoration: none;">${verifyUrl}</a>
+  //         </div>
+  //       </div>
         
-        <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 20px;" />
+  //       <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 20px;" />
         
-        <!-- Footer -->
-        <div style="text-align: center;">
-          <p style="color: #999; font-size: 12px; margin: 0 0 5px 0;">
-            If you didn't create an account, you can safely ignore this email.
-          </p>
-          <p style="color: #999; font-size: 12px; margin: 0;">
-            &copy; ${new Date().getFullYear()} Shop Premium. All rights reserved.
-          </p>
-        </div>
+  //       <!-- Footer -->
+  //       <div style="text-align: center;">
+  //         <p style="color: #999; font-size: 12px; margin: 0 0 5px 0;">
+  //           If you didn't create an account, you can safely ignore this email.
+  //         </p>
+  //         <p style="color: #999; font-size: 12px; margin: 0;">
+  //           &copy; ${new Date().getFullYear()} Shop Premium. All rights reserved.
+  //         </p>
+  //       </div>
         
-      </div>
-    `
-  });
+  //     </div>
+  //   `
+  // });
 
   res.status(201).json({
     user: {
@@ -356,55 +356,55 @@ const login = asyncHandler(async (req, res) => {
 
   // ==================== التعديل الجديد هنا ====================
   // الفحص: هل الحساب مفعل؟ (استخدمنا نفس الـ Property اللي في الـ verifyAccount وهي isVerify)
-  if (!user.isVerify) {
-    // 1. مسح أي توكن تفعيل قديم للمستخدم ده عشان ميبقاش فيه زحمة في الـ DB
-    await Verification.deleteOne({ userId: user._id });
+  // if (!user.isVerify) {
+  //   // 1. مسح أي توكن تفعيل قديم للمستخدم ده عشان ميبقاش فيه زحمة في الـ DB
+  //   await Verification.deleteOne({ userId: user._id });
 
-    // 2. توليد توكن تفعيل جديد
-    const tokenVer = crypto.randomBytes(32).toString("hex");
-    await Verification.create({
-      userId: user._id,
-      tokenVer
-    });
+  //   // 2. توليد توكن تفعيل جديد
+  //   const tokenVer = crypto.randomBytes(32).toString("hex");
+  //   await Verification.create({
+  //     userId: user._id,
+  //     tokenVer
+  //   });
 
-    // 3. تجهيز رابط التفعيل (نفس اللي عملته في الـ register)
-    const verifyUrl = `${getFrontendOrigin()}/verify-email?id=${user._id}&token=${tokenVer}`;
+  //   // 3. تجهيز رابط التفعيل (نفس اللي عملته في الـ register)
+  //   const verifyUrl = `${getFrontendOrigin()}/verify-email?id=${user._id}&token=${tokenVer}`;
 
-    // 4. إرسال الإيميل
-    await sendEmail({
-      email: user.email,
-      subject: "🔒 Activate Your Shop Premium Account",
-      html: `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #fff;">
-          <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #111; font-size: 26px; font-weight: 700; margin: 0; letter-spacing: 1px;">SHOP PREMIUM</h1>
-            <p style="color: #666; font-size: 14px; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 2px;">Elevate Your Experience</p>
-          </div>
-          <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 30px;" />
-          <div style="padding: 0 10px;">
-            <h2 style="color: #222; font-size: 20px; font-weight: 600; margin-top: 0;">Welcome back, ${user.username}! ✨</h2>
-            <p style="color: #444; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-              Your account is not activated yet. Please click the button below to verify your email address and unlock your account.
-            </p>
-            <div style="text-align: center; margin: 35px 0;">
-              <a href="${verifyUrl}" style="background-color: #000; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                Verify Email Address
-              </a>
-            </div>
-            <div style="background-color: #f9f9f9; padding: 12px; border-radius: 6px; word-break: break-all; margin-bottom: 30px;">
-              <a href="${verifyUrl}" style="color: #0066cc; font-size: 13px; text-decoration: none;">${verifyUrl}</a>
-            </div>
-          </div>
-        </div>
-      `
-    });
+  //   // 4. إرسال الإيميل
+  //   await sendEmail({
+  //     email: user.email,
+  //     subject: "🔒 Activate Your Shop Premium Account",
+  //     html: `
+  //       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #fff;">
+  //         <div style="text-align: center; margin-bottom: 30px;">
+  //           <h1 style="color: #111; font-size: 26px; font-weight: 700; margin: 0; letter-spacing: 1px;">SHOP PREMIUM</h1>
+  //           <p style="color: #666; font-size: 14px; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 2px;">Elevate Your Experience</p>
+  //         </div>
+  //         <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 30px;" />
+  //         <div style="padding: 0 10px;">
+  //           <h2 style="color: #222; font-size: 20px; font-weight: 600; margin-top: 0;">Welcome back, ${user.username}! ✨</h2>
+  //           <p style="color: #444; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+  //             Your account is not activated yet. Please click the button below to verify your email address and unlock your account.
+  //           </p>
+  //           <div style="text-align: center; margin: 35px 0;">
+  //             <a href="${verifyUrl}" style="background-color: #000; color: #fff; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+  //               Verify Email Address
+  //             </a>
+  //           </div>
+  //           <div style="background-color: #f9f9f9; padding: 12px; border-radius: 6px; word-break: break-all; margin-bottom: 30px;">
+  //             <a href="${verifyUrl}" style="color: #0066cc; font-size: 13px; text-decoration: none;">${verifyUrl}</a>
+  //           </div>
+  //         </div>
+  //       </div>
+  //     `
+  //   });
 
-    // 5. الرد على الـ Frontend بـ 403 ورسالة واضحة مع إرجاع flag يسهل على الفرونت إظهار زرار إعادة الإرسال لو احتاج
-    return res.status(403).json({
-      isVerified: false,
-      message: "Your account is not verified. A new verification link has been sent to your email."
-    });
-  }
+  //   // 5. الرد على الـ Frontend بـ 403 ورسالة واضحة مع إرجاع flag يسهل على الفرونت إظهار زرار إعادة الإرسال لو احتاج
+  //   return res.status(403).json({
+  //     isVerified: false,
+  //     message: "Your account is not verified. A new verification link has been sent to your email."
+  //   });
+  // }
   // ==========================================================
 
   // Reset login locking & attempts (يكمل عادي لو الحساب مفعل)
