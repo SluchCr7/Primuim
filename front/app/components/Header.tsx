@@ -234,11 +234,25 @@ export const Header: React.FC = () => {
       <div className="mx-auto flex h-20 max-w-9xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
         
         {/* LOGO */}
-        <LinkNext href="/" className="flex items-center gap-2.5 shrink-0">
-          {/* <Image width={500} height={500} src="/luxury_store_logo.png" alt="PREMIUM Logo" className="h-8 w-8 object-contain rounded-md border border-gold/30" /> */}
-          <Image width={500} height={500} src="/logo_wbg.png" alt="LUMIXA Logo" className="h-8 w-8 object-contain rounded-md border border-gold/30" />
-          <span className="font-serif text-2xl sm:text-3xl font-black tracking-[0.25em] text-gold hover:opacity-90 transition-opacity">
-            LUMIXA
+        <LinkNext
+          href="/"
+          aria-label="LUMIXA home"
+          className="group flex items-center gap-3 shrink-0"
+        >
+          <Image
+            width={40}
+            height={40}
+            src="/icon.svg"
+            alt=""
+            className="h-10 w-10 rounded-xl border border-gold/35 shadow-sm transition-transform duration-300 group-hover:scale-[1.04]"
+          />
+          <span className="flex flex-col leading-none">
+            <span className="font-serif text-xl sm:text-2xl font-semibold tracking-[0.2em] text-foreground transition-colors duration-300 group-hover:text-gold">
+              LUMIXA
+            </span>
+            <span className="mt-1.5 hidden text-[8px] font-medium uppercase tracking-[0.28em] text-gold/80 sm:block">
+              Curated Marketplace
+            </span>
           </span>
         </LinkNext>
 
