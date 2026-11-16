@@ -19,6 +19,12 @@ const checkoutSessionSchema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           ref: "Product",
         },
+        variantSku: {
+          type: String,
+          default: null,
+          trim: true,
+          uppercase: true,
+        },
         title: String,
         price: Number,
         quantity: Number,
@@ -64,6 +70,14 @@ const checkoutSessionSchema = new mongoose.Schema(
       type: Date,
       default: () => new Date(Date.now() + 60 * 60 * 1000), // expires in 1 hour
       index: { expires: 0 },
+    },
+    orderGroupId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    completedAt: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true }

@@ -77,11 +77,13 @@ router.get("/mine", verifyToken, getMyOrders);
  *               type: object
  *               properties:
  *                 success: { type: boolean, example: true }
- *                 order:   { $ref: '#/components/schemas/Order' }
- orders:
-   type: array
-   items: { $ref: '#/components/schemas/Order' }
- checkoutGroupId: { type: string }
+ *                 order: { $ref: '#/components/schemas/Order' }
+ *                 orders:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Order'
+ *                 checkoutGroupId:
+ *                   type: string
  *       400:
  *         description: Cart empty or stock issue.
  *         content:

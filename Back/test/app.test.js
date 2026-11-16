@@ -37,6 +37,10 @@ const Notification = require("../models/Notification");
 const CheckoutSession = require("../models/CheckoutSession");
 const StockReservation = require("../models/StockReservation");
 const WarehouseInventory = require("../models/WarehouseInventory");
+const SellerInventory = require("../models/SellerInventory");
+const InventoryMovement = require("../models/InventoryMovement");
+const Warehouse = require("../models/Warehouse");
+const inventoryService = require("../utils/inventoryService");
 
 // Setup JWT secret if not defined
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "test-secret";
@@ -285,20 +289,37 @@ test("approved sellers can update store contact and address details", async () =
 
 test("seller product creation keeps repeated tags and payout requests debit atomically", async () => {
   const originals = {
+    startSession: mongoose.startSession,
     categoryFindById: Category.findById,
     productFindOne: Product.findOne,
     productCreate: Product.create,
+    initializeSellerInventory: inventoryService.initializeSellerInventory,
     userFindOneAndUpdate: User.findOneAndUpdate
   };
   let createdProduct;
   let payoutFilter;
   let payoutUpdate;
+  let initializedInventoryCount = 0;
+  const transaction = {
+    active: false,
+    startTransaction() { this.active = true; },
+    inTransaction() { return this.active; },
+    async abortTransaction() { this.active = false; },
+    async commitTransaction() { this.active = false; },
+    async endSession() {}
+  };
 
+  mongoose.startSession = async () => transaction;
   Category.findById = async () => ({ _id: "60c72b2f9b1d8e25d8888880" });
   Product.findOne = async () => null;
-  Product.create = async (data) => {
-    createdProduct = data;
-    return data;
+  Product.create = async (documents) => {
+    const data = Array.isArray(documents) ? documents[0] : documents;
+    createdProduct = { ...data, _id: "60c72b2f9b1d8e25d8888871" };
+    return Array.isArray(documents) ? [createdProduct] : createdProduct;
+  };
+  inventoryService.initializeSellerInventory = async () => {
+    initializedInventoryCount += 1;
+    return { availableStock: 0 };
   };
   User.findOneAndUpdate = async (filter, update) => {
     payoutFilter = filter;
@@ -314,7 +335,7 @@ test("seller product creation keeps repeated tags and payout requests debit atom
       .field("description", "A detailed description for the handmade product.")
       .field("category", "60c72b2f9b1d8e25d8888880")
       .field("price", "125")
-      .field("stock", "3")
+      .field("stock", "0")
       .field("isPublished", "true")
       .field("specifications", "[]")
       .field("tags", "premium")
@@ -322,6 +343,7 @@ test("seller product creation keeps repeated tags and payout requests debit atom
 
     assert.equal(productResponse.status, 201);
     assert.deepEqual(createdProduct.tags, ["premium", "handmade"]);
+    assert.equal(initializedInventoryCount, 1);
 
     const invalidPayout = await request(app)
       .post("/api/sellers/payout")
@@ -341,9 +363,11 @@ test("seller product creation keeps repeated tags and payout requests debit atom
     assert.deepEqual(payoutFilter.walletBalance, { $gte: 200 });
     assert.equal(payoutUpdate.$inc.walletBalance, -200);
   } finally {
+    mongoose.startSession = originals.startSession;
     Category.findById = originals.categoryFindById;
     Product.findOne = originals.productFindOne;
     Product.create = originals.productCreate;
+    inventoryService.initializeSellerInventory = originals.initializeSellerInventory;
     User.findOneAndUpdate = originals.userFindOneAndUpdate;
   }
 });
@@ -510,12 +534,23 @@ test("multi-store checkout creates one order per seller and preserves the checko
     checkoutFindOne: CheckoutSession.findOne,
     checkoutDeleteOne: CheckoutSession.deleteOne,
     productFindById: Product.findById,
+    productFindOne: Product.findOne,
     orderCreate: Order.create,
     orderFindById: Order.findById,
+    orderFind: Order.find,
     reservationFind: StockReservation.find,
-    reservationDelete: StockReservation.findByIdAndDelete,
+    reservationFindOne: StockReservation.findOne,
+    reservationFindById: StockReservation.findById,
+    reservationUpdate: StockReservation.findOneAndUpdate,
+    reservationCreate: StockReservation.create,
     inventoryUpdate: WarehouseInventory.findOneAndUpdate,
     inventoryFind: WarehouseInventory.findOne,
+    warehouseFind: Warehouse.find,
+    warehouseAggregate: Warehouse.aggregate,
+    sellerInventoryFind: SellerInventory.findOne,
+    sellerInventoryList: SellerInventory.find,
+    sellerInventoryUpdate: SellerInventory.findOneAndUpdate,
+    movementCreate: InventoryMovement.create,
     loyaltyUpdate: LoyaltyWallet.findOneAndUpdate,
     loyaltyCreate: LoyaltyTransaction.create
   };
@@ -539,29 +574,45 @@ test("multi-store checkout creates one order per seller and preserves the checko
     stock: 10,
     sold: 0,
     lowStockThreshold: 0,
-    variants: [],
+    variants: index === 0
+      ? [{ sku: "TEST-VARIANT-0", price: 100, stock: 10 }]
+      : [],
+    inventoryMode: "seller-managed",
+    isPublished: true,
     inventoryLogs: [],
     save: async function() { return this; }
   }));
   const now = new Date();
   const cart = {
     _id: "60c72b2f9b1d8e25d8888899",
-    items: productIds.map(product => ({ product, quantity: 1 })),
+    items: productIds.map((product, index) => ({
+      product,
+      variantSku: index === 0 ? "TEST-VARIANT-0" : null,
+      quantity: 1,
+    })),
     save: async function() { return this; }
   };
   const checkoutSession = {
     shippingAddress: { fullName: "Buyer", phone: "01000000000", city: "Cairo", street: "Main Street" },
     shippingMethod: "Standard Shipping",
     paymentMethod: "cod",
-    expiresAt: new Date(Date.now() + 60_000)
+    sessionId: "checkout-test-session",
+    expiresAt: new Date(Date.now() + 60_000),
+    save: async function() { return this; }
   };
-  const reservations = products.map((product, index) => ({
-    _id: `60c72b2f9b1d8e25d88888${31 + index}`,
-    sku: product.sku,
-    warehouse: "60c72b2f9b1d8e25d8888820",
-    quantity: 1,
-    expiresAt: new Date(now.getTime() + 60_000)
+  const sellerInventories = products.map((product, index) => ({
+    _id: `60c72b2f9b1d8e25d88888${41 + index}`,
+    seller: product.seller,
+    product: product._id,
+    sku: product.variants[0]?.sku || product.sku,
+    warehouse: null,
+    declaredStock: 10,
+    reservedStock: 0,
+    availableStock: 10,
+    inventoryStatus: "active"
   }));
+  const reservations = [];
+  let reservationSequence = 51;
   let createdOrders = [];
   let walletBalance = 20;
   let pointBuckets = [{ points: 20, expiryDate: new Date(Date.now() + 86_400_000) }];
@@ -571,10 +622,50 @@ test("multi-store checkout creates one order per seller and preserves the checko
   CheckoutSession.findOne = () => queryStub(checkoutSession);
   CheckoutSession.deleteOne = () => queryStub({ deletedCount: 1 });
   Product.findById = (id) => queryStub(products.find(product => product._id === id.toString()));
-  StockReservation.find = (filter) => queryStub(reservations.filter(reservation => reservation.sku === filter.sku));
-  StockReservation.findByIdAndDelete = () => queryStub({ deletedCount: 1 });
+  Product.findOne = (filter) => queryStub(products.find(product =>
+    product._id === filter._id?.toString() &&
+    product.seller === filter.seller?.toString()
+  ));
+  StockReservation.find = () => queryStub([]);
+  StockReservation.findOne = () => queryStub(null);
+  StockReservation.create = async (documents) => {
+    const created = documents.map(document => ({
+      ...document,
+      _id: `60c72b2f9b1d8e25d88888${reservationSequence++}`,
+      save: async function() { return this; }
+    }));
+    reservations.push(...created);
+    return created;
+  };
+  StockReservation.findById = (id) => queryStub(reservations.find(item => item._id === id));
+  StockReservation.findOneAndUpdate = async (filter, update) => {
+    const reservation = reservations.find(item => item._id === filter._id);
+    if (reservation && update.$set?.status) reservation.status = update.$set.status;
+    return reservation;
+  };
+  SellerInventory.findOne = (filter) => queryStub(sellerInventories.find(item =>
+    item.seller === filter.seller?.toString() &&
+    item.product === filter.product?.toString() &&
+    item.sku === filter.sku &&
+    item.warehouse === null
+  ));
+  SellerInventory.find = (filter) => queryStub(sellerInventories.filter(item =>
+    item.product === filter.product?.toString() && item.seller === filter.seller?.toString()
+  ));
+  SellerInventory.findOneAndUpdate = async (filter, update) => {
+    const inventory = sellerInventories.find(item => item._id === filter._id);
+    if (!inventory) return null;
+    for (const [field, delta] of Object.entries(update.$inc || {})) {
+      inventory[field] += delta;
+    }
+    return inventory;
+  };
+  InventoryMovement.create = async (documents) => documents;
+  Order.find = () => queryStub([]);
   WarehouseInventory.findOneAndUpdate = async () => ({ availableStock: 10, reorderPoint: 0 });
   WarehouseInventory.findOne = async () => null;
+  Warehouse.find = async () => [];
+  Warehouse.aggregate = async () => [];
   Order.create = async (documents) => {
     createdOrders = documents;
     return documents;
@@ -608,6 +699,8 @@ test("multi-store checkout creates one order per seller and preserves the checko
     assert.equal(response.body.order._id, response.body.orders[0]._id);
     assert.equal(response.body.orders[0].seller, sellers[0]);
     assert.equal(response.body.orders[1].seller, sellers[1]);
+    assert.equal(response.body.orders[0].orderItems[0].sku, "TEST-VARIANT-0");
+    assert.equal(response.body.orders[0].orderItems[0].inventorySource, "seller-managed");
     assert.equal(response.body.orders[0].shippingPrice, 12.5);
     assert.equal(response.body.orders[1].shippingPrice, 37.5);
     assert.equal(response.body.orders[0].taxPrice, 14);
@@ -619,18 +712,36 @@ test("multi-store checkout creates one order per seller and preserves the checko
     assert.equal(transaction.active, false);
     assert.equal(cart.items.length, 0);
     assert.equal(walletBalance, 0);
+    assert.equal(sellerInventories.every(inventory =>
+      inventory.declaredStock === 9 &&
+      inventory.reservedStock === 0 &&
+      inventory.availableStock === 9
+    ), true);
+    assert.equal(reservations.length, 2);
+    assert.equal(reservations.every(reservation => reservation.status === "committed"), true);
   } finally {
     mongoose.startSession = originals.startSession;
     Cart.findOne = originals.cartFindOne;
     CheckoutSession.findOne = originals.checkoutFindOne;
     CheckoutSession.deleteOne = originals.checkoutDeleteOne;
     Product.findById = originals.productFindById;
+    Product.findOne = originals.productFindOne;
     Order.create = originals.orderCreate;
     Order.findById = originals.orderFindById;
+    Order.find = originals.orderFind;
     StockReservation.find = originals.reservationFind;
-    StockReservation.findByIdAndDelete = originals.reservationDelete;
+    StockReservation.findOne = originals.reservationFindOne;
+    StockReservation.findById = originals.reservationFindById;
+    StockReservation.findOneAndUpdate = originals.reservationUpdate;
+    StockReservation.create = originals.reservationCreate;
     WarehouseInventory.findOneAndUpdate = originals.inventoryUpdate;
     WarehouseInventory.findOne = originals.inventoryFind;
+    Warehouse.find = originals.warehouseFind;
+    Warehouse.aggregate = originals.warehouseAggregate;
+    SellerInventory.findOne = originals.sellerInventoryFind;
+    SellerInventory.find = originals.sellerInventoryList;
+    SellerInventory.findOneAndUpdate = originals.sellerInventoryUpdate;
+    InventoryMovement.create = originals.movementCreate;
     LoyaltyWallet.findOneAndUpdate = originals.loyaltyUpdate;
     LoyaltyTransaction.create = originals.loyaltyCreate;
   }

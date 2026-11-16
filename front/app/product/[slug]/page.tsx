@@ -257,12 +257,6 @@ export default function ProductDetailsBySlugPage() {
       return;
     }
 
-    // Guard: selected combination must be in-stock
-    if (activeVariant !== null && activeVariant !== undefined && activeVariant.stock <= 0) {
-      showToast("This combination is currently out of stock.", "error");
-      return;
-    }
-
     setAddingToCart(true);
 
     // Determine which SKU to use

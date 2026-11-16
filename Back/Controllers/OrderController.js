@@ -5,10 +5,18 @@ const { Product } = require("../models/Product");
 const mongoose = require("mongoose");
 const CheckoutSession = require("../models/CheckoutSession");
 const generateInvoice = require("../utils/generateInvoice");
-const WarehouseInventory = require("../models/WarehouseInventory");
-const StockReservation = require("../models/StockReservation");
 const { redeemLoyaltyPoints } = require("../utils/loyaltyService");
-const { routeOrderInventory, checkAndAlertReorder } = require("../utils/inventoryService");
+const {
+    routeOrderInventory,
+    commitWarehouseCartItem,
+    reserveSellerInventory,
+    commitSellerReservation,
+    releaseSellerCartReservations,
+    releaseCartReservations,
+    restoreSellerStock,
+    restoreWarehouseStock,
+    adjustWarehouseInventory,
+} = require("../utils/inventoryService");
 
 const createOrderError = (message, statusCode = 400) => {
     const error = new Error(message);
@@ -60,10 +68,12 @@ const getMyOrders = asyncHandler(async (req, res) => {
 // ========================================
 const createOrder = asyncHandler(async (req, res, next) => {
     const session = await mongoose.startSession();
+    let reservationCartId;
 
     try {
         session.startTransaction();
         const cart = await Cart.findOne({ user: req.user.id }).session(session);
+        reservationCartId = cart?._id?.toString();
         const { coordinates, redeemPoints } = req.body;
         const checkoutSession = await CheckoutSession.findOne({ userId: req.user.id }).session(session);
         if (
@@ -76,6 +86,19 @@ const createOrder = asyncHandler(async (req, res, next) => {
         }
         if (!checkoutSession.expiresAt || checkoutSession.expiresAt <= new Date()) {
             throw createOrderError("Checkout session has expired. Please start checkout again.");
+        }
+        if (checkoutSession.completedAt && checkoutSession.orderGroupId) {
+            const completedOrders = await Order.find({
+                user: req.user.id,
+                checkoutGroupId: checkoutSession.orderGroupId,
+            }).session(session);
+            await session.commitTransaction();
+            return res.status(200).json({
+                success: true,
+                order: completedOrders[0],
+                orders: completedOrders,
+                checkoutGroupId: checkoutSession.orderGroupId,
+            });
         }
 
         const allowedPaymentMethods = ["cod"];
@@ -117,160 +140,110 @@ const createOrder = asyncHandler(async (req, res, next) => {
             if (!product) {
                 throw createOrderError("Product not found", 404);
             }
-
-            if (product.variants?.length > 0) {
-                throw createOrderError("Variant products are currently unavailable for purchase.");
+            if (product.isDeleted || product.isPublished === false) {
+                throw createOrderError(`Product ${product.title} is no longer available.`, 409);
             }
 
             if (product.seller && product.seller.toString() === req.user.id) {
                 throw createOrderError(`You cannot purchase your own product: ${product.title}`);
             }
 
-            const sku = product.sku || product.title;
-            const reservations = await StockReservation.find({
-                cartId: cart._id.toString(),
-                user: req.user.id,
-                sku
-            }).session(session);
-            const now = new Date();
-            const activeReservations = reservations.filter(reservation => reservation.expiresAt > now);
-            const reservedQuantity = activeReservations.reduce((sum, reservation) => sum + reservation.quantity, 0);
-            const inventoryAllocations = [];
-
-            if (reservedQuantity === item.quantity) {
-                for (const reservation of activeReservations) {
-                    const invUpdate = await WarehouseInventory.findOneAndUpdate(
-                        {
-                            warehouse: reservation.warehouse,
-                            sku: reservation.sku,
-                            reservedStock: { $gte: reservation.quantity },
-                            physicalStock: { $gte: reservation.quantity }
-                        },
-                        {
-                            $inc: {
-                                physicalStock: -reservation.quantity,
-                                reservedStock: -reservation.quantity
-                            }
-                        },
-                        { session, new: true }
-                    );
-                    if (!invUpdate) {
-                        throw createOrderError(`Failed to commit reserved warehouse stock for SKU ${reservation.sku}.`, 409);
-                    }
-                    inventoryAllocations.push({
-                        warehouse: reservation.warehouse,
-                        sku: reservation.sku,
-                        quantity: reservation.quantity
-                    });
-                    await StockReservation.findByIdAndDelete(reservation._id).session(session);
-                    await checkAndAlertReorder(reservation.warehouse, reservation.sku);
-                }
-                for (const reservation of reservations.filter(entry => entry.expiresAt <= now)) {
-                    const released = await WarehouseInventory.findOneAndUpdate(
-                        {
-                            warehouse: reservation.warehouse,
-                            sku: reservation.sku,
-                            reservedStock: { $gte: reservation.quantity }
-                        },
-                        {
-                            $inc: {
-                                reservedStock: -reservation.quantity,
-                                availableStock: reservation.quantity
-                            }
-                        },
-                        { session, new: true }
-                    );
-                    if (!released) {
-                        throw createOrderError(`Failed to release expired reservation for SKU ${reservation.sku}.`, 409);
-                    }
-                    await StockReservation.findByIdAndDelete(reservation._id).session(session);
-                }
-            } else {
-                for (const reservation of reservations) {
-                    const released = await WarehouseInventory.findOneAndUpdate(
-                        {
-                            warehouse: reservation.warehouse,
-                            sku: reservation.sku,
-                            reservedStock: { $gte: reservation.quantity }
-                        },
-                        {
-                            $inc: {
-                                reservedStock: -reservation.quantity,
-                                availableStock: reservation.quantity
-                            }
-                        },
-                        { session, new: true }
-                    );
-                    if (!released) {
-                        throw createOrderError(`Failed to release stale reservation for SKU ${reservation.sku}.`, 409);
-                    }
-                    await StockReservation.findByIdAndDelete(reservation._id).session(session);
-                }
-                const allocations = await routeOrderInventory(
-                    [{ sku, quantity: item.quantity, productId: product._id }],
-                    coordinates,
-                    session
-                );
-
-                for (const alloc of allocations) {
-                    const invUpdate = await WarehouseInventory.findOneAndUpdate(
-                        {
-                            warehouse: alloc.warehouseId,
-                            sku: alloc.sku,
-                            physicalStock: { $gte: alloc.quantity },
-                            availableStock: { $gte: alloc.quantity }
-                        },
-                        {
-                            $inc: {
-                                physicalStock: -alloc.quantity,
-                                availableStock: -alloc.quantity
-                            }
-                        },
-                        { session, new: true }
-                    );
-
-                    if (!invUpdate) {
-                        throw createOrderError(`Insufficient warehouse stock for SKU: ${alloc.sku}`, 409);
-                    }
-                    inventoryAllocations.push({
-                        warehouse: alloc.warehouseId,
-                        sku: alloc.sku,
-                        quantity: alloc.quantity
-                    });
-
-                    // Run reorder trigger warnings
-                    await checkAndAlertReorder(alloc.warehouseId, alloc.sku);
-                }
+            const selectedVariant = product.variants?.length
+                ? product.variants.find(variant =>
+                    variant.sku.toUpperCase() === String(item.variantSku || "").trim().toUpperCase()
+                )
+                : null;
+            if (product.variants?.length && !selectedVariant) {
+                throw createOrderError(`Select a valid variant for ${product.title}.`, 400);
+            }
+            if (!product.variants?.length && item.variantSku) {
+                throw createOrderError(`${product.title} does not have selectable variants.`, 400);
             }
 
-            // 2. Adjust legacy/global product stock & stats
-            if (product.stock < item.quantity) {
-                throw createOrderError(`Not enough stock for ${product.title}`, 409);
+            const sku = selectedVariant?.sku || product.sku || product.slug;
+            if (!sku) {
+                throw createOrderError(`A stable SKU is required for ${product.title}.`, 409);
             }
-            product.stock -= item.quantity;
-            product.sold += item.quantity;
+            const inventorySource = product.inventoryMode || "seller-managed";
+            let inventoryId = null;
+            let reservationId = null;
+            let inventoryAllocations = [];
+            const itemPrice = selectedVariant?.price ?? product.price;
+
+            product.sold = (product.sold || 0) + item.quantity;
             product.inventoryLogs.push({
                 action: "sale",
                 quantity: item.quantity,
                 note: `Sold via order for user ${req.user.id}`,
                 createdBy: req.user.id
             });
-
             await product.save({ session });
 
-            // Trigger low-stock real-time alert (Legacy)
-            if (product.stock <= product.lowStockThreshold && product.seller) {
-                try {
-                    const { createNotification } = require("../utils/notifications");
-                    await createNotification({
-                        user: product.seller,
-                        title: "Low Stock Alert",
-                        message: `Product "${product.title}" has reached critical low stock level (${product.stock} left).`,
-                        type: "stock"
-                    });
-                } catch (err) {
-                    console.error("Failed to generate low-stock alert notification:", err.message);
+            if (inventorySource === "seller-managed") {
+                const reservation = await reserveSellerInventory({
+                    seller: product.seller,
+                    product: product._id,
+                    sku,
+                    quantity: item.quantity,
+                    user: req.user.id,
+                    cartId: cart._id.toString(),
+                    variantSku: selectedVariant?.sku || null,
+                    session,
+                    actor: "system",
+                    reason: "ORDER_RESERVATION",
+                    referenceType: "checkout",
+                    referenceId: checkoutSession.sessionId,
+                });
+                reservationId = reservation._id;
+                await commitSellerReservation({
+                    reservationId,
+                    session,
+                    referenceType: "order",
+                    referenceId: checkoutSession.sessionId,
+                });
+                inventoryId = reservation.inventory;
+            } else if (inventorySource === "warehouse-managed") {
+                inventoryAllocations = await commitWarehouseCartItem({
+                    cartId: cart._id.toString(),
+                    userId: req.user.id,
+                    product: product._id,
+                    sku,
+                    quantity: item.quantity,
+                    session,
+                });
+                if (!inventoryAllocations) {
+                    const allocations = await routeOrderInventory(
+                        [{ sku, quantity: item.quantity, productId: product._id }],
+                        coordinates,
+                        session
+                    );
+                    for (const alloc of allocations) {
+                        const inventory = await adjustWarehouseInventory({
+                            seller: product.seller,
+                            product: product._id,
+                            warehouse: alloc.warehouseId,
+                            sku: alloc.sku,
+                            operation: "decrease",
+                            quantity: alloc.quantity,
+                            actor: "system",
+                            reason: "ORDER_COMMIT",
+                            referenceType: "checkout",
+                            referenceId: checkoutSession.sessionId,
+                            session,
+                        });
+                        inventoryAllocations.push({
+                            warehouse: alloc.warehouseId,
+                            inventory: inventory._id,
+                            sku: alloc.sku,
+                            quantity: alloc.quantity,
+                            returnedQuantity: 0,
+                            cancelledQuantity: 0,
+                        });
+                        if (!inventoryId) inventoryId = inventory._id;
+                    }
                 }
+            } else {
+                throw createOrderError(`Unsupported inventory mode for ${product.title}.`, 409);
             }
 
             orderItems.push({
@@ -279,10 +252,22 @@ const createOrder = asyncHandler(async (req, res, next) => {
                 title: product.title,
                 image: product.images?.[0]?.url || "",
                 quantity: item.quantity,
-                price: product.price,
-                inventoryAllocations
+                price: itemPrice,
+                sku,
+                variantSku: selectedVariant?.sku || null,
+                inventorySource,
+                inventory: inventoryId,
+                inventoryModel: inventorySource === "seller-managed" ? "SellerInventory" : "WarehouseInventory",
+                reservationId,
+                inventoryAllocations,
             });
         }
+        await releaseSellerCartReservations({
+            cartId: reservationCartId,
+            user: req.user.id,
+            session,
+        });
+        await releaseCartReservations(reservationCartId, req.user.id, session);
 
         const itemsPrice = Math.round(orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0) * 100) / 100;
 
@@ -330,6 +315,7 @@ const createOrder = asyncHandler(async (req, res, next) => {
             return {
                 _id: new mongoose.Types.ObjectId(),
                 checkoutGroupId,
+                checkoutSessionId: checkoutSession.sessionId,
                 user: req.user.id,
                 seller: group.seller,
                 orderItems: group.orderItems,
@@ -357,8 +343,9 @@ const createOrder = asyncHandler(async (req, res, next) => {
         cart.items = [];
         await cart.save({ session });
 
-        // Delete checkout session
-        await CheckoutSession.deleteOne({ userId: req.user.id }).session(session);
+        checkoutSession.orderGroupId = checkoutGroupId;
+        checkoutSession.completedAt = new Date();
+        await checkoutSession.save({ session });
 
         await session.commitTransaction();
 
@@ -445,6 +432,24 @@ const createOrder = asyncHandler(async (req, res, next) => {
         if (session.inTransaction()) {
             await session.abortTransaction();
         }
+        if (reservationCartId) {
+            const cleanupSession = await mongoose.startSession();
+            try {
+                cleanupSession.startTransaction();
+                await releaseSellerCartReservations({
+                    cartId: reservationCartId,
+                    user: req.user.id,
+                    session: cleanupSession,
+                });
+                await releaseCartReservations(reservationCartId, req.user.id, cleanupSession);
+                await cleanupSession.commitTransaction();
+            } catch (cleanupError) {
+                if (cleanupSession.inTransaction()) await cleanupSession.abortTransaction();
+                console.error("Failed to release cart stock reservations after checkout failure:", cleanupError);
+            } finally {
+                await cleanupSession.endSession();
+            }
+        }
         if (error.statusCode) {
             return res.status(error.statusCode).json({ success: false, message: error.message });
         }
@@ -500,52 +505,107 @@ const cancelOrder = asyncHandler(async (req, res) => {
         if (existingOrder.user.toString() !== req.user.id) {
             throw createOrderError("Not authorized", 403);
         }
-        if (existingOrder.orderStatus !== "pending") {
-            throw createOrderError("Order cannot be cancelled");
+        if (!["pending", "processing", "confirmed", "partially_cancelled"].includes(existingOrder.orderStatus)) {
+            throw createOrderError("Only unfulfilled orders can be cancelled.");
         }
 
-        const order = await Order.findOneAndUpdate(
-            { _id: existingOrder._id, user: req.user.id, orderStatus: "pending" },
-            { $set: { orderStatus: "cancelled" } },
-            { new: true, session }
-        );
-        if (!order) {
-            throw createOrderError("Order cannot be cancelled", 409);
-        }
+        const requestedItems = Array.isArray(req.body.items) && req.body.items.length
+            ? req.body.items
+            : existingOrder.orderItems.map(item => ({
+                productId: item.product,
+                sku: item.sku,
+                quantity: item.quantity - (item.cancelledQuantity || 0) - (item.returnedQuantity || 0),
+            })).filter(item => item.quantity > 0);
 
-        for (const item of order.orderItems) {
-            for (const allocation of item.inventoryAllocations || []) {
-                const inventory = await WarehouseInventory.findOneAndUpdate(
-                    { warehouse: allocation.warehouse, sku: allocation.sku },
-                    {
-                        $inc: {
-                            physicalStock: allocation.quantity,
-                            availableStock: allocation.quantity
-                        }
-                    },
-                    { session, new: true }
-                );
-                if (!inventory) {
-                    throw createOrderError(`Warehouse inventory was not found for SKU ${allocation.sku}.`, 409);
+        for (const requested of requestedItems) {
+            if (!requested || !Number.isSafeInteger(requested.quantity) || requested.quantity < 1) {
+                throw createOrderError("Each cancellation line requires a positive whole-number quantity.", 400);
+            }
+            const orderItem = existingOrder.orderItems.find(item =>
+                item.product.toString() === String(requested.productId || requested.product || "") &&
+                (!requested.sku || (item.sku || "").toUpperCase() === String(requested.sku).toUpperCase())
+            );
+            if (!orderItem) {
+                throw createOrderError("The selected product/SKU is not part of this order.", 400);
+            }
+            const alreadyCancelled = Number(orderItem.cancelledQuantity || 0);
+            const alreadyReturned = Number(orderItem.returnedQuantity || 0);
+            if (alreadyCancelled + alreadyReturned + requested.quantity > orderItem.quantity) {
+                throw createOrderError("Cancellation quantity exceeds the unfulfilled quantity.", 409);
+            }
+
+            const product = await Product.findById(orderItem.product).session(session);
+            const sku = orderItem.sku || product?.sku || product?.slug;
+            if (!product || !sku) {
+                throw createOrderError("Product inventory reference is unavailable.", 409);
+            }
+            product.sold = Math.max(0, Number(product.sold || 0) - requested.quantity);
+            product.inventoryLogs.push({
+                action: "refund",
+                quantity: requested.quantity,
+                note: `Order ${existingOrder._id} cancelled`,
+                createdBy: req.user.id,
+            });
+            await product.save({ session });
+
+            if (orderItem.inventorySource === "warehouse-managed" || orderItem.inventoryAllocations?.length) {
+                let remaining = requested.quantity;
+                for (const allocation of orderItem.inventoryAllocations || []) {
+                    const allocationRemaining =
+                        allocation.quantity -
+                        Number(allocation.returnedQuantity || 0) -
+                        Number(allocation.cancelledQuantity || 0);
+                    const restoreQuantity = Math.min(remaining, allocationRemaining);
+                    if (restoreQuantity <= 0) continue;
+                    await restoreWarehouseStock({
+                        seller: orderItem.seller || product.seller,
+                        product: orderItem.product,
+                        warehouse: allocation.warehouse,
+                        sku: allocation.sku,
+                        quantity: restoreQuantity,
+                        reason: "ORDER_CANCELLATION",
+                        referenceType: "order",
+                        referenceId: String(existingOrder._id),
+                        idempotencyKey: `${existingOrder._id}:${sku}:cancel:${alreadyCancelled + requested.quantity}:${allocation.warehouse}`,
+                        session,
+                    });
+                    allocation.cancelledQuantity = Number(allocation.cancelledQuantity || 0) + restoreQuantity;
+                    remaining -= restoreQuantity;
+                    if (remaining === 0) break;
                 }
-            }
-
-            const product = await Product.findById(item.product).session(session);
-            if (product) {
-                product.stock += item.quantity;
-                product.sold = Math.max(0, product.sold - item.quantity);
-                product.inventoryLogs.push({
-                    action: "refund",
-                    quantity: item.quantity,
-                    note: `Order ${order._id} cancelled`,
-                    createdBy: req.user.id
+                if (remaining > 0) {
+                    throw createOrderError("Cancellation quantity exceeds warehouse allocation history.", 409);
+                }
+            } else {
+                await restoreSellerStock({
+                    seller: orderItem.seller || product.seller,
+                    product: orderItem.product,
+                    sku,
+                    quantity: requested.quantity,
+                    actor: "system",
+                    reason: "ORDER_CANCELLATION",
+                    referenceType: "order",
+                    referenceId: String(existingOrder._id),
+                    idempotencyKey: `${existingOrder._id}:${sku}:cancel:${alreadyCancelled + requested.quantity}`,
+                    session,
                 });
-                await product.save({ session });
             }
+            orderItem.cancelledQuantity = alreadyCancelled + requested.quantity;
         }
+
+        const allCancelled = existingOrder.orderItems.every(item =>
+            Number(item.cancelledQuantity || 0) + Number(item.returnedQuantity || 0) >= item.quantity
+        );
+        existingOrder.orderStatus = allCancelled ? "cancelled" : "partially_cancelled";
+        const order = await existingOrder.save({ session });
 
         await session.commitTransaction();
-        res.json({ success: true, message: "Order cancelled" });
+        res.json({
+            success: true,
+            message: allCancelled ? "Order cancelled" : "Order items cancelled",
+            refundRequiresProcessing: order.isPaid || order.paymentStatus === "paid",
+            order,
+        });
     } catch (error) {
         if (session.inTransaction()) {
             await session.abortTransaction();
@@ -612,73 +672,106 @@ const processReturn = asyncHandler(async (req, res) => {
                 !returnedItem ||
                 !Number.isSafeInteger(returnedItem.quantity) ||
                 returnedItem.quantity < 1 ||
-                (!returnedItem.productId && !returnedItem.sku)
+                (!returnedItem.productId && !returnedItem.sku) ||
+                !["sellable", "damaged"].includes(returnedItem.condition)
             ) {
-                throw createOrderError("Each returned item needs a product ID or SKU and a positive whole-number quantity.");
+                throw createOrderError("Each return needs a product ID or SKU, a positive quantity, and a sellable/damaged condition.");
             }
 
             let product = returnedItem.productId
                 ? await Product.findById(returnedItem.productId).session(session)
-                : await Product.findOne({ sku: returnedItem.sku }).session(session);
+                : await Product.findOne({
+                    $or: [{ sku: returnedItem.sku }, { "variants.sku": returnedItem.sku }]
+                }).session(session);
             if (!product && returnedItem.sku) {
-                product = await Product.findOne({ title: returnedItem.sku }).session(session);
+                product = await Product.findOne({ slug: returnedItem.sku }).session(session);
             }
             if (!product) throw createOrderError("Returned product was not found.", 404);
 
             const orderItem = order.orderItems.find(item =>
-                item.product.toString() === product._id.toString()
+                item.product.toString() === product._id.toString() &&
+                (!returnedItem.sku || (item.sku || "").toUpperCase() === String(returnedItem.sku).toUpperCase())
             );
-            if (!orderItem) throw createOrderError("The product is not part of this order.");
+            if (!orderItem) throw createOrderError("The product/SKU is not part of this order.");
 
             const alreadyReturned = orderItem.returnedQuantity || 0;
-            if (alreadyReturned + returnedItem.quantity > orderItem.quantity) {
+            if (alreadyReturned + (orderItem.cancelledQuantity || 0) + returnedItem.quantity > orderItem.quantity) {
                 throw createOrderError("Return quantity exceeds the unreturned quantity for this product.");
             }
 
-            const allocations = orderItem.inventoryAllocations || [];
-            if (!allocations.length) {
-                throw createOrderError("This order has no warehouse allocation history; its return cannot be restocked automatically.", 409);
-            }
-
-            let quantityToRestock = returnedItem.quantity;
-            for (const allocation of allocations) {
-                const unreturnedAllocationQuantity =
-                    allocation.quantity - (allocation.returnedQuantity || 0);
-                const allocatedReturnQuantity = Math.min(quantityToRestock, unreturnedAllocationQuantity);
-                if (allocatedReturnQuantity <= 0) continue;
-
-                const inventory = await WarehouseInventory.findOneAndUpdate(
-                    { warehouse: allocation.warehouse, sku: allocation.sku },
-                    {
-                        $inc: {
-                            physicalStock: allocatedReturnQuantity,
-                            availableStock: allocatedReturnQuantity
-                        }
-                    },
-                    { session, new: true }
-                );
-                if (!inventory) {
-                    throw createOrderError(`Warehouse inventory was not found for SKU ${allocation.sku}.`, 409);
-                }
-
-                allocation.returnedQuantity = (allocation.returnedQuantity || 0) + allocatedReturnQuantity;
-                quantityToRestock -= allocatedReturnQuantity;
-                if (quantityToRestock === 0) break;
-            }
-            if (quantityToRestock > 0) {
-                throw createOrderError("Return quantity exceeds the warehouse allocation history.", 409);
-            }
-
-            orderItem.returnedQuantity = alreadyReturned + returnedItem.quantity;
-            product.stock += returnedItem.quantity;
+            const sku = orderItem.sku || product.sku || product.slug;
             product.sold = Math.max(0, product.sold - returnedItem.quantity);
             product.inventoryLogs.push({
                 action: "refund",
                 quantity: returnedItem.quantity,
-                note: `Restocked return from Order ${orderId}`,
+                note: `${returnedItem.condition} return from Order ${orderId}`,
                 createdBy: req.user.id
             });
             await product.save({ session });
+
+            if (returnedItem.condition === "sellable") {
+                if (orderItem.inventorySource === "warehouse-managed" || orderItem.inventoryAllocations?.length) {
+                    let remaining = returnedItem.quantity;
+                    for (const allocation of orderItem.inventoryAllocations || []) {
+                        const allocReturn = Math.min(
+                            remaining,
+                            allocation.quantity -
+                                (allocation.returnedQuantity || 0) -
+                                (allocation.cancelledQuantity || 0)
+                        );
+                        if (allocReturn <= 0) continue;
+                        await restoreWarehouseStock({
+                            seller: orderItem.seller || product.seller,
+                            product: orderItem.product,
+                            warehouse: allocation.warehouse,
+                            sku: allocation.sku,
+                            quantity: allocReturn,
+                            reason: "SELLABLE_RETURN",
+                            referenceType: "return",
+                            referenceId: String(orderId),
+                            idempotencyKey: `${orderId}:${sku}:return:${alreadyReturned + returnedItem.quantity}:${allocation.warehouse}`,
+                            session,
+                        });
+                        allocation.returnedQuantity = (allocation.returnedQuantity || 0) + allocReturn;
+                        remaining -= allocReturn;
+                        if (remaining === 0) break;
+                    }
+                    if (remaining > 0) {
+                        throw createOrderError("Return quantity exceeds the warehouse allocation history.", 409);
+                    }
+                } else {
+                    await restoreSellerStock({
+                        seller: orderItem.seller || product.seller,
+                        product: orderItem.product,
+                        sku,
+                        quantity: returnedItem.quantity,
+                        actor: "admin",
+                        reason: "SELLABLE_RETURN",
+                        referenceType: "return",
+                        referenceId: String(orderId),
+                        idempotencyKey: `${orderId}:${sku}:return:${alreadyReturned + returnedItem.quantity}`,
+                        session,
+                    });
+                }
+            } else if (orderItem.inventoryAllocations?.length) {
+                let remaining = returnedItem.quantity;
+                for (const allocation of orderItem.inventoryAllocations) {
+                    const allocReturn = Math.min(
+                        remaining,
+                        allocation.quantity -
+                            (allocation.returnedQuantity || 0) -
+                            (allocation.cancelledQuantity || 0)
+                    );
+                    allocation.returnedQuantity = (allocation.returnedQuantity || 0) + allocReturn;
+                    remaining -= allocReturn;
+                    if (remaining === 0) break;
+                }
+                if (remaining > 0) {
+                    throw createOrderError("Return quantity exceeds the warehouse allocation history.", 409);
+                }
+            }
+
+            orderItem.returnedQuantity = alreadyReturned + returnedItem.quantity;
         }
 
         order.returnStatus = order.orderItems.every(item =>
@@ -689,7 +782,7 @@ const processReturn = asyncHandler(async (req, res) => {
         await session.commitTransaction();
         return res.status(200).json({
             success: true,
-            message: "Returned items were recorded and restocked. Payment refunds must be processed separately.",
+            message: "Returned items were recorded; only confirmed sellable items were restocked. Payment refunds must be processed separately.",
             order
         });
     } catch (error) {

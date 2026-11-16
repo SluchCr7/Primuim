@@ -506,7 +506,7 @@ export default function CartPage() {
 
     if (isAuthenticated) {
       try {
-        await updateDbQuantity({ productId, quantity: newQty }).unwrap();
+        await updateDbQuantity({ productId, quantity: newQty, variantSku }).unwrap();
       } catch (err) {
         alert(t("Could not update item quantity."));
       }
@@ -518,7 +518,7 @@ export default function CartPage() {
   const handleRemoveItem = async (productId: string, variantSku?: string) => {
     if (isAuthenticated) {
       try {
-        await removeFromDb(productId).unwrap();
+        await removeFromDb({ productId, variantSku }).unwrap();
       } catch (err) {
         alert(t("Could not remove item."));
       }

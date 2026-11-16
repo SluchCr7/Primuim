@@ -35,6 +35,43 @@ const orderItemSchema = new mongoose.Schema(
       required: true,
       min: 1,
     },
+    sku: {
+      type: String,
+      default: "",
+      trim: true,
+      uppercase: true,
+    },
+    variantSku: {
+      type: String,
+      default: null,
+      trim: true,
+      uppercase: true,
+    },
+    inventorySource: {
+      type: String,
+      enum: ["seller-managed", "warehouse-managed"],
+      default: "seller-managed",
+    },
+    inventory: {
+      type: mongoose.Schema.Types.ObjectId,
+      refPath: "orderItems.inventoryModel",
+      default: null,
+    },
+    inventoryModel: {
+      type: String,
+      enum: ["SellerInventory", "WarehouseInventory"],
+      default: "SellerInventory",
+    },
+    reservationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "StockReservation",
+      default: null,
+    },
+    cancelledQuantity: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     inventoryAllocations: {
       type: [
         {
@@ -42,6 +79,11 @@ const orderItemSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "Warehouse",
             required: true,
+          },
+          inventory: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "WarehouseInventory",
+            default: null,
           },
           sku: {
             type: String,
@@ -53,6 +95,11 @@ const orderItemSchema = new mongoose.Schema(
             min: 1,
           },
           returnedQuantity: {
+            type: Number,
+            default: 0,
+            min: 0,
+          },
+          cancelledQuantity: {
             type: Number,
             default: 0,
             min: 0,
@@ -124,6 +171,10 @@ const orderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       index: true,
     },
+    checkoutSessionId: {
+      type: String,
+      index: true,
+    },
 
     orderItems: {
       type: [orderItemSchema],
@@ -157,6 +208,7 @@ const orderSchema = new mongoose.Schema(
         "confirmed",
         "shipped",
         "delivered",
+        "partially_cancelled",
         "cancelled",
       ],
       default: "pending",

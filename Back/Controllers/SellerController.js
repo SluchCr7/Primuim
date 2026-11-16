@@ -207,7 +207,8 @@ const updateSellerOrderStatus = asyncHandler(async (req, res) => {
   const allowedTransitions = {
     pending: ["processing"],
     processing: ["shipped", "delivered"],
-    shipped: ["delivered"]
+    shipped: ["delivered"],
+    partially_cancelled: ["shipped", "delivered"]
   };
   const session = await mongoose.startSession();
   let order;
@@ -252,12 +253,17 @@ const updateSellerOrderStatus = asyncHandler(async (req, res) => {
       order.deliveredAt = new Date();
 
       for (const item of order.orderItems) {
+        const fulfilledQuantity = item.quantity -
+          Number(item.cancelledQuantity || 0) -
+          Number(item.returnedQuantity || 0);
+        if (fulfilledQuantity <= 0) continue;
+
         const product = await Product.findById(item.product).session(session);
         if (!product || !product.seller) {
           throw Object.assign(new Error(`Seller information is missing for ${item.title}.`), { statusCode: 409 });
         }
 
-        product.salesCount = (product.salesCount || 0) + item.quantity;
+        product.salesCount = (product.salesCount || 0) + fulfilledQuantity;
         if (product.salesCount >= 50) {
           product.isBestSeller = true;
         }
@@ -273,7 +279,7 @@ const updateSellerOrderStatus = asyncHandler(async (req, res) => {
           throw Object.assign(new Error(`Seller account was not found for ${item.title}.`), { statusCode: 409 });
         }
 
-        const creditAmount = item.price * item.quantity;
+        const creditAmount = item.price * fulfilledQuantity;
         sellerUser.walletBalance += creditAmount;
         sellerUser.loyaltyPoints += Math.floor(creditAmount * 0.05);
         sellerUser.activityLogs.push({

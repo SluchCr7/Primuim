@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const WarehouseInventorySchema = new mongoose.Schema({
+  seller: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+    index: true
+  },
   warehouse: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Warehouse', 

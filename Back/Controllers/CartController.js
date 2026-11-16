@@ -1,8 +1,75 @@
 const Cart = require("../models/Cart");
 const asyncHandler = require("express-async-handler");
 const { Product } = require("../models/Product");
+const WarehouseInventory = require("../models/WarehouseInventory");
+const Warehouse = require("../models/Warehouse");
+const StockReservation = require("../models/StockReservation");
+const { getAvailableStock } = require("../utils/inventoryService");
 
 const isValidQuantity = (quantity) => Number.isSafeInteger(quantity) && quantity > 0;
+
+const resolveCartSelection = async (product, variantSku, userId, cartId) => {
+    let sku;
+    let price = product.price;
+
+    if (product.variants?.length) {
+        const variant = product.variants.find(
+            item => item.sku.toUpperCase() === String(variantSku || "").trim().toUpperCase()
+        );
+        if (!variant) {
+            throw Object.assign(new Error("Select a valid product variant."), { statusCode: 400 });
+        }
+        sku = variant.sku;
+        price = variant.price;
+    } else {
+        if (variantSku) {
+            throw Object.assign(new Error("This product does not have selectable variants."), { statusCode: 400 });
+        }
+        sku = product.sku || product.slug;
+    }
+
+    let available;
+    if ((product.inventoryMode || "seller-managed") === "warehouse-managed") {
+        const warehouses = await Warehouse.find({ isActive: true }).select("_id");
+        const rows = warehouses.length
+            ? await WarehouseInventory.find({
+                product: product._id,
+                sku,
+                warehouse: { $in: warehouses.map(warehouse => warehouse._id) },
+            })
+            : [];
+        available = rows.reduce((sum, row) => sum + Number(row.availableStock || 0), 0);
+        if (cartId) {
+            const ownReservations = await StockReservation.find({
+                user: userId,
+                cartId: String(cartId),
+                product: product._id,
+                sku,
+                $or: [{ source: "warehouse-managed" }, { source: { $exists: false } }],
+                status: "active",
+                expiresAt: { $gt: new Date() },
+            });
+            available += ownReservations.reduce((sum, reservation) => sum + reservation.quantity, 0);
+        }
+    } else {
+        available = await getAvailableStock({
+            seller: product.seller,
+            product: product._id,
+            sku,
+            user: userId,
+            cartId,
+        });
+    }
+
+    return { sku, price, available };
+};
+
+const recalculateCart = async (cart) => {
+    await cart.populate("items.product");
+    cart.totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+    cart.totalPrice = cart.items.reduce((sum, item) => sum + item.quantity * item.price, 0);
+    await cart.save();
+};
 
 // ========================================
 // GET CART
@@ -10,7 +77,7 @@ const isValidQuantity = (quantity) => Number.isSafeInteger(quantity) && quantity
 const getCart = asyncHandler(async (req, res) => {
 
     const cart = await Cart.findOne({ user: req.user.id })
-        .populate("items.product", "title price images stock");
+        .populate("items.product", "title price images stock sku slug variants seller inventoryMode");
 
     if (!cart) {
         return res.status(200).json({
@@ -21,6 +88,13 @@ const getCart = asyncHandler(async (req, res) => {
                 totalPrice: 0
             }
         });
+    }
+
+    for (const item of cart.items) {
+        if (!item.product) continue;
+        const selected = await resolveCartSelection(item.product, item.variantSku, req.user.id, cart._id);
+        item.availableStock = selected.available;
+        item.price = selected.price;
     }
 
     res.json({
@@ -35,7 +109,7 @@ const getCart = asyncHandler(async (req, res) => {
 // ========================================
 const addToCart = asyncHandler(async (req, res) => {
 
-    const { productId, quantity } = req.body;
+    const { productId, quantity, variantSku } = req.body;
 
     if (!productId || !isValidQuantity(quantity)) {
         return res.status(400).json({
@@ -52,17 +126,10 @@ const addToCart = asyncHandler(async (req, res) => {
             message: "Product not found"
         });
     }
-    if (product.isDeleted || !product.isPublished) {
+    if (product.isDeleted || product.isPublished === false) {
         return res.status(409).json({
             success: false,
             message: "Product is no longer available"
-        });
-    }
-
-    if (product.variants?.length > 0) {
-        return res.status(400).json({
-            success: false,
-            message: "Variant products are currently unavailable for purchase."
         });
     }
 
@@ -82,49 +149,45 @@ const addToCart = asyncHandler(async (req, res) => {
         });
     }
 
-    const existingItem = cart.items.find(
-        item => item.product.toString() === productId
+    let selection;
+    try {
+        selection = await resolveCartSelection(product, variantSku, req.user.id, cart._id);
+    } catch (error) {
+        return res.status(error.statusCode || 400).json({ success: false, message: error.message });
+    }
+
+    const selectedVariantSku = product.variants?.length ? selection.sku : null;
+    const existingItem = cart.items.find(item =>
+        item.product.toString() === productId &&
+        (item.variantSku || null) === selectedVariantSku
     );
 
     if (existingItem) {
-        if (existingItem.quantity + quantity > product.stock) {
+        if (existingItem.quantity + quantity > selection.available) {
             return res.status(409).json({
                 success: false,
-                message: `Only ${product.stock} units are available`
+                message: `Only ${selection.available} units are available`
             });
         }
         existingItem.quantity += quantity;
-        existingItem.price = product.price;
+        existingItem.price = selection.price;
     } else {
-        if (quantity > product.stock) {
+        if (quantity > selection.available) {
             return res.status(409).json({
                 success: false,
-                message: `Only ${product.stock} units are available`
+                message: `Only ${selection.available} units are available`
             });
         }
         cart.items.push({
             product: productId,
+            variantSku: selectedVariantSku,
             quantity,
-            price: product.price
+            price: selection.price
         });
     }
 
     await cart.save();
-
-    // Recalculate totals (IMPORTANT)
-    await cart.populate("items.product");
-
-    cart.totalItems = cart.items.reduce(
-        (sum, item) => sum + item.quantity,
-        0
-    );
-
-    cart.totalPrice = cart.items.reduce(
-        (sum, item) => sum + item.quantity * item.product.price,
-        0
-    );
-
-    await cart.save();
+    await recalculateCart(cart);
 
     res.json({
         success: true,
@@ -139,6 +202,7 @@ const addToCart = asyncHandler(async (req, res) => {
 const removeFromCart = asyncHandler(async (req, res) => {
 
     const productId = req.params.productId;
+    const variantSku = req.query.variantSku;
 
     const cart = await Cart.findOne({ user: req.user.id });
 
@@ -149,25 +213,13 @@ const removeFromCart = asyncHandler(async (req, res) => {
         });
     }
 
-    cart.items = cart.items.filter(
-        item => item.product.toString() !== productId
+    cart.items = cart.items.filter(item =>
+        item.product.toString() !== productId ||
+        (variantSku ? item.variantSku !== variantSku : Boolean(item.variantSku))
     );
 
     await cart.save();
-
-    await cart.populate("items.product");
-
-    cart.totalItems = cart.items.reduce(
-        (sum, item) => sum + item.quantity,
-        0
-    );
-
-    cart.totalPrice = cart.items.reduce(
-        (sum, item) => sum + item.quantity * item.product.price,
-        0
-    );
-
-    await cart.save();
+    await recalculateCart(cart);
 
     res.json({
         success: true,
@@ -193,7 +245,7 @@ const clearCart = asyncHandler(async (req, res) => {
 // MERGE GUEST CART
 // ========================================
 const mergeCart = asyncHandler(async (req, res) => {
-    const { items } = req.body; // array of { productId, quantity }
+    const { items } = req.body; // array of { productId, quantity, variantSku }
 
     if (!items || !Array.isArray(items)) {
         return res.status(400).json({
@@ -218,7 +270,7 @@ const mergeCart = asyncHandler(async (req, res) => {
                 message: "Each guest cart item must be an object."
             });
         }
-        const { productId, quantity } = item;
+        const { productId, quantity, variantSku } = item;
         if (!productId || !isValidQuantity(quantity)) {
             return res.status(400).json({
                 success: false,
@@ -227,16 +279,10 @@ const mergeCart = asyncHandler(async (req, res) => {
         }
 
         const product = await Product.findById(productId);
-        if (!product || product.isDeleted || !product.isPublished) {
+        if (!product || product.isDeleted || product.isPublished === false) {
             return res.status(409).json({
                 success: false,
                 message: "A guest cart product is no longer available."
-            });
-        }
-        if (product.variants?.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Variant products are currently unavailable for purchase."
             });
         }
         if (product.seller && product.seller.toString() === req.user.id) {
@@ -246,32 +292,38 @@ const mergeCart = asyncHandler(async (req, res) => {
             });
         }
 
-        const existingItem = cart.items.find(
-            ci => ci.product.toString() === productId
+        let selection;
+        try {
+            selection = await resolveCartSelection(product, variantSku, req.user.id, cart._id);
+        } catch (error) {
+            return res.status(error.statusCode || 400).json({ success: false, message: error.message });
+        }
+        const selectedVariantSku = product.variants?.length ? selection.sku : null;
+        const existingItem = cart.items.find(ci =>
+            ci.product.toString() === productId && (ci.variantSku || null) === selectedVariantSku
         );
 
         const nextQuantity = (existingItem?.quantity || 0) + quantity;
-        if (nextQuantity > product.stock) {
+        if (nextQuantity > selection.available) {
             return res.status(409).json({
                 success: false,
-                message: `Only ${product.stock} units of ${product.title} are available.`
+                message: `Only ${selection.available} units of ${product.title} are available.`
             });
         }
         if (existingItem) {
             existingItem.quantity = nextQuantity;
-            existingItem.price = product.price;
+            existingItem.price = selection.price;
         } else {
             cart.items.push({
                 product: productId,
+                variantSku: selectedVariantSku,
                 quantity,
-                price: product.price
+                price: selection.price
             });
         }
     }
 
     await cart.save();
-
-    await cart.populate("items.product");
 
     cart.totalItems = cart.items.reduce(
         (sum, item) => sum + item.quantity,
@@ -279,7 +331,7 @@ const mergeCart = asyncHandler(async (req, res) => {
     );
 
     cart.totalPrice = cart.items.reduce(
-        (sum, item) => sum + item.quantity * (item.product ? item.product.price : item.price),
+        (sum, item) =>         sum + item.quantity * item.price,
         0
     );
 
@@ -296,7 +348,7 @@ const mergeCart = asyncHandler(async (req, res) => {
 // UPDATE CART ITEM QUANTITY
 // ========================================
 const updateCartItemQuantity = asyncHandler(async (req, res) => {
-    const { productId, quantity } = req.body;
+    const { productId, quantity, variantSku } = req.body;
 
     if (!productId || !Number.isSafeInteger(quantity) || quantity < 0) {
         return res.status(400).json({
@@ -315,7 +367,8 @@ const updateCartItemQuantity = asyncHandler(async (req, res) => {
     }
 
     const itemIndex = cart.items.findIndex(
-        item => item.product.toString() === productId
+        item => item.product.toString() === productId &&
+            (item.variantSku || null) === (variantSku || null)
     );
 
     if (itemIndex > -1) {
@@ -329,25 +382,26 @@ const updateCartItemQuantity = asyncHandler(async (req, res) => {
                     message: "Product not found"
                 });
             }
-            if (product.variants?.length > 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Variant products are currently unavailable for purchase."
-                });
-            }
-            if (product.isDeleted || !product.isPublished) {
+            if (product.isDeleted || product.isPublished === false) {
                 return res.status(409).json({
                     success: false,
                     message: "Product is no longer available"
                 });
             }
-            if (quantity > product.stock) {
+            let selection;
+            try {
+                selection = await resolveCartSelection(product, variantSku, req.user.id, cart._id);
+            } catch (error) {
+                return res.status(error.statusCode || 400).json({ success: false, message: error.message });
+            }
+            if (quantity > selection.available) {
                 return res.status(409).json({
                     success: false,
-                    message: `Only ${product.stock} units are available`
+                    message: `Only ${selection.available} units are available`
                 });
             }
             cart.items[itemIndex].quantity = quantity;
+            cart.items[itemIndex].price = selection.price;
         }
     } else {
         return res.status(404).json({
@@ -357,11 +411,9 @@ const updateCartItemQuantity = asyncHandler(async (req, res) => {
     }
 
     await cart.save();
-    await cart.populate("items.product");
-
     cart.totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
     cart.totalPrice = cart.items.reduce(
-        (sum, item) => sum + item.quantity * (item.product ? item.product.price : item.price),
+        (sum, item) => sum + item.quantity * item.price,
         0
     );
 

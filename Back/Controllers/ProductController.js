@@ -5,6 +5,9 @@ const SearchAnalytics = require("../models/SearchAnalytics");
 const asyncHandler = require("express-async-handler");
 const slugify = require("slugify");
 const { cloudUpload, cloudRemove } = require("../config/cloudUplaod");
+const mongoose = require("mongoose");
+const Warehouse = require("../models/Warehouse");
+const StockReservation = require("../models/StockReservation");
 
 
 // ========================================
@@ -500,7 +503,9 @@ const AddNewProduct = asyncHandler(async (req, res) => {
         specifications,
         attributes,
         variants,
-        tags
+        tags,
+        inventoryMode,
+        warehouse
     } = req.body;
 
     const categoryExists = await Category.findById(category);
@@ -512,13 +517,37 @@ const AddNewProduct = asyncHandler(async (req, res) => {
         });
     }
 
-    // Check SKU uniqueness
-    if (sku) {
-        const skuExists = await Product.findOne({ sku });
+    const variantSkus = (variants || []).map(variant => String(variant.sku || "").trim().toUpperCase());
+    const submittedSkus = [sku, ...variantSkus]
+        .filter(Boolean)
+        .map(value => String(value).trim().toUpperCase());
+    if (new Set(submittedSkus).size !== submittedSkus.length) {
+        return res.status(400).json({ success: false, message: "Product and variant SKUs must be unique." });
+    }
+    if (submittedSkus.length) {
+        const skuExists = await Product.findOne({
+            $or: [
+                { sku: { $in: submittedSkus } },
+                { "variants.sku": { $in: submittedSkus } },
+            ],
+        });
         if (skuExists) {
             return res.status(400).json({
                 success: false,
-                message: "SKU already exists"
+                message: "SKU already belongs to another product or variant."
+            });
+        }
+    }
+
+    const resolvedInventoryMode = inventoryMode || "seller-managed";
+    if (resolvedInventoryMode === "warehouse-managed") {
+        const activeWarehouse = warehouse
+            ? await Warehouse.findOne({ _id: warehouse, isActive: true })
+            : null;
+        if (!activeWarehouse) {
+            return res.status(400).json({
+                success: false,
+                message: "Warehouse-managed products require an active warehouse."
             });
         }
     }
@@ -551,29 +580,88 @@ const AddNewProduct = asyncHandler(async (req, res) => {
         slug = `${slug}-${Date.now()}`;
     }
 
-    // 6️⃣ Create product with all fields including dynamic attributes & variants
-    const product = await Product.create({
-        seller: req.user.id,
-        title,
-        slug,
-        description,
-        category,
-        subcategory: subcategory || null,
-        brand,
-        price,
-        comparePrice,
-        stock: (variants && variants.length > 0)
-            // If variants are provided, aggregate total stock from them
-            ? variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
-            : (stock || 0),
-        sku,
-        isPublished,
-        images,
-        specifications: specifications || [],
-        attributes: attributes || [],
-        variants: variants || [],
-        tags: tags || []
-    });
+    // Product and initial stock must commit or roll back together.
+    const normalizedInitialStock = Number(stock || 0);
+    const session = await mongoose.startSession();
+    let product;
+    try {
+        session.startTransaction();
+        [product] = await Product.create([{
+            seller: req.user.id,
+            title,
+            slug,
+            description,
+            category,
+            subcategory: subcategory || null,
+            brand,
+            price,
+            comparePrice,
+            stock: 0,
+            sku,
+            inventoryMode: resolvedInventoryMode,
+            warehouse: resolvedInventoryMode === "warehouse-managed" ? warehouse : null,
+            isPublished,
+            images,
+            specifications: specifications || [],
+            attributes: attributes || [],
+            variants: variants || [],
+            tags: tags || []
+        }], { session });
+
+        const { initializeSellerInventory, adjustWarehouseInventory } = require("../utils/inventoryService");
+        const initialSkuStocks = variants && variants.length
+            ? variants.map(variant => ({ sku: variant.sku, quantity: Number(variant.stock || 0), referenceType: "product_variant" }))
+            : [{ sku: sku || product.slug, quantity: normalizedInitialStock, referenceType: "product" }];
+
+        const availableStockBySku = new Map();
+        let totalReservedStock = 0;
+        for (const initialStock of initialSkuStocks) {
+            let initializedInventory;
+            if (resolvedInventoryMode === "seller-managed") {
+                initializedInventory = await initializeSellerInventory({
+                    seller: req.user.id,
+                    product: product._id,
+                    sku: initialStock.sku,
+                    quantity: initialStock.quantity,
+                    actor: "seller",
+                    reason: "INITIAL_STOCK",
+                    referenceType: initialStock.referenceType,
+                    referenceId: String(product._id),
+                    session,
+                });
+            } else {
+                initializedInventory = await adjustWarehouseInventory({
+                    seller: req.user.id,
+                    product: product._id,
+                    warehouse,
+                    sku: initialStock.sku,
+                    operation: "set",
+                    quantity: initialStock.quantity,
+                    actor: "seller",
+                    reason: "INITIAL_STOCK",
+                    referenceType: initialStock.referenceType,
+                    referenceId: String(product._id),
+                    session,
+                });
+            }
+            availableStockBySku.set(String(initialStock.sku).toUpperCase(), initializedInventory.availableStock);
+            totalReservedStock += Number(initializedInventory.reservedStock || 0);
+        }
+        product.stock = Array.from(availableStockBySku.values()).reduce((sum, quantity) => sum + quantity, 0);
+        product.reservedStock = totalReservedStock;
+        if (product.variants?.length) {
+            product.variants = product.variants.map(variant => ({
+                ...variant.toObject?.() || variant,
+                stock: availableStockBySku.get(String(variant.sku).toUpperCase()) || 0,
+            }));
+        }
+        await session.commitTransaction();
+    } catch (error) {
+        if (session.inTransaction()) await session.abortTransaction();
+        throw error;
+    } finally {
+        await session.endSession();
+    }
 
     res.status(201).json({
         success: true,
@@ -604,6 +692,20 @@ const updateProduct = asyncHandler(async (req, res) => {
         });
     }
 
+    if (req.body.stock !== undefined && (!Number.isSafeInteger(req.body.stock) || req.body.stock < 0)) {
+        return res.status(400).json({
+            success: false,
+            message: "Stock must be a non-negative whole number."
+        });
+    }
+    if (req.body.variants && typeof req.body.variants === "string") {
+        try {
+            req.body.variants = JSON.parse(req.body.variants);
+        } catch (error) {
+            return res.status(400).json({ success: false, message: "Invalid variants JSON." });
+        }
+    }
+
     const allowedFields = [
         "title",
         "description",
@@ -632,6 +734,35 @@ const updateProduct = asyncHandler(async (req, res) => {
         }
     });
 
+    if (updatePayload.sku !== undefined && String(updatePayload.sku || "") !== String(product.sku || "")) {
+        return res.status(409).json({
+            success: false,
+            message: "SKU changes require an explicit inventory migration and are not supported here."
+        });
+    }
+
+    if (updatePayload.variants) {
+        const existingSkus = (product.variants || []).map(variant => variant.sku.toUpperCase()).sort();
+        const requestedSkus = updatePayload.variants.map(variant =>
+            String(variant.sku || "").trim().toUpperCase()
+        ).sort();
+        if (
+            new Set(requestedSkus).size !== requestedSkus.length ||
+            existingSkus.length !== requestedSkus.length ||
+            existingSkus.some((existingSku, index) => existingSku !== requestedSkus[index])
+        ) {
+            return res.status(409).json({
+                success: false,
+                message: "Adding, removing, or changing variant SKUs requires an explicit inventory migration."
+            });
+        }
+        for (const variant of updatePayload.variants) {
+            if (!Number.isSafeInteger(variant.stock) || variant.stock < 0) {
+                return res.status(400).json({ success: false, message: "Variant stock must be a non-negative whole number." });
+            }
+        }
+    }
+
     if (updatePayload.category) {
         const categoryExists = await Category.findById(updatePayload.category);
         if (!categoryExists) {
@@ -656,8 +787,102 @@ const updateProduct = asyncHandler(async (req, res) => {
         }
     }
 
-    Object.assign(product, updatePayload);
-    const updated = await product.save();
+    const session = await mongoose.startSession();
+    let updated;
+    try {
+        session.startTransaction();
+        const { setSellerStock, adjustWarehouseInventory } = require("../utils/inventoryService");
+        const requestedStock = updatePayload.stock;
+        delete updatePayload.stock;
+        if (requestedStock !== undefined) {
+            if (product.variants?.length) {
+                throw Object.assign(new Error("Set stock for each variant SKU instead of the parent product."), { statusCode: 400 });
+            }
+            const sku = product.sku || product.slug;
+            if ((product.inventoryMode || "seller-managed") === "warehouse-managed") {
+                if (!product.warehouse) {
+                    throw Object.assign(new Error("Warehouse-managed product has no configured warehouse."), { statusCode: 409 });
+                }
+                await adjustWarehouseInventory({
+                    seller: product.seller,
+                    product: product._id,
+                    warehouse: product.warehouse,
+                    sku,
+                    operation: "set",
+                    quantity: requestedStock,
+                    actor: req.user.role === "seller" ? "seller" : "admin",
+                    reason: "PRODUCT_UPDATE",
+                    referenceType: "product",
+                    referenceId: String(product._id),
+                    session,
+                });
+            } else {
+                await setSellerStock({
+                    seller: product.seller,
+                    product: product._id,
+                    sku,
+                    quantity: requestedStock,
+                    actor: req.user.role === "seller" ? "seller" : "admin",
+                    reason: "PRODUCT_UPDATE",
+                    referenceType: "product",
+                    referenceId: String(product._id),
+                    session,
+                });
+            }
+        }
+        if (updatePayload.variants) {
+            const availableBySku = new Map();
+            for (const variant of updatePayload.variants) {
+                const stockOptions = {
+                    seller: product.seller,
+                    product: product._id,
+                    sku: variant.sku,
+                    quantity: variant.stock,
+                    actor: req.user.role === "seller" ? "seller" : "admin",
+                    reason: "PRODUCT_UPDATE",
+                    referenceType: "product",
+                    referenceId: String(product._id),
+                    session,
+                };
+                let updatedInventory;
+                if ((product.inventoryMode || "seller-managed") === "warehouse-managed") {
+                    if (!product.warehouse) {
+                        throw Object.assign(new Error("Warehouse-managed product has no configured warehouse."), { statusCode: 409 });
+                    }
+                    updatedInventory = await adjustWarehouseInventory({
+                        ...stockOptions,
+                        warehouse: product.warehouse,
+                        operation: "set",
+                    });
+                } else {
+                    updatedInventory = await setSellerStock(stockOptions);
+                }
+                availableBySku.set(variant.sku.toUpperCase(), updatedInventory.availableStock);
+            }
+            updatePayload.variants = updatePayload.variants.map(variant => ({
+                ...variant,
+                stock: availableBySku.get(variant.sku.toUpperCase()),
+            }));
+        }
+        if (requestedStock !== undefined || updatePayload.variants) {
+            const syncedProduct = await Product.findById(product._id).session(session);
+            if (syncedProduct) {
+                product.stock = syncedProduct.stock;
+                product.reservedStock = syncedProduct.reservedStock;
+            }
+        }
+        Object.assign(product, updatePayload);
+        updated = await product.save({ session });
+        await session.commitTransaction();
+    } catch (error) {
+        if (session.inTransaction()) await session.abortTransaction();
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ success: false, message: error.message });
+        }
+        throw error;
+    } finally {
+        await session.endSession();
+    }
 
     res.status(200).json({
         success: true,
@@ -685,6 +910,18 @@ const deleteProduct = asyncHandler(async (req, res) => {
         return res.status(403).json({
             success: false,
             message: "Not authorized"
+        });
+    }
+
+    const activeReservation = await StockReservation.findOne({
+        product: product._id,
+        status: "active",
+        expiresAt: { $gt: new Date() },
+    });
+    if (activeReservation) {
+        return res.status(409).json({
+            success: false,
+            message: "Product cannot be archived while active stock reservations exist."
         });
     }
 

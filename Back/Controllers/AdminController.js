@@ -7,6 +7,7 @@ const SellerRequest = require("../models/SellerRequest");
 const Notification = require("../models/Notification");
 const SystemSettings = require("../models/SystemSettings");
 const AnalyticsEvent = require("../models/AnalyticsEvent");
+const mongoose = require("mongoose");
 
 const getAllUsers = asyncHandler(async (req, res) => {
   const page = Number(req.query.page) || 1;
@@ -262,12 +263,6 @@ const getInventoryAnalytics = asyncHandler(async (req, res) => {
 
 const adjustProductInventory = asyncHandler(async (req, res) => {
   const { quantity, action, note } = req.body;
-  const product = await Product.findById(req.params.id);
-
-  if (!product || product.isDeleted) {
-    return res.status(404).json({ success: false, message: "Product not found" });
-  }
-
   if (!Number.isInteger(quantity) || quantity <= 0) {
     return res.status(400).json({ success: false, message: "Quantity must be a positive integer" });
   }
@@ -276,30 +271,74 @@ const adjustProductInventory = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "Invalid inventory action" });
   }
 
-  if (action === "sale") {
-    if (product.stock < quantity) {
-      return res.status(400).json({ success: false, message: "Insufficient stock" });
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+    const product = await Product.findById(req.params.id).session(session);
+    if (!product || product.isDeleted) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: "Product not found" });
     }
-    product.stock -= quantity;
-    product.sold += quantity;
-  } else {
-    product.stock += quantity;
+
+    const { adjustSellerInventory, adjustWarehouseInventory } = require("../utils/inventoryService");
+    const sku = String(req.body.sku || product.sku || product.slug || "").trim().toUpperCase();
+    const variant = product.variants?.find(entry => entry.sku.toUpperCase() === sku);
+    if (product.variants?.length && !variant) {
+      await session.abortTransaction();
+      return res.status(400).json({ success: false, message: "A valid variant SKU is required." });
+    }
+    const delta = action === "sale" ? -quantity : quantity;
+    const options = {
+      seller: product.seller,
+      product: product._id,
+      sku,
+      quantity: delta,
+      actor: "admin",
+      reason: note || (action === "sale" ? "SALE" : "MANUAL_ADJUSTMENT"),
+      referenceType: "admin",
+      referenceId: product._id.toString(),
+      session,
+    };
+    if ((product.inventoryMode || "seller-managed") === "warehouse-managed") {
+      if (!product.warehouse) {
+        await session.abortTransaction();
+        return res.status(409).json({ success: false, message: "Warehouse-managed product has no configured warehouse." });
+      }
+      await adjustWarehouseInventory({
+        ...options,
+        warehouse: product.warehouse,
+        operation: delta > 0 ? "increase" : "decrease",
+        quantity: Math.abs(delta),
+      });
+    } else {
+      await adjustSellerInventory(options);
+    }
+    const updatedProduct = await Product.findById(product._id).session(session);
+    if (action === "sale") updatedProduct.sold += quantity;
+    updatedProduct.inventoryLogs.push({
+      action,
+      quantity,
+      note: note || "Inventory update",
+      createdBy: req.user.id
+    });
+
+    await updatedProduct.save({ session });
+    await session.commitTransaction();
+
+    res.status(200).json({
+      success: true,
+      message: "Inventory updated successfully",
+      product: updatedProduct
+    });
+  } catch (error) {
+    if (session.inTransaction()) await session.abortTransaction();
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
+    throw error;
+  } finally {
+    await session.endSession();
   }
-
-  product.inventoryLogs.push({
-    action,
-    quantity,
-    note: note || "Inventory update",
-    createdBy: req.user.id
-  });
-
-  await product.save();
-
-  res.status(200).json({
-    success: true,
-    message: "Inventory updated successfully",
-    product
-  });
 });
 
 // ========================================

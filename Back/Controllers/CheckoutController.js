@@ -2,6 +2,10 @@ const asyncHandler = require("express-async-handler");
 const Cart = require("../models/Cart");
 const { Product } = require("../models/Product");
 const CheckoutSession = require("../models/CheckoutSession");
+const WarehouseInventory = require("../models/WarehouseInventory");
+const Warehouse = require("../models/Warehouse");
+const StockReservation = require("../models/StockReservation");
+const { getAvailableStock } = require("../utils/inventoryService");
 
 // Local shipping options definition
 const shippingOptions = [
@@ -10,8 +14,18 @@ const shippingOptions = [
   { id: "free", name: "Free Shipping", cost: 0, days: "5-7 business days", minAmount: 1000 }
 ];
 
+const getSelectedVariant = (product, variantSku) => {
+  if (!product.variants?.length) return null;
+  return product.variants.find(
+    variant => variant.sku.toUpperCase() === String(variantSku || "").trim().toUpperCase()
+  ) || null;
+};
+
+const getCartItemPrice = (item) =>
+  getSelectedVariant(item.product, item.variantSku)?.price ?? item.product.price;
+
 const getCartSubtotal = (cart) => cart.items.reduce(
-  (total, item) => total + item.product.price * item.quantity,
+  (total, item) => total + getCartItemPrice(item) * item.quantity,
   0
 );
 
@@ -26,15 +40,52 @@ const isValidAddress = (address) => {
     (address.postalCode === undefined || typeof address.postalCode === "string");
 };
 
-const validatePurchasableCart = (cart) => {
+const validatePurchasableCart = async (cart, userId) => {
   for (const item of cart.items) {
-    if (!item.product || item.product.isDeleted || !item.product.isPublished) {
+    if (!item.product || item.product.isDeleted || item.product.isPublished === false) {
       return "A product in your cart is no longer available.";
     }
-    if (item.product.variants?.length > 0) {
-      return "Variant products are currently unavailable for purchase.";
+    const product = item.product;
+    const variant = getSelectedVariant(product, item.variantSku);
+    if (product.variants?.length && !variant) {
+      return `Select a valid variant for product: ${product.title}`;
     }
-    if (item.product.stock < item.quantity) {
+    if (!product.variants?.length && item.variantSku) {
+      return `Product ${product.title} does not have selectable variants.`;
+    }
+
+    const sku = variant?.sku || product.sku || product.slug;
+    let available;
+    if ((product.inventoryMode || "seller-managed") === "warehouse-managed") {
+      const activeWarehouses = await Warehouse.find({ isActive: true }).select("_id");
+      const inventories = activeWarehouses.length
+        ? await WarehouseInventory.find({
+          product: product._id,
+          sku,
+          warehouse: { $in: activeWarehouses.map(warehouse => warehouse._id) },
+        })
+        : [];
+      available = inventories.reduce((sum, inventory) => sum + Number(inventory.availableStock || 0), 0);
+      const ownReservations = await StockReservation.find({
+        user: userId,
+        cartId: String(cart._id),
+        product: product._id,
+        sku,
+        $or: [{ source: "warehouse-managed" }, { source: { $exists: false } }],
+        status: "active",
+        expiresAt: { $gt: new Date() },
+      });
+      available += ownReservations.reduce((sum, reservation) => sum + reservation.quantity, 0);
+    } else {
+      available = await getAvailableStock({
+        seller: product.seller,
+        product: product._id,
+        sku,
+        user: userId,
+        cartId: cart._id,
+      });
+    }
+    if (available < item.quantity) {
       return `Insufficient stock for product: ${item.product.title}`;
     }
   }
@@ -53,7 +104,7 @@ const startCheckout = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "Your cart is empty" });
   }
 
-  const cartError = validatePurchasableCart(cart);
+  const cartError = await validatePurchasableCart(cart, req.user.id);
   if (cartError) {
     return res.status(409).json({ success: false, message: cartError });
   }
@@ -65,8 +116,9 @@ const startCheckout = asyncHandler(async (req, res) => {
     userId: req.user.id,
     items: cart.items.map(item => ({
       product: item.product._id,
+      variantSku: item.variantSku || null,
       title: item.product.title,
-      price: item.product.price,
+      price: getCartItemPrice(item),
       quantity: item.quantity
     })),
     subtotal,
@@ -84,7 +136,7 @@ const startCheckout = asyncHandler(async (req, res) => {
 
   const session = await CheckoutSession.findOneAndUpdate(
     { userId: req.user.id },
-    sessionData,
+    { $set: { ...sessionData, completedAt: null, orderGroupId: null } },
     { upsert: true, new: true }
   );
 
@@ -154,7 +206,7 @@ const saveShipping = asyncHandler(async (req, res) => {
   if (!cart || cart.items.length === 0) {
     return res.status(400).json({ success: false, message: "Your cart is empty." });
   }
-  const cartError = validatePurchasableCart(cart);
+  const cartError = await validatePurchasableCart(cart, req.user.id);
   if (cartError) {
     return res.status(409).json({ success: false, message: cartError });
   }
@@ -168,8 +220,9 @@ const saveShipping = asyncHandler(async (req, res) => {
 
   session.items = cart.items.map(item => ({
     product: item.product._id,
+    variantSku: item.variantSku || null,
     title: item.product.title,
-    price: item.product.price,
+    price: getCartItemPrice(item),
     quantity: item.quantity
   }));
   session.subtotal = subtotal;

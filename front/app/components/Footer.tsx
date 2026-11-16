@@ -57,7 +57,7 @@ export const Footer = () => {
           <Link
             href="/"
             className="font-serif text-2xl font-semibold tracking-[0.22em] text-foreground transition-colors hover:text-gold"
-            aria-label="LUMIXA home"
+            aria-label={t("LUMIXA home")}
           >
             LUMIXA
           </Link>

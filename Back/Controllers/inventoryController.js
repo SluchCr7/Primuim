@@ -1,14 +1,19 @@
 const asyncHandler = require("express-async-handler");
 const Warehouse = require("../models/Warehouse");
 const WarehouseInventory = require("../models/WarehouseInventory");
+const SellerInventory = require("../models/SellerInventory");
 const Order = require("../models/Order");
 const Product = require("../models/Product").Product || require("../models/Product");
+const { User } = require("../models/User");
 const Cart = require("../models/Cart");
 const mongoose = require("mongoose");
 const {
-  releaseCartReservations,
-  reserveStock,
-  routeOrderInventory
+  reserveWarehouseCart,
+  reserveSellerInventory,
+  releaseSellerCartReservations,
+  setSellerStock,
+  adjustSellerInventory,
+  adjustWarehouseInventory,
 } = require("../utils/inventoryService");
 
 // @desc    Create a new warehouse
@@ -42,59 +47,106 @@ const createWarehouse = asyncHandler(async (req, res) => {
 // @route   POST /api/inventory/stock-adjustment
 // @access  Private/Admin
 const adjustStock = asyncHandler(async (req, res) => {
-  const { warehouseId, sku, productId, physicalStockChange, reorderPoint, safetyStock } = req.body;
+  const {
+    warehouseId,
+    sku,
+    productId,
+    quantity,
+    sellerId,
+    mode,
+    reason,
+    operation,
+    physicalStockChange,
+  } = req.body;
 
-  if (!warehouseId || !sku || !productId) {
-    return res.status(400).json({ success: false, message: "warehouseId, sku, and productId are required." });
+  if (!productId || !sku) {
+    return res.status(400).json({ success: false, message: "productId and sku are required." });
   }
 
-  // Find or create inventory mapping
-  let inventory = await WarehouseInventory.findOne({ warehouse: warehouseId, sku });
+  const product = await Product.findById(productId);
+  if (!product || product.isDeleted) {
+    return res.status(404).json({ success: false, message: "Product not found." });
+  }
+  const inventoryMode = mode || product.inventoryMode || "seller-managed";
+  if (inventoryMode !== (product.inventoryMode || "seller-managed")) {
+    return res.status(409).json({ success: false, message: "Inventory mode does not match the product." });
+  }
+  const isAdmin = ["admin", "superadmin"].includes(req.user.role);
+  if (!isAdmin && req.user.role !== "seller") {
+    return res.status(403).json({ success: false, message: "Not authorized to manage inventory." });
+  }
+  if (req.user.role === "seller" && sellerId && sellerId !== req.user.id) {
+    return res.status(403).json({ success: false, message: "Sellers may only manage their own inventory." });
+  }
+  const ownerId = req.user.role === "seller" ? req.user.id : sellerId;
+  if (!ownerId) {
+    return res.status(400).json({ success: false, message: "sellerId is required for administrator stock adjustments." });
+  }
+  const seller = await User.findById(ownerId).select("_id role");
+  if (!seller || seller.role !== "seller") {
+    return res.status(404).json({ success: false, message: "Seller not found." });
+  }
+  if (String(product.seller) !== String(ownerId)) {
+    return res.status(403).json({ success: false, message: "The product does not belong to the specified seller." });
+  }
 
-  if (!inventory) {
-    inventory = new WarehouseInventory({
-      warehouse: warehouseId,
-      product: productId,
-      sku,
-      physicalStock: 0,
-      reservedStock: 0,
-      availableStock: 0
+  let resolvedOperation = operation;
+  let resolvedQuantity = quantity;
+  if (!resolvedOperation && Number.isSafeInteger(physicalStockChange) && physicalStockChange !== 0) {
+    resolvedOperation = physicalStockChange > 0 ? "increase" : "decrease";
+    resolvedQuantity = Math.abs(physicalStockChange);
+  }
+  if (!["set", "increase", "decrease"].includes(resolvedOperation) ||
+      !Number.isSafeInteger(resolvedQuantity) ||
+      resolvedQuantity < 0 ||
+      (resolvedOperation !== "set" && resolvedQuantity === 0)) {
+    return res.status(400).json({
+      success: false,
+      message: "Provide operation=set|increase|decrease and a valid whole-number quantity.",
     });
   }
-
-  if (physicalStockChange !== undefined) {
-    inventory.physicalStock = Math.max(0, inventory.physicalStock + physicalStockChange);
-  }
-  if (reorderPoint !== undefined) {
-    inventory.reorderPoint = reorderPoint;
-  }
-  if (safetyStock !== undefined) {
-    inventory.safetyStock = safetyStock;
+  if (inventoryMode === "warehouse-managed" && (!isAdmin || !warehouseId)) {
+    return res.status(403).json({ success: false, message: "Warehouse stock requires an administrator and an active warehouse." });
   }
 
-  // Available stock recalculated in pre-save hook
-  await inventory.save();
-
-  // Also update overall product total stock in standard Product model for backward compatibility
+  const session = await mongoose.startSession();
   try {
-    const ProductModel = require("../models/Product");
-    const product = await ProductModel.findById(productId);
-    if (product) {
-      // Recalculate total physical stock across all warehouses for this SKU/product
-      const allInventoriesForProduct = await WarehouseInventory.find({ product: productId });
-      const totalPhysicalStock = allInventoriesForProduct.reduce((sum, inv) => sum + inv.physicalStock, 0);
-      product.stock = totalPhysicalStock;
-      await product.save();
+    session.startTransaction();
+    const options = {
+      seller: ownerId,
+      product: productId,
+      sku,
+      quantity: resolvedQuantity,
+      actor: isAdmin ? "admin" : "seller",
+      reason: reason || "MANUAL_ADJUSTMENT",
+      referenceType: "inventory",
+      referenceId: productId,
+      session,
+    };
+    const inventory = inventoryMode === "warehouse-managed"
+      ? await adjustWarehouseInventory({ ...options, warehouse: warehouseId, operation: resolvedOperation })
+      : resolvedOperation === "set"
+        ? await setSellerStock(options)
+        : await adjustSellerInventory({
+          ...options,
+          quantity: resolvedOperation === "increase" ? resolvedQuantity : -resolvedQuantity,
+        });
+    await session.commitTransaction();
+    return res.status(200).json({
+      success: true,
+      message: "Inventory updated successfully.",
+      inventory,
+      availableStock: inventory.availableStock,
+    });
+  } catch (error) {
+    if (session.inTransaction()) await session.abortTransaction();
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ success: false, message: error.message });
     }
-  } catch (err) {
-    console.error("Failed to sync main product stock level:", err.message);
+    throw error;
+  } finally {
+    await session.endSession();
   }
-
-  res.status(200).json({
-    success: true,
-    message: "Stock adjusted successfully",
-    inventory
-  });
 });
 
 // @desc    Get Inventory Turnover Report
@@ -125,24 +177,48 @@ const getTurnoverReport = asyncHandler(async (req, res) => {
 
   // 2. Calculate Average Inventory Value
   // We multiply physical stock by the product's base price
-  const inventoryValueResult = await WarehouseInventory.aggregate([
-    {
-      $lookup: {
-        from: "products",
-        localField: "product",
-        foreignField: "_id",
-        as: "productDetails"
+  const [warehouseInventoryValue, sellerInventoryValue] = await Promise.all([
+    WarehouseInventory.aggregate([
+      {
+        $lookup: {
+          from: "products",
+          localField: "product",
+          foreignField: "_id",
+          as: "productDetails"
+        }
+      },
+      { $unwind: "$productDetails" },
+      { $match: { "productDetails.inventoryMode": "warehouse-managed" } },
+      {
+        $group: {
+          _id: null,
+          totalValue: { $sum: { $multiply: ["$physicalStock", "$productDetails.price"] } }
+        }
       }
-    },
-    { $unwind: "$productDetails" },
-    {
-      $group: {
-        _id: null,
-        totalValue: { $sum: { $multiply: ["$physicalStock", "$productDetails.price"] } }
+    ]),
+    SellerInventory.aggregate([
+      { $match: { warehouse: null } },
+      {
+        $lookup: {
+          from: "products",
+          localField: "product",
+          foreignField: "_id",
+          as: "productDetails"
+        }
+      },
+      { $unwind: "$productDetails" },
+      { $match: { "productDetails.inventoryMode": "seller-managed" } },
+      {
+        $group: {
+          _id: null,
+          totalValue: { $sum: { $multiply: ["$declaredStock", "$productDetails.price"] } }
+        }
       }
-    }
+    ])
   ]);
-  const currentInventoryValue = inventoryValueResult[0]?.totalValue || 0;
+  const currentInventoryValue =
+    (warehouseInventoryValue[0]?.totalValue || 0) +
+    (sellerInventoryValue[0]?.totalValue || 0);
 
   // For reporting, we simulate historical starting value, or use current value as baseline average
   const averageInventory = currentInventoryValue || 1; // Prevent division by zero
@@ -170,43 +246,80 @@ const reserveCartStock = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "Your cart is empty." });
   }
 
-  const items = [];
+  const sellerItems = [];
+  const warehouseItems = [];
   for (const item of cart.items) {
     const product = item.product;
     if (!product) {
       return res.status(400).json({ success: false, message: "A cart product is no longer available." });
     }
-    if (product.isDeleted || !product.isPublished) {
+    if (product.isDeleted || product.isPublished === false) {
       return res.status(409).json({ success: false, message: `Product ${product.title} is no longer available.` });
     }
-    if (product.variants?.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Variant products are currently unavailable for purchase."
-      });
+    if (product.seller && product.seller.toString() === req.user.id) {
+      return res.status(400).json({ success: false, message: "You cannot reserve your own product." });
     }
-    if (!Number.isSafeInteger(item.quantity) || item.quantity < 1 || product.stock < item.quantity) {
-      return res.status(409).json({ success: false, message: `Insufficient stock for product ${product.title}.` });
+    const variant = product.variants?.length
+      ? product.variants.find(
+        entry => entry.sku.toUpperCase() === String(item.variantSku || "").trim().toUpperCase()
+      )
+      : null;
+    if (product.variants?.length && !variant) {
+      return res.status(400).json({ success: false, message: `Choose a valid variant for ${product.title}.` });
     }
-    items.push({
-      sku: product.sku || product.title,
+    if (!product.variants?.length && item.variantSku) {
+      return res.status(400).json({ success: false, message: `${product.title} does not have variants.` });
+    }
+    if (!Number.isSafeInteger(item.quantity) || item.quantity < 1) {
+      return res.status(400).json({ success: false, message: `Invalid quantity for ${product.title}.` });
+    }
+    const stockItem = {
+      seller: product.seller,
+      sku: variant?.sku || product.sku || product.slug,
       quantity: item.quantity,
-      productId: product._id
-    });
+      productId: product._id,
+      variantSku: variant?.sku || null,
+    };
+    if ((product.inventoryMode || "seller-managed") === "warehouse-managed") {
+      warehouseItems.push(stockItem);
+    } else {
+      sellerItems.push(stockItem);
+    }
   }
 
   const cartId = cart._id.toString();
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    await releaseCartReservations(cartId, req.user.id, session);
-    const allocations = await routeOrderInventory(items, undefined, session);
-    await reserveStock(cartId, req.user.id, allocations, session);
+    const sellerReservations = [];
+    for (const item of sellerItems) {
+      sellerReservations.push(await reserveSellerInventory({
+        ...item,
+        user: req.user.id,
+        cartId,
+        session,
+      }));
+    }
+    await releaseSellerCartReservations({
+      cartId,
+      user: req.user.id,
+      keepKeys: sellerReservations.map(reservation => reservation.reservationKey),
+      session,
+    });
+    const warehouseReservationResult = warehouseItems.length
+      ? await reserveWarehouseCart({
+        cartId,
+        userId: req.user.id,
+        items: warehouseItems.map(({ sku, quantity, productId }) => ({ sku, quantity, productId })),
+        session,
+      })
+      : { allocations: [], reservations: [] };
     await session.commitTransaction();
     return res.status(200).json({
       success: true,
       message: "Stock successfully reserved for 15 minutes",
-      allocations
+      sellerReservations,
+      allocations: warehouseReservationResult.allocations,
     });
   } catch (err) {
     if (session.inTransaction()) {

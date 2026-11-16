@@ -9,7 +9,7 @@ const {
 const { verifyToken, verifyAdmin } = require("../Middelwares/verifyToken");
 
 router.post("/warehouses", verifyAdmin, createWarehouse);
-router.post("/stock-adjustment", verifyAdmin, adjustStock);
+router.post("/stock-adjustment", verifyToken, adjustStock);
 router.get("/turnover-report", verifyAdmin, getTurnoverReport);
 router.post("/reserve", verifyToken, reserveCartStock);
 

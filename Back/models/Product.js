@@ -80,6 +80,7 @@ const productVariantSchema = new mongoose.Schema(
       min: 0,
     },
     stock: {
+      // Compatibility projection; inventory services are authoritative.
       type: Number,
       required: true,
       default: 0,
@@ -238,6 +239,18 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    inventoryMode: {
+      type: String,
+      enum: ['seller-managed', 'warehouse-managed'],
+      default: 'seller-managed',
+      index: true,
+    },
+    warehouse: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Warehouse',
+      default: null,
+      index: true,
+    },
     isDeleted: {
       type: Boolean,
       default: false,
@@ -269,6 +282,7 @@ const productSchema = new mongoose.Schema(
      * Each variant tracks its own stock and (optional) price override.
      */
     variants: {
+      // Variant stock mirrors available inventory and never controls checkout.
       type: [productVariantSchema],
       default: [],
     },
@@ -328,6 +342,7 @@ productSchema.index({
 productSchema.index({ isBestSeller: 1, isDeleted: 1, isPublished: 1 });
 productSchema.index({ isDeleted: 1, isPublished: 1, category: 1, createdAt: -1 });
 productSchema.index({ seller: 1, isDeleted: 1, createdAt: -1 });
+productSchema.index({ "variants.sku": 1 }, { unique: true, sparse: true });
 
 const Product = mongoose.model("Product", productSchema);
 
@@ -343,6 +358,8 @@ const validateCreateProduct = (obj) => {
     stock: Joi.number().integer().min(0).default(0),
     sku: Joi.string().trim().max(100).optional(),
     isPublished: Joi.boolean().optional(),
+    inventoryMode: Joi.string().valid('seller-managed', 'warehouse-managed').optional(),
+    warehouse: Joi.string().hex().length(24).allow(null, "").optional(),
     images: Joi.array()
       .items(
         Joi.object({

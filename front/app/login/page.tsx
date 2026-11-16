@@ -233,6 +233,7 @@ export default function LoginPage() {
         const guestItems = items.map((item) => ({
           productId: item.product._id,
           quantity: item.quantity,
+          variantSku: item.variantSku,
         }));
         await mergeCart({ items: guestItems }).unwrap();
         clearGuestCart();

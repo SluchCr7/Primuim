@@ -7,6 +7,12 @@ const cartItemSchema = new mongoose.Schema(
         ref: "Product",
         required: true
     },
+    variantSku: {
+        type: String,
+        default: null,
+        trim: true,
+        uppercase: true
+    },
 
     quantity: {
         type: Number,
@@ -17,6 +23,10 @@ const cartItemSchema = new mongoose.Schema(
     price: {
         type: Number,
         required: true
+    },
+    availableStock: {
+        type: Number,
+        min: 0,
     }
 },
 { _id: false }
