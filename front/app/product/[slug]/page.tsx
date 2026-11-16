@@ -242,6 +242,14 @@ export default function ProductDetailsBySlugPage() {
     if (attrs.length === 0) return true;
     return attrs.every((axis: any) => attrSelection[axis.name] !== undefined);
   }, [attrSelection, product]);
+  const hasVariants = (product?.variants?.length ?? 0) > 0;
+  const selectedPurchaseVariant = hasVariants
+    ? product?.attributes?.length
+      ? activeVariant
+      : product.variants.find((variant: { sku: string; stock: number }) =>
+          variant.sku === selectedVariant?.sku
+        ) || product.variants[0]
+    : null;
 
   const handleAddToCart = async () => {
     if (!product) return;
@@ -256,11 +264,23 @@ export default function ProductDetailsBySlugPage() {
       showToast("Please select all options before adding to bag.", "error");
       return;
     }
+    if (hasVariants && !selectedPurchaseVariant) {
+      showToast("Please select a valid product variant.", "error");
+      return;
+    }
+    if (hasVariants && selectedPurchaseVariant.stock <= 0) {
+      showToast("This variant is out of stock.", "error");
+      return;
+    }
+    if (!hasVariants && product.stock <= 0) {
+      showToast("This product is out of stock.", "error");
+      return;
+    }
 
     setAddingToCart(true);
 
     // Determine which SKU to use
-    const variantSku = activeVariant?.sku ?? (selectedVariant?.sku || undefined);
+    const variantSku = selectedPurchaseVariant?.sku || undefined;
 
     if (!isAuthenticated) {
       addGuestCartItem(product, 1, variantSku);
@@ -662,26 +682,25 @@ export default function ProductDetailsBySlugPage() {
                   onClick={handleAddToCart}
                   disabled={
                     addingToCart ||
-                    product.stock === 0 ||
                     isOwner ||
-                    (product.variants?.length ?? 0) > 0 ||
-                    !allAttributesSelected ||
-                    (allAttributesSelected && activeVariant !== undefined && activeVariant !== null && activeVariant.stock <= 0)
+                    (hasVariants
+                      ? !allAttributesSelected || !selectedPurchaseVariant || selectedPurchaseVariant.stock <= 0
+                      : product.stock <= 0)
                   }
                   className="flex-grow h-14 rounded-full bg-foreground text-background hover:bg-gold hover:text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-black/5 uppercase tracking-widest text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:-translate-y-0.5"
                 >
-                  {(product.variants?.length ?? 0) > 0 ? (
-                    t("Variant purchases are temporarily unavailable")
-                  ) : addingToCart ? (
+                  {addingToCart ? (
                     t("Reserving Allocation…")
-                  ) : product.stock === 0 ? (
-                    t("Allocation Closed")
                   ) : isOwner ? (
                     t("Self-Owned Product")
+                  ) : hasVariants && (!allAttributesSelected || !selectedPurchaseVariant) ? (
+                    t("Select All Options")
+                  ) : hasVariants && selectedPurchaseVariant.stock <= 0 ? (
+                    t("Combination Out of Stock")
+                  ) : !hasVariants && product.stock <= 0 ? (
+                    t("Allocation Closed")
                   ) : !allAttributesSelected ? (
                     t("Select All Options")
-                  ) : allAttributesSelected && activeVariant !== undefined && activeVariant !== null && activeVariant.stock <= 0 ? (
-                    t("Combination Out of Stock")
                   ) : (
                     <>
                       <ShoppingBag className="h-4 w-4" /> {t("Add To Shopping Bag")}

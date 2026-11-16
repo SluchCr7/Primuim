@@ -237,7 +237,7 @@ export default function AddProductPage() {
   }, [isAuthenticated, user, router]);
 
   // ── API hooks ─────────────────────────────────────────────────────────────
-  const { data: categoriesData } = useGetCategoriesQuery(undefined);
+  const { data: categoriesData } = useGetCategoriesQuery({ tree: "false" });
   const [createProduct, { isLoading: isCreating }] = useCreateProductMutation();
   const [uploadImage, { isLoading: isUploading }] = useUploadImageMutation();
 
@@ -248,6 +248,7 @@ export default function AddProductPage() {
   const [title, setTitle]               = useState("");
   const [description, setDescription]   = useState("");
   const [categoryId, setCategoryId]     = useState("");
+  const [subcategoryId, setSubcategoryId] = useState("");
   const [brand, setBrand]               = useState("");
   const [price, setPrice]               = useState("");
   const [comparePrice, setComparePrice] = useState("");
@@ -266,8 +267,12 @@ export default function AddProductPage() {
   const [isPublished, setIsPublished]       = useState(true);
 
   // ── Derived category type ─────────────────────────────────────────────────
-  const categories = categoriesData?.categories || [];
+  const categories = (categoriesData?.categories || []).filter((category: any) => category.isActive !== false);
   const selectedCategory = categories.find((c: any) => c._id === categoryId);
+  const subcategories = categories.filter((category: any) => {
+    const parentId = typeof category.parent === "string" ? category.parent : category.parent?._id;
+    return parentId === categoryId;
+  });
   const categoryType = selectedCategory ? detectCategoryType(selectedCategory.name) : "generic";
   const stepLabels = [
     translate("Basic Info", "Basic Info"),
@@ -278,6 +283,7 @@ export default function AddProductPage() {
   // When category changes, reset and pre-populate attribute templates
   const handleCategoryChange = useCallback((id: string) => {
     setCategoryId(id);
+    setSubcategoryId("");
     setVariants([]);
     const cat = categories.find((c: any) => c._id === id);
     if (!cat) return;
@@ -336,7 +342,7 @@ export default function AddProductPage() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    const toUpload = Array.from(files).slice(0, 6 - uploadedImages.length);
+    const toUpload = Array.from(files).slice(0, 5 - uploadedImages.length);
     for (const file of toUpload) {
       const fd = new FormData();
       fd.append("image", file);
@@ -350,15 +356,32 @@ export default function AddProductPage() {
   };
 
   // ── Step validation ───────────────────────────────────────────────────────
-  const step1Valid = title.trim().length >= 3 && description.trim().length >= 10 && categoryId && parseFloat(price) >= 0;
+  const parsedPrice = Number(price);
+  const parsedStock = Number(stock);
+  const step1Valid =
+    title.trim().length >= 3 &&
+    description.trim().length >= 10 &&
+    Boolean(categoryId) &&
+    Number.isFinite(parsedPrice) &&
+    parsedPrice >= 0 &&
+    (comparePrice === "" || (Number.isFinite(Number(comparePrice)) && Number(comparePrice) >= 0)) &&
+    (variants.length > 0 || (Number.isSafeInteger(parsedStock) && parsedStock >= 0));
 
   const step2Valid = (() => {
     if (categoryType === "electronics") return true; // specs optional
     if (attributes.length > 0) {
       const allHaveValues = attributes.every((a) => a.name && a.values.length > 0);
-      return allHaveValues;
+      if (!allHaveValues || variants.length === 0) return false;
     }
-    return true;
+    const variantSkus = variants.map((variant) => variant.sku.trim().toUpperCase());
+    return new Set(variantSkus).size === variantSkus.length &&
+      variants.every((variant) =>
+        variant.sku.trim() &&
+        Number.isSafeInteger(variant.stock) &&
+        variant.stock >= 0 &&
+        Number.isFinite(variant.price) &&
+        variant.price >= 0
+      );
   })();
 
   // ── Tags ──────────────────────────────────────────────────────────────────
@@ -369,10 +392,12 @@ export default function AddProductPage() {
 
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
+    if (!step1Valid || !step2Valid || isUploading || isCreating) return;
     const formData = new FormData();
     formData.append("title", title);
     formData.append("description", description);
     formData.append("category", categoryId);
+    if (subcategoryId) formData.append("subcategory", subcategoryId);
     formData.append("price", price);
     if (comparePrice) formData.append("comparePrice", comparePrice);
     if (brand) formData.append("brand", brand);
@@ -466,6 +491,21 @@ export default function AddProductPage() {
           </select>
         </div>
 
+        <div className={fieldCls}>
+          <label className={labelCls}>{translate("Subcategory", "Subcategory")}</label>
+          <select
+            value={subcategoryId}
+            onChange={(e) => setSubcategoryId(e.target.value)}
+            disabled={!categoryId || subcategories.length === 0}
+            className={`${inputCls} cursor-pointer disabled:opacity-50`}
+          >
+            <option value="">{translate("No subcategory", "No subcategory")}</option>
+            {subcategories.map((subcategory: any) => (
+              <option key={subcategory._id} value={subcategory._id}>{subcategory.name}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Brand */}
         <div className={fieldCls}>
           <label className={labelCls}>{translate("Brand", "Brand")}</label>
@@ -487,11 +527,11 @@ export default function AddProductPage() {
             onChange={(e) => setComparePrice(e.target.value)} placeholder="Original price before discount" />
         </div>
 
-        {/* Stock — only shown when no variants will be used */}
-        {categoryType !== "clothing" && categoryType !== "shoes" && (
+        {/* Simple-product stock is entered here; variant stock is set per SKU below. */}
+        {variants.length === 0 && (
           <div className={fieldCls}>
             <label className={labelCls}>{translate("Stock Quantity", "Stock Quantity")}</label>
-            <input type="number" min="0" className={inputCls} value={stock}
+            <input type="number" min="0" step="1" className={inputCls} value={stock}
               onChange={(e) => setStock(e.target.value)} placeholder="0" />
           </div>
         )}
@@ -733,18 +773,18 @@ export default function AddProductPage() {
       <div className="flex flex-col gap-4">
         <div>
           <h3 className="text-sm font-semibold text-foreground">{translate("Product Images", "Product Images")}</h3>
-          <p className="text-[11px] text-muted mt-0.5">{translate("Upload up to 6 images (JPG, PNG, WEBP). First image = cover.", "Upload up to 6 images (JPG, PNG, WEBP). First image = cover.")}</p>
+          <p className="text-[11px] text-muted mt-0.5">{translate("Upload up to 5 images (JPG, PNG, WEBP). First image = cover.", "Upload up to 5 images (JPG, PNG, WEBP). First image = cover.")}</p>
         </div>
 
         {/* Upload zone */}
-        {uploadedImages.length < 6 && (
+        {uploadedImages.length < 5 && (
           <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-card-border rounded-2xl py-10 cursor-pointer hover:border-gold/50 hover:bg-gold/5 transition-all group">
             <div className="h-12 w-12 rounded-2xl bg-card-bg border border-card-border flex items-center justify-center group-hover:border-gold/40 transition-colors">
               {isUploading ? <Loader2 className="h-5 w-5 animate-spin text-gold" /> : <Upload className="h-5 w-5 text-muted" />}
             </div>
             <div className="text-center">
               <p className="text-sm font-semibold text-foreground">{isUploading ? translate("Uploading…", "Uploading…") : translate("Click to upload images", "Click to upload images")}</p>
-              <p className="text-[11px] text-muted mt-0.5">{uploadedImages.length}/6 {translate("uploaded", "uploaded")}</p>
+              <p className="text-[11px] text-muted mt-0.5">{uploadedImages.length}/5 {translate("uploaded", "uploaded")}</p>
             </div>
             <input type="file" accept="image/*" multiple className="hidden"
               onChange={handleImageUpload} disabled={isUploading} />
@@ -889,7 +929,7 @@ export default function AddProductPage() {
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={isCreating}
+                disabled={isCreating || isUploading}
                 className="flex items-center gap-2 h-11 px-6 rounded-xl bg-gold text-background text-sm font-bold hover:bg-gold/90 transition-all disabled:opacity-60 shadow-lg shadow-gold/25"
               >
                 {isCreating ? (

@@ -290,6 +290,7 @@ test("approved sellers can update store contact and address details", async () =
 test("seller product creation keeps repeated tags and payout requests debit atomically", async () => {
   const originals = {
     startSession: mongoose.startSession,
+    getClient: mongoose.connection.getClient,
     categoryFindById: Category.findById,
     productFindOne: Product.findOne,
     productCreate: Product.create,
@@ -310,11 +311,20 @@ test("seller product creation keeps repeated tags and payout requests debit atom
   };
 
   mongoose.startSession = async () => transaction;
-  Category.findById = async () => ({ _id: "60c72b2f9b1d8e25d8888880" });
+  mongoose.connection.getClient = () => ({
+    topology: { description: { type: "ReplicaSetWithPrimary" } }
+  });
+  Category.findById = async (id) => id === "60c72b2f9b1d8e25d8888880"
+    ? { _id: id, isActive: true }
+    : { _id: id, parent: "60c72b2f9b1d8e25d8888882", isActive: true };
   Product.findOne = async () => null;
   Product.create = async (documents) => {
     const data = Array.isArray(documents) ? documents[0] : documents;
-    createdProduct = { ...data, _id: "60c72b2f9b1d8e25d8888871" };
+    createdProduct = {
+      ...data,
+      _id: "60c72b2f9b1d8e25d8888871",
+      async save() { return this; }
+    };
     return Array.isArray(documents) ? [createdProduct] : createdProduct;
   };
   inventoryService.initializeSellerInventory = async () => {
@@ -338,11 +348,47 @@ test("seller product creation keeps repeated tags and payout requests debit atom
       .field("stock", "0")
       .field("isPublished", "true")
       .field("specifications", "[]")
+      .field("images", JSON.stringify([{
+        publicId: "test-product-image",
+        url: "https://example.com/product.jpg"
+      }]))
       .field("tags", "premium")
       .field("tags", "handmade");
 
     assert.equal(productResponse.status, 201);
     assert.deepEqual(createdProduct.tags, ["premium", "handmade"]);
+    assert.deepEqual(createdProduct.images, [{
+      publicId: "test-product-image",
+      url: "https://example.com/product.jpg"
+    }]);
+    assert.equal(initializedInventoryCount, 1);
+
+    const invalidSubcategoryResponse = await request(app)
+      .post("/api/products")
+      .set("Authorization", `Bearer ${sellerToken}`)
+      .field("title", "Wrong Parent Category Product")
+      .field("description", "A product with a subcategory from another parent.")
+      .field("category", "60c72b2f9b1d8e25d8888880")
+      .field("subcategory", "60c72b2f9b1d8e25d8888881")
+      .field("price", "125");
+
+    assert.equal(invalidSubcategoryResponse.status, 400);
+    assert.match(invalidSubcategoryResponse.body.message, /does not belong/i);
+    assert.equal(initializedInventoryCount, 1);
+
+    Category.findById = async () => ({
+      _id: "60c72b2f9b1d8e25d8888880",
+      isActive: false
+    });
+    const inactiveCategoryResponse = await request(app)
+      .post("/api/products")
+      .set("Authorization", `Bearer ${sellerToken}`)
+      .field("title", "Inactive Category Product")
+      .field("description", "A product with an inactive category.")
+      .field("category", "60c72b2f9b1d8e25d8888880")
+      .field("price", "125");
+
+    assert.equal(inactiveCategoryResponse.status, 404);
     assert.equal(initializedInventoryCount, 1);
 
     const invalidPayout = await request(app)
@@ -364,11 +410,79 @@ test("seller product creation keeps repeated tags and payout requests debit atom
     assert.equal(payoutUpdate.$inc.walletBalance, -200);
   } finally {
     mongoose.startSession = originals.startSession;
+    mongoose.connection.getClient = originals.getClient;
     Category.findById = originals.categoryFindById;
     Product.findOne = originals.productFindOne;
     Product.create = originals.productCreate;
     inventoryService.initializeSellerInventory = originals.initializeSellerInventory;
     User.findOneAndUpdate = originals.userFindOneAndUpdate;
+  }
+});
+
+test("seller product creation stages publication when transactions are unavailable", async () => {
+  const originals = {
+    startSession: mongoose.startSession,
+    getClient: mongoose.connection.getClient,
+    categoryFindById: Category.findById,
+    productFindOne: Product.findOne,
+    productCreate: Product.create,
+    initializeSellerInventory: inventoryService.initializeSellerInventory,
+  };
+  let createdPublicationState;
+  let savedPublicationState;
+  let inventoryInitialized = false;
+
+  mongoose.connection.getClient = () => ({
+    topology: { description: { type: "Single" } }
+  });
+  mongoose.startSession = async () => {
+    throw new Error("A transaction session must not be requested for a standalone topology.");
+  };
+  Category.findById = async () => ({
+    _id: "60c72b2f9b1d8e25d8888880",
+    isActive: true
+  });
+  Product.findOne = async () => null;
+  Product.create = async (documents) => {
+    const data = documents[0];
+    createdPublicationState = data.isPublished;
+    const product = {
+      ...data,
+      _id: "60c72b2f9b1d8e25d8888872",
+      async save() {
+        savedPublicationState = this.isPublished;
+        return this;
+      }
+    };
+    return [product];
+  };
+  inventoryService.initializeSellerInventory = async () => {
+    inventoryInitialized = true;
+    return { availableStock: 3, reservedStock: 0 };
+  };
+
+  try {
+    const response = await request(app)
+      .post("/api/products")
+      .set("Authorization", `Bearer ${sellerToken}`)
+      .field("title", "Standalone Seller Product")
+      .field("description", "A product that is initialized without transactions.")
+      .field("category", "60c72b2f9b1d8e25d8888880")
+      .field("price", "75")
+      .field("stock", "3")
+      .field("isPublished", "true");
+
+    assert.equal(response.status, 201);
+    assert.equal(createdPublicationState, false);
+    assert.equal(inventoryInitialized, true);
+    assert.equal(savedPublicationState, true);
+  } finally {
+    mongoose.startSession = originals.startSession;
+    mongoose.connection.getClient = originals.getClient;
+    Category.findById = originals.categoryFindById;
+    Product.findOne = originals.productFindOne;
+    Product.create = originals.productCreate;
+    inventoryService.initializeSellerInventory = originals.initializeSellerInventory;
   }
 });
 

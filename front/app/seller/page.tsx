@@ -131,6 +131,7 @@ export default function SellerDashboardPage() {
   const [price, setPrice] = useState("");
   const [comparePrice, setComparePrice] = useState("");
   const [stock, setStock] = useState("");
+  const [stockChanged, setStockChanged] = useState(false);
   const [sku, setSku] = useState("");
   const [isPublished, setIsPublished] = useState(true);
   const [tags, setTags] = useState("");
@@ -365,6 +366,7 @@ export default function SellerDashboardPage() {
     setPrice("");
     setComparePrice("");
     setStock("");
+    setStockChanged(false);
     setSku("");
     setIsPublished(true);
     setTags("");
@@ -383,6 +385,7 @@ export default function SellerDashboardPage() {
     setPrice(prod.price?.toString() || "");
     setComparePrice(prod.comparePrice?.toString() || "");
     setStock(prod.stock?.toString() || "");
+    setStockChanged(false);
     setSku(prod.sku || "");
     setIsPublished(prod.isPublished !== false);
     setTags(prod.tags?.join(", ") || "");
@@ -411,11 +414,11 @@ export default function SellerDashboardPage() {
           brand,
           price: parseFloat(price),
           comparePrice: comparePrice ? parseFloat(comparePrice) : undefined,
-          stock: parseInt(stock),
           sku,
           isPublished,
           tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
           specifications,
+          ...(stockChanged ? { stock: parseInt(stock) } : {}),
         };
 
         await updateProduct({ id: editingProdId, productData }).unwrap();
@@ -1609,7 +1612,10 @@ export default function SellerDashboardPage() {
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">Category</label>
                   <select
                     value={category}
-                    onChange={(e) => setCategory(e.target.value)}
+                    onChange={(e) => {
+                      setCategory(e.target.value);
+                      setSubcategory("");
+                    }}
                     className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none text-foreground"
                   >
                     {!categoriesData?.categories ? (
@@ -1654,7 +1660,10 @@ export default function SellerDashboardPage() {
                     required
                     min={0}
                     value={stock}
-                    onChange={(e) => setStock(e.target.value)}
+                    onChange={(e) => {
+                      setStock(e.target.value);
+                      setStockChanged(true);
+                    }}
                     className="w-full rounded border border-card-border bg-background px-3 py-2 text-xs outline-none focus:border-gold"
                     placeholder="10"
                   />

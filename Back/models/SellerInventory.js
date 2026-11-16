@@ -49,6 +49,10 @@ const sellerInventorySchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    stockInitialized: {
+      type: Boolean,
+      default: true,
+    },
     inventoryStatus: {
       type: String,
       enum: ['active', 'paused', 'out_of_stock', 'archived'],

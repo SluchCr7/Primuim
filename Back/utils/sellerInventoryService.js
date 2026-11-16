@@ -66,7 +66,7 @@ async function getSellerInventory({ seller, product, sku, warehouse = null, sess
   return findSellerInventory({ seller, product, sku: resolved.sku, warehouse, session });
 }
 
-async function ensureSellerInventory({ seller, product, sku, warehouse = null, session }) {
+async function ensureSellerInventory({ seller, product, sku, warehouse = null, lowStockThreshold = 0, session }) {
   const resolved = await resolveSellerSku({ seller, product, sku, warehouse, session });
   let inventory = await findSellerInventory({ seller, product, sku: resolved.sku, warehouse, session });
   if (inventory) {
@@ -83,6 +83,8 @@ async function ensureSellerInventory({ seller, product, sku, warehouse = null, s
       declaredStock: 0,
       reservedStock: 0,
       availableStock: 0,
+      stockInitialized: false,
+      lowStockThreshold,
       inventoryStatus: 'out_of_stock',
       lastStockUpdate: new Date(),
     });
@@ -163,45 +165,90 @@ async function getAvailableStock({ seller, product, sku, warehouse = null, user,
   return available + ownReservations.reduce((sum, reservation) => sum + reservation.quantity, 0);
 }
 
-async function initializeSellerInventory({ seller, product, sku, quantity = 0, warehouse = null, actor = 'seller', reason, referenceType = 'product', referenceId = '', session }) {
+async function initializeSellerInventory({ seller, product, sku, quantity = 0, warehouse = null, lowStockThreshold = 0, actor = 'seller', reason, referenceType = 'product', referenceId = '', session }) {
   if (!Number.isSafeInteger(quantity) || quantity < 0) {
     throw inventoryConflict('Initial stock must be a non-negative whole number.', 400);
   }
-  const { inventory } = await ensureSellerInventory({ seller, product, sku, warehouse, session });
-  if (inventory.declaredStock !== 0 || inventory.reservedStock !== 0) {
+  if (!Number.isFinite(lowStockThreshold) || lowStockThreshold < 0) {
+    throw inventoryConflict('Low-stock threshold must be a non-negative number.', 400);
+  }
+  const { inventory } = await ensureSellerInventory({
+    seller,
+    product,
+    sku,
+    warehouse,
+    lowStockThreshold,
+    session,
+  });
+  if (inventory.stockInitialized) {
     throw inventoryConflict('Seller inventory has already been initialized.', 409);
   }
-  const updated = await SellerInventory.findOneAndUpdate(
-    { _id: inventory._id, declaredStock: 0, reservedStock: 0 },
-    {
-      $set: {
-        declaredStock: quantity,
-        availableStock: quantity,
-        inventoryStatus: quantity > 0 ? 'active' : 'out_of_stock',
-        lastStockUpdate: new Date(),
+  let updated = inventory;
+  const isPendingRetry =
+    inventory.declaredStock === quantity &&
+    inventory.reservedStock === 0 &&
+    inventory.availableStock === quantity;
+  if (!isPendingRetry) {
+    if (inventory.declaredStock !== 0 || inventory.reservedStock !== 0) {
+      throw inventoryConflict('Pending inventory stock does not match the requested initialization.', 409);
+    }
+    updated = await SellerInventory.findOneAndUpdate(
+      { _id: inventory._id, stockInitialized: false, declaredStock: 0, reservedStock: 0 },
+      {
+        $set: {
+          declaredStock: quantity,
+          availableStock: quantity,
+          inventoryStatus: quantity > 0 ? 'active' : 'out_of_stock',
+          lastStockUpdate: new Date(),
+        },
       },
-    },
-    { new: true, runValidators: true, ...(session ? { session } : {}) }
-  );
-  if (!updated) {
-    throw inventoryConflict('Inventory changed concurrently; retry the stock initialization.', 409);
+      { new: true, runValidators: true, ...(session ? { session } : {}) }
+    );
+    if (!updated) {
+      throw inventoryConflict('Inventory changed concurrently; retry the stock initialization.', 409);
+    }
   }
   if (quantity > 0) {
-    await logMovement({
-      inventory: updated,
-      previousQuantity: 0,
-      changedQuantity: quantity,
-      newQuantity: quantity,
-      movementType: 'INITIAL_STOCK',
-      reason,
-      referenceType,
-      referenceId,
-      actor,
-      session,
-    });
+    const idempotencyKey = `seller-initial-stock:${updated._id}`;
+    const existingMovement = await withSession(
+      InventoryMovement.findOne({ idempotencyKey }),
+      session
+    );
+    if (!existingMovement) {
+      try {
+        await logMovement({
+          inventory: updated,
+          previousQuantity: 0,
+          changedQuantity: quantity,
+          newQuantity: quantity,
+          movementType: 'INITIAL_STOCK',
+          reason,
+          referenceType,
+          referenceId,
+          actor,
+          session,
+          idempotencyKey,
+        });
+      } catch (error) {
+        if (error.code !== 11000) throw error;
+        const concurrentMovement = await withSession(
+          InventoryMovement.findOne({ idempotencyKey }),
+          session
+        );
+        if (!concurrentMovement) throw error;
+      }
+    }
   }
   await updateLegacyProductStock(product, seller, session);
-  return updated;
+  const initialized = await SellerInventory.findOneAndUpdate(
+    { _id: updated._id, stockInitialized: false, declaredStock: quantity, reservedStock: 0 },
+    { $set: { stockInitialized: true } },
+    { new: true, runValidators: true, ...(session ? { session } : {}) }
+  );
+  if (!initialized) {
+    throw inventoryConflict('Inventory initialization changed concurrently; retry the operation.', 409);
+  }
+  return initialized;
 }
 
 async function setSellerStock({ seller, product, sku, quantity, warehouse = null, actor = 'seller', reason = 'SET_STOCK', referenceType = 'manual', referenceId = '', session }) {
@@ -210,8 +257,19 @@ async function setSellerStock({ seller, product, sku, quantity, warehouse = null
   }
   const { inventory } = await ensureSellerInventory({ seller, product, sku, warehouse, session });
   if (inventory.declaredStock === quantity) {
+    let unchangedInventory = inventory;
+    if (inventory.stockInitialized === false) {
+      unchangedInventory = await SellerInventory.findOneAndUpdate(
+        { _id: inventory._id, stockInitialized: false, declaredStock: quantity },
+        { $set: { stockInitialized: true, lastStockUpdate: new Date() } },
+        { new: true, ...(session ? { session } : {}) }
+      );
+      if (!unchangedInventory) {
+        throw inventoryConflict('Inventory changed concurrently; retry the stock update.', 409);
+      }
+    }
     await updateLegacyProductStock(product, seller, session);
-    return inventory;
+    return unchangedInventory;
   }
   const updated = await SellerInventory.findOneAndUpdate(
     {
@@ -224,6 +282,7 @@ async function setSellerStock({ seller, product, sku, quantity, warehouse = null
           declaredStock: quantity,
           availableStock: { $subtract: [quantity, '$reservedStock'] },
           inventoryStatus: { $cond: [{ $gt: [quantity, 0] }, 'active', 'out_of_stock'] },
+          stockInitialized: true,
           lastStockUpdate: new Date(),
         },
       },
@@ -267,7 +326,7 @@ async function adjustSellerInventory({ seller, product, sku, quantity, warehouse
     },
     {
       $inc: { declaredStock: quantity, availableStock: quantity },
-      $set: { lastStockUpdate: new Date() },
+      $set: { stockInitialized: true, lastStockUpdate: new Date() },
     },
     { new: true, runValidators: true, ...(session ? { session } : {}) }
   );
@@ -318,7 +377,7 @@ async function reserveSellerInventory({ seller, product, sku, quantity, user, ca
           _id: inventory._id,
           $expr: { $gte: [{ $subtract: ['$declaredStock', '$reservedStock'] }, delta] },
         },
-        { $inc: { reservedStock: delta, availableStock: -delta }, $set: { lastStockUpdate: now } },
+        { $inc: { reservedStock: delta, availableStock: -delta }, $set: { stockInitialized: true, lastStockUpdate: now } },
         { new: true, ...(session ? { session } : {}) }
       );
       if (!updatedInventory) {
@@ -327,7 +386,7 @@ async function reserveSellerInventory({ seller, product, sku, quantity, user, ca
     } else if (delta < 0) {
       updatedInventory = await SellerInventory.findOneAndUpdate(
         { _id: inventory._id, reservedStock: { $gte: -delta } },
-        { $inc: { reservedStock: delta, availableStock: -delta }, $set: { lastStockUpdate: now } },
+        { $inc: { reservedStock: delta, availableStock: -delta }, $set: { stockInitialized: true, lastStockUpdate: now } },
         { new: true, ...(session ? { session } : {}) }
       );
       if (!updatedInventory) {
@@ -362,7 +421,7 @@ async function reserveSellerInventory({ seller, product, sku, quantity, user, ca
       _id: inventory._id,
       $expr: { $gte: [{ $subtract: ['$declaredStock', '$reservedStock'] }, quantity] },
     },
-    { $inc: { reservedStock: quantity, availableStock: -quantity }, $set: { lastStockUpdate: now } },
+    { $inc: { reservedStock: quantity, availableStock: -quantity }, $set: { stockInitialized: true, lastStockUpdate: now } },
     { new: true, ...(session ? { session } : {}) }
   );
   if (!reservedInventory) {
@@ -436,6 +495,7 @@ async function commitSellerReservation({ reservationId, session, actor = 'system
       $inc: { declaredStock: -claimed.quantity, reservedStock: -claimed.quantity },
       $set: {
         inventoryStatus: 'active',
+        stockInitialized: true,
         lastStockUpdate: new Date(),
       },
     },
@@ -493,7 +553,7 @@ async function releaseSellerReservation({ reservationId, expired = false, sessio
     { _id: claimed.inventory, reservedStock: { $gte: claimed.quantity } },
     {
       $inc: { reservedStock: -claimed.quantity, availableStock: claimed.quantity },
-      $set: { lastStockUpdate: new Date() },
+      $set: { stockInitialized: true, lastStockUpdate: new Date() },
     },
     { new: true, ...(session ? { session } : {}) }
   );
@@ -530,7 +590,7 @@ async function restoreSellerStock({ seller, product, sku, quantity, warehouse = 
     { _id: inventory._id },
     {
       $inc: { declaredStock: quantity, availableStock: quantity },
-      $set: { inventoryStatus: 'active', lastStockUpdate: new Date() },
+      $set: { inventoryStatus: 'active', stockInitialized: true, lastStockUpdate: new Date() },
     },
     { new: true, runValidators: true, ...(session ? { session } : {}) }
   );
@@ -549,6 +609,10 @@ async function restoreSellerStock({ seller, product, sku, quantity, warehouse = 
   });
   await updateLegacyProductStock(product, seller, session);
   return updated;
+}
+
+async function syncSellerProductStock({ seller, product, session }) {
+  await updateLegacyProductStock(product, seller, session);
 }
 
 async function releaseExpiredSellerReservations({ limit = 100 } = {}) {
@@ -602,6 +666,7 @@ module.exports = {
   commitSellerReservation,
   releaseSellerReservation,
   restoreSellerStock,
+  syncSellerProductStock,
   releaseExpiredSellerReservations,
   releaseSellerCartReservations,
   resolveSellerSku,

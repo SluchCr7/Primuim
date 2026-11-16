@@ -6,6 +6,7 @@ const InventoryMovement = require("../models/InventoryMovement");
 const StockReservation = require("../models/StockReservation");
 const {
   getAvailableStock,
+  initializeSellerInventory,
   resolveSellerSku,
   reserveSellerInventory,
   restoreSellerStock,
@@ -197,6 +198,87 @@ test("seller stock restoration is idempotent by reference key", async () => {
     assert.equal(inventory.availableStock, 6);
     assert.equal(updateCount, 1);
     assert.equal(movements.length, 1);
+  } finally {
+    Product.findOne = originals.productFindOne;
+    SellerInventory.findOne = originals.inventoryFindOne;
+    SellerInventory.find = originals.inventoryFind;
+    SellerInventory.findOneAndUpdate = originals.inventoryUpdate;
+    InventoryMovement.findOne = originals.movementFindOne;
+    InventoryMovement.create = originals.movementCreate;
+  }
+});
+
+test("pending seller inventory initialization resumes without duplicating its movement", async () => {
+  const originals = {
+    productFindOne: Product.findOne,
+    inventoryFindOne: SellerInventory.findOne,
+    inventoryFind: SellerInventory.find,
+    inventoryUpdate: SellerInventory.findOneAndUpdate,
+    movementFindOne: InventoryMovement.findOne,
+    movementCreate: InventoryMovement.create,
+  };
+  const seller = "60c72b2f9b1d8e25d8888811";
+  const productId = "60c72b2f9b1d8e25d8888822";
+  const inventory = {
+    _id: "60c72b2f9b1d8e25d8888844",
+    seller,
+    product: productId,
+    sku: "SIMPLE-SKU",
+    warehouse: null,
+    declaredStock: 0,
+    reservedStock: 0,
+    availableStock: 0,
+    stockInitialized: false,
+    lowStockThreshold: 4,
+  };
+  const product = {
+    _id: productId,
+    seller,
+    sku: "SIMPLE-SKU",
+    slug: "simple-product",
+    variants: [],
+    saveAttempts: 0,
+    async save() {
+      this.saveAttempts += 1;
+      if (this.saveAttempts === 1) throw new Error("Projection write failed.");
+      return this;
+    },
+  };
+  const movements = [];
+  Product.findOne = () => queryStub(product);
+  SellerInventory.findOne = () => queryStub(inventory);
+  SellerInventory.find = () => queryStub([inventory]);
+  SellerInventory.findOneAndUpdate = async (_filter, update) => {
+    Object.assign(inventory, update.$set || {});
+    return inventory;
+  };
+  InventoryMovement.findOne = filter => queryStub(
+    movements.find(movement => movement.idempotencyKey === filter.idempotencyKey) || null
+  );
+  InventoryMovement.create = async (documents) => {
+    movements.push(...documents);
+    return documents;
+  };
+
+  try {
+    const options = {
+      seller,
+      product: productId,
+      sku: "SIMPLE-SKU",
+      quantity: 6,
+      lowStockThreshold: 4,
+    };
+    await assert.rejects(initializeSellerInventory(options), /Projection write failed/);
+    assert.equal(inventory.stockInitialized, false);
+    assert.equal(inventory.declaredStock, 6);
+    assert.equal(movements.length, 1);
+
+    await initializeSellerInventory(options);
+    assert.equal(inventory.stockInitialized, true);
+    assert.equal(product.stock, 6);
+    assert.equal(inventory.lowStockThreshold, 4);
+    assert.equal(movements.length, 1);
+    await assert.rejects(initializeSellerInventory(options), error => error.statusCode === 409);
   } finally {
     Product.findOne = originals.productFindOne;
     SellerInventory.findOne = originals.inventoryFindOne;

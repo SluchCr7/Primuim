@@ -473,7 +473,19 @@ const AddNewProduct = asyncHandler(async (req, res) => {
         }
     }
 
-    // 4️⃣ Parse tags (comma-separated string from FormData)
+    // 4️⃣ Parse uploaded image metadata (already uploaded through /api/upload/image)
+    if (req.body.images && typeof req.body.images === "string") {
+        try {
+            req.body.images = JSON.parse(req.body.images);
+        } catch (error) {
+            return res.status(400).json({
+                success: false,
+                errors: ["Invalid format for images. Must be a valid JSON array."]
+            });
+        }
+    }
+
+    // 5️⃣ Parse tags (comma-separated string from FormData)
     if (req.body.tags && typeof req.body.tags === "string") {
         req.body.tags = req.body.tags.split(",").map(tag => tag.trim()).filter(Boolean);
     }
@@ -505,16 +517,32 @@ const AddNewProduct = asyncHandler(async (req, res) => {
         variants,
         tags,
         inventoryMode,
-        warehouse
+        warehouse,
+        images: submittedImages
     } = req.body;
 
     const categoryExists = await Category.findById(category);
 
-    if (!categoryExists) {
+    if (!categoryExists || categoryExists.isActive === false) {
         return res.status(404).json({
             success: false,
-            message: "Category not found"
+            message: categoryExists ? "Category is inactive" : "Category not found"
         });
+    }
+    if (subcategory) {
+        const subcategoryExists = await Category.findById(subcategory);
+        if (!subcategoryExists || subcategoryExists.isActive === false) {
+            return res.status(400).json({
+                success: false,
+                message: subcategoryExists ? "Subcategory is inactive" : "Subcategory not found"
+            });
+        }
+        if (String(subcategoryExists.parent || "") !== String(category)) {
+            return res.status(400).json({
+                success: false,
+                message: "Subcategory does not belong to the selected category."
+            });
+        }
     }
 
     const variantSkus = (variants || []).map(variant => String(variant.sku || "").trim().toUpperCase());
@@ -553,7 +581,7 @@ const AddNewProduct = asyncHandler(async (req, res) => {
     }
 
     // Upload images
-    const images = [];
+    const images = Array.isArray(submittedImages) ? submittedImages : [];
 
     if (req.files && req.files.length > 0) {
         const uploadedImages = await Promise.all(
@@ -580,12 +608,15 @@ const AddNewProduct = asyncHandler(async (req, res) => {
         slug = `${slug}-${Date.now()}`;
     }
 
-    // Product and initial stock must commit or roll back together.
+    // Keep the product unpublished until inventory initialization succeeds when transactions are unavailable.
     const normalizedInitialStock = Number(stock || 0);
-    const session = await mongoose.startSession();
+    const shouldPublish = isPublished === undefined ? true : Boolean(isPublished);
+    const topologyType = mongoose.connection.getClient()?.topology?.description?.type;
+    const supportsTransactions = ["ReplicaSetWithPrimary", "Sharded", "LoadBalanced"].includes(topologyType);
+    const session = supportsTransactions ? await mongoose.startSession() : null;
     let product;
     try {
-        session.startTransaction();
+        if (session) session.startTransaction();
         [product] = await Product.create([{
             seller: req.user.id,
             title,
@@ -600,13 +631,13 @@ const AddNewProduct = asyncHandler(async (req, res) => {
             sku,
             inventoryMode: resolvedInventoryMode,
             warehouse: resolvedInventoryMode === "warehouse-managed" ? warehouse : null,
-            isPublished,
+            isPublished: session ? shouldPublish : false,
             images,
             specifications: specifications || [],
             attributes: attributes || [],
             variants: variants || [],
             tags: tags || []
-        }], { session });
+        }], session ? { session } : {});
 
         const { initializeSellerInventory, adjustWarehouseInventory } = require("../utils/inventoryService");
         const initialSkuStocks = variants && variants.length
@@ -627,7 +658,7 @@ const AddNewProduct = asyncHandler(async (req, res) => {
                     reason: "INITIAL_STOCK",
                     referenceType: initialStock.referenceType,
                     referenceId: String(product._id),
-                    session,
+                    ...(session && { session }),
                 });
             } else {
                 initializedInventory = await adjustWarehouseInventory({
@@ -641,7 +672,7 @@ const AddNewProduct = asyncHandler(async (req, res) => {
                     reason: "INITIAL_STOCK",
                     referenceType: initialStock.referenceType,
                     referenceId: String(product._id),
-                    session,
+                    ...(session && { session }),
                 });
             }
             availableStockBySku.set(String(initialStock.sku).toUpperCase(), initializedInventory.availableStock);
@@ -655,12 +686,16 @@ const AddNewProduct = asyncHandler(async (req, res) => {
                 stock: availableStockBySku.get(String(variant.sku).toUpperCase()) || 0,
             }));
         }
-        await session.commitTransaction();
+        if (!session) {
+            product.isPublished = shouldPublish;
+            await product.save();
+        }
+        if (session) await session.commitTransaction();
     } catch (error) {
-        if (session.inTransaction()) await session.abortTransaction();
+        if (session?.inTransaction()) await session.abortTransaction();
         throw error;
     } finally {
-        await session.endSession();
+        if (session) await session.endSession();
     }
 
     res.status(201).json({
@@ -763,13 +798,32 @@ const updateProduct = asyncHandler(async (req, res) => {
         }
     }
 
-    if (updatePayload.category) {
-        const categoryExists = await Category.findById(updatePayload.category);
-        if (!categoryExists) {
+    if (updatePayload.category || updatePayload.subcategory !== undefined) {
+        const targetCategory = updatePayload.category || product.category;
+        const targetSubcategory = updatePayload.subcategory === undefined
+            ? product.subcategory
+            : updatePayload.subcategory;
+        const categoryExists = await Category.findById(targetCategory);
+        if (!categoryExists || categoryExists.isActive === false) {
             return res.status(404).json({
                 success: false,
-                message: "Category not found"
+                message: categoryExists ? "Category is inactive" : "Category not found"
             });
+        }
+        if (targetSubcategory) {
+            const subcategoryExists = await Category.findById(targetSubcategory);
+            if (!subcategoryExists || subcategoryExists.isActive === false) {
+                return res.status(400).json({
+                    success: false,
+                    message: subcategoryExists ? "Subcategory is inactive" : "Subcategory not found"
+                });
+            }
+            if (String(subcategoryExists.parent || "") !== String(targetCategory)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Subcategory does not belong to the selected category."
+                });
+            }
         }
     }
 
@@ -799,7 +853,7 @@ const updateProduct = asyncHandler(async (req, res) => {
                 throw Object.assign(new Error("Set stock for each variant SKU instead of the parent product."), { statusCode: 400 });
             }
             const sku = product.sku || product.slug;
-            if ((product.inventoryMode || "seller-managed") === "warehouse-managed") {
+            if (requestedStock !== product.stock && (product.inventoryMode || "seller-managed") === "warehouse-managed") {
                 if (!product.warehouse) {
                     throw Object.assign(new Error("Warehouse-managed product has no configured warehouse."), { statusCode: 409 });
                 }
@@ -816,7 +870,7 @@ const updateProduct = asyncHandler(async (req, res) => {
                     referenceId: String(product._id),
                     session,
                 });
-            } else {
+            } else if (requestedStock !== product.stock) {
                 await setSellerStock({
                     seller: product.seller,
                     product: product._id,
@@ -830,9 +884,19 @@ const updateProduct = asyncHandler(async (req, res) => {
                 });
             }
         }
+        let variantStockChanged = false;
         if (updatePayload.variants) {
             const availableBySku = new Map();
+            const existingVariantsBySku = new Map(
+                (product.variants || []).map(variant => [variant.sku.toUpperCase(), variant])
+            );
             for (const variant of updatePayload.variants) {
+                const existingVariant = existingVariantsBySku.get(variant.sku.toUpperCase());
+                if (existingVariant && variant.stock === existingVariant.stock) {
+                    availableBySku.set(variant.sku.toUpperCase(), existingVariant.stock);
+                    continue;
+                }
+                variantStockChanged = true;
                 const stockOptions = {
                     seller: product.seller,
                     product: product._id,
@@ -864,7 +928,7 @@ const updateProduct = asyncHandler(async (req, res) => {
                 stock: availableBySku.get(variant.sku.toUpperCase()),
             }));
         }
-        if (requestedStock !== undefined || updatePayload.variants) {
+        if ((requestedStock !== undefined && requestedStock !== product.stock) || variantStockChanged) {
             const syncedProduct = await Product.findById(product._id).session(session);
             if (syncedProduct) {
                 product.stock = syncedProduct.stock;

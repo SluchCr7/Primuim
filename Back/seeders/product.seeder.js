@@ -1,6 +1,9 @@
 
 const mongoose = require("mongoose");
 const { Product } = require("../models/Product");
+const { Category } = require("../models/Category");
+const { User } = require("../models/User");
+const inventoryService = require("../utils/inventoryService");
 require("dotenv").config({
   path: require("path").resolve(__dirname, "../.env"),
 });
@@ -8,7 +11,7 @@ require("dotenv").config({
 // CONFIG
 // ============================================================
 
-const APPROVED_SELLER_ID = "6a3a6caa3f50534a6356a3ad";
+const APPROVED_SELLER_ID = "6afb253cb669c3195b023c45";
 
 const CATEGORY_IDS = {
   electronics: "6a392bdaf71d80816ab3bc0a",
@@ -272,7 +275,7 @@ const products = [
     subcategory: CATEGORY_IDS.menTshirts,
     brand: "BasicWear",
     price: 399,
-    stock: 60,
+    stock: 40,
     image: IMAGES.tshirt,
     tags: ["men", "tshirt", "cotton"],
     attributes: [
@@ -641,30 +644,280 @@ const products = [
 // SEED FUNCTION
 // ============================================================
 
-const seedProducts = async () => {
-  try {
-    console.log("Starting product seeder...");
+const normalizeSku = (sku) => String(sku || "").trim().toUpperCase();
 
-    const operations = products.map((product) => ({
-      updateOne: {
-        filter: { slug: product.slug },
-        update: { $set: product },
-        upsert: true,
-      },
+const getInventoryRecords = (seedProduct, persistedProduct) => {
+  const seededStockBySku = new Map(
+    (seedProduct.variants || []).map((variant) => [
+      normalizeSku(variant.sku),
+      variant.stock,
+    ])
+  );
+  const variants = persistedProduct ? persistedProduct.variants : seedProduct.variants;
+  if (variants?.length) {
+    return variants.map((variant) => ({
+      sku: variant.sku,
+      quantity: seededStockBySku.has(normalizeSku(variant.sku))
+        ? seededStockBySku.get(normalizeSku(variant.sku))
+        : variant.stock,
+      referenceType: "product_variant",
     }));
-
-    const result = await Product.bulkWrite(operations);
-
-    console.log("Product seeder completed.");
-    console.log(`Products in seed file: ${products.length}`);
-    console.log(`Inserted: ${result.upsertedCount}`);
-    console.log(`Updated: ${result.modifiedCount}`);
-
-    return result;
-  } catch (error) {
-    console.error("Product seeder failed:", error);
-    throw error;
   }
+  const sku = persistedProduct
+    ? persistedProduct.sku || persistedProduct.slug
+    : seedProduct.sku || seedProduct.slug;
+  const quantity = persistedProduct
+    ? (normalizeSku(sku) === normalizeSku(seedProduct.sku || seedProduct.slug)
+      ? seedProduct.stock
+      : persistedProduct.stock)
+    : seedProduct.stock;
+  return [{
+    sku,
+    quantity,
+    referenceType: "product",
+  }];
+};
+
+const validateSeedProducts = async (seedProducts = products) => {
+  const slugs = new Set();
+  const skus = new Set();
+
+  if (!mongoose.isValidObjectId(APPROVED_SELLER_ID)) {
+    throw new Error(`Invalid approved seller ID: ${APPROVED_SELLER_ID}`);
+  }
+
+  for (const product of seedProducts) {
+    if (slugs.has(product.slug)) {
+      throw new Error(`Duplicate product slug in seed data: ${product.slug}`);
+    }
+    slugs.add(product.slug);
+
+    for (const id of [product.category, product.subcategory].filter(Boolean)) {
+      if (!mongoose.isValidObjectId(id)) {
+        throw new Error(`Invalid category reference for product "${product.slug}": ${id}`);
+      }
+    }
+
+    for (const record of getInventoryRecords(product)) {
+      const sku = normalizeSku(record.sku);
+      if (!sku) {
+        throw new Error(`Missing SKU for product "${product.slug}".`);
+      }
+      if (skus.has(sku)) {
+        throw new Error(`Duplicate product or variant SKU in seed data: ${sku}`);
+      }
+      skus.add(sku);
+
+      if (!Number.isSafeInteger(record.quantity) || record.quantity < 0) {
+        throw new Error(`Invalid seed quantity for ${sku}: ${record.quantity}`);
+      }
+    }
+
+    const candidate = new Product({
+      ...product,
+      seller: new mongoose.Types.ObjectId(APPROVED_SELLER_ID),
+      inventoryMode: "seller-managed",
+      warehouse: null,
+      stock: 0,
+      reservedStock: 0,
+      variants: product.variants.map((variant) => ({ ...variant, stock: 0 })),
+    });
+    await candidate.validate();
+  }
+};
+
+const validateSellerAndCategories = async (seedProducts = products) => {
+  const seller = await User.findById(APPROVED_SELLER_ID)
+    .select("_id role sellerStatus isBlocked isVerify");
+  if (!seller) {
+    throw new Error(`Approved seller ${APPROVED_SELLER_ID} does not exist.`);
+  }
+  if (
+    seller.role !== "seller" ||
+    seller.sellerStatus !== "approved" ||
+    seller.isBlocked ||
+    !seller.isVerify
+  ) {
+    throw new Error(
+      `Seller ${APPROVED_SELLER_ID} is not eligible to sell (requires verified, unblocked, approved seller account).`
+    );
+  }
+
+  const categoryIds = new Set();
+  for (const product of seedProducts) {
+    categoryIds.add(String(product.category));
+    if (product.subcategory) categoryIds.add(String(product.subcategory));
+  }
+  const categories = await Category.find({
+    _id: { $in: [...categoryIds].map((id) => new mongoose.Types.ObjectId(id)) },
+  }).select("_id parent isActive");
+  const categoriesById = new Map(
+    categories.map((category) => [String(category._id), category])
+  );
+
+  for (const product of seedProducts) {
+    const category = categoriesById.get(String(product.category));
+    if (!category) {
+      throw new Error(`Category ${product.category} for "${product.slug}" does not exist.`);
+    }
+    if (!category.isActive) {
+      throw new Error(`Category ${product.category} for "${product.slug}" is inactive.`);
+    }
+    if (product.subcategory) {
+      const subcategory = categoriesById.get(String(product.subcategory));
+      if (!subcategory) {
+        throw new Error(`Subcategory ${product.subcategory} for "${product.slug}" does not exist.`);
+      }
+      if (!subcategory.isActive) {
+        throw new Error(`Subcategory ${product.subcategory} for "${product.slug}" is inactive.`);
+      }
+      if (!subcategory.parent || String(subcategory.parent) !== String(category._id)) {
+        throw new Error(
+          `Subcategory ${product.subcategory} is not a child of category ${product.category} for "${product.slug}".`
+        );
+      }
+    }
+  }
+};
+
+const supportsTransactions = () => {
+  const topologyType = mongoose.connection.getClient()?.topology?.description?.type;
+  return ["ReplicaSetWithPrimary", "Sharded", "LoadBalanced"].includes(topologyType);
+};
+
+const withSession = (query, session) => session ? query.session(session) : query;
+
+const seedProduct = async (seedData, session, counts, transactional) => {
+  const existingQuery = Product.findOne({ slug: seedData.slug });
+  const existingProduct = await withSession(existingQuery, session);
+
+  if (
+    existingProduct &&
+    String(existingProduct.seller) !== APPROVED_SELLER_ID
+  ) {
+    throw new Error(
+      `Product slug "${seedData.slug}" is already owned by a different seller.`
+    );
+  }
+  if (
+    existingProduct?.inventoryMode &&
+    existingProduct.inventoryMode !== "seller-managed"
+  ) {
+    throw new Error(
+      `Product "${seedData.slug}" is warehouse-managed and cannot be converted by this seller inventory seeder.`
+    );
+  }
+
+  const inventoryRecords = getInventoryRecords(seedData, existingProduct);
+  for (const record of inventoryRecords) {
+    const skuOwnerQuery = Product.findOne({
+      $or: [
+        { sku: record.sku },
+        { "variants.sku": record.sku },
+      ],
+    });
+    const skuOwner = await withSession(skuOwnerQuery, session);
+    if (skuOwner && String(skuOwner._id) !== String(existingProduct?._id || "")) {
+      throw new Error(`SKU "${record.sku}" already belongs to product "${skuOwner.slug}".`);
+    }
+  }
+
+  let product = existingProduct;
+  if (!product) {
+    product = new Product({
+      ...seedData,
+      seller: new mongoose.Types.ObjectId(APPROVED_SELLER_ID),
+      inventoryMode: "seller-managed",
+      warehouse: null,
+      stock: 0,
+      reservedStock: 0,
+      variants: seedData.variants.map((variant) => ({ ...variant, stock: 0 })),
+    });
+    await product.save(session ? { session } : undefined);
+    counts.createdProducts += 1;
+  } else {
+    counts.existingProducts += 1;
+  }
+
+  for (const record of inventoryRecords) {
+    const options = {
+      seller: APPROVED_SELLER_ID,
+      product: product._id,
+      sku: record.sku,
+      warehouse: null,
+      session,
+    };
+    const initialStock = Number.isSafeInteger(record.quantity) && record.quantity >= 0
+      ? record.quantity
+      : 0;
+    const inventory = await inventoryService.getSellerInventory(options);
+    if (inventory && inventory.stockInitialized !== false) {
+      counts.preservedInventories += 1;
+      continue;
+    }
+
+    try {
+      await inventoryService.initializeSellerInventory({
+        ...options,
+        quantity: initialStock,
+        lowStockThreshold: Number(product.lowStockThreshold || seedData.lowStockThreshold || 0),
+        actor: "system",
+        reason: "PRODUCT_SEED_INITIALIZATION",
+        referenceType: record.referenceType,
+        referenceId: String(product._id),
+      });
+      counts.createdInventories += 1;
+    } catch (error) {
+      if (transactional || error.code !== 11000) throw error;
+
+      const concurrentInventory = await inventoryService.getSellerInventory(options);
+      if (!concurrentInventory || concurrentInventory.stockInitialized === false) throw error;
+      counts.preservedInventories += 1;
+    }
+  }
+  await inventoryService.syncSellerProductStock({
+    seller: product.seller,
+    product: product._id,
+    session,
+  });
+};
+
+const seedProducts = async ({ productCatalog = products } = {}) => {
+  await validateSeedProducts(productCatalog);
+  await validateSellerAndCategories(productCatalog);
+
+  const transactional = supportsTransactions();
+  const counts = {
+    createdProducts: 0,
+    existingProducts: 0,
+    createdInventories: 0,
+    preservedInventories: 0,
+  };
+
+  console.log(`Starting product seeder (${productCatalog.length} products)...`);
+  for (const product of productCatalog) {
+    const session = transactional ? await mongoose.startSession() : null;
+    try {
+      if (session) session.startTransaction();
+      await seedProduct(product, session, counts, transactional);
+      if (session) await session.commitTransaction();
+    } catch (error) {
+      if (session?.inTransaction()) await session.abortTransaction();
+      throw new Error(`Failed to seed product "${product.slug}": ${error.message}`, {
+        cause: error,
+      });
+    } finally {
+      if (session) await session.endSession();
+    }
+  }
+
+  console.log("Product seeder completed.");
+  console.log(`Products in seed file: ${productCatalog.length}`);
+  console.log(`Inserted: ${counts.createdProducts}`);
+  console.log(`Existing products preserved: ${counts.existingProducts}`);
+  console.log(`Inventory records created: ${counts.createdInventories}`);
+  console.log(`Existing inventory records preserved: ${counts.preservedInventories}`);
+  return counts;
 };
 
 if (require.main === module) {
@@ -674,12 +927,21 @@ if (require.main === module) {
     try {
       await connectDB();
       await seedProducts();
-      process.exit(0);
     } catch (error) {
       console.error(error);
-      process.exit(1);
+      process.exitCode = 1;
+    } finally {
+      await mongoose.disconnect();
     }
   };
 
   runSeeder();
 }
+
+module.exports = {
+  seedProducts,
+  validateSeedProducts,
+  validateSellerAndCategories,
+  getInventoryRecords,
+  products,
+};
